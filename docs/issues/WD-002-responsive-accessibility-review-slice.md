@@ -1,10 +1,12 @@
 # WD-002 - Responsive And Accessibility Review Slice
 
-Status: Open
+Status: Browser validated on feature branch
 Project: Wedding Dashboard
 Repo: `C:\dev\ashley-hazel-wedding-portal-prototype`
 Created: 2026-06-09
 GitHub Issue: https://github.com/VainAsher/ashley-hazel-wedding-portal/issues/2
+Feature Branch: feature/wd-002-responsive-accessibility-review
+Validation Note: docs/validation/WD-002-validation-2026-06-09.md
 
 ## Goal
 

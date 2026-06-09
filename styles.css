@@ -59,3 +59,119 @@
   color: var(--muted);
   font-style: italic;
 }
+.skip-link {
+  background: var(--sun);
+  border-radius: 0 0 12px 12px;
+  color: var(--plum);
+  font-weight: 800;
+  left: 1rem;
+  padding: 0.75rem 1rem;
+  position: fixed;
+  top: 0;
+  transform: translateY(-120%);
+  transition: transform 0.15s ease;
+  z-index: 20;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 3px solid #ffffff;
+  outline-offset: 3px;
+}
+
+main:focus {
+  outline: none;
+}
+
+.sidebar nav button {
+  min-height: 44px;
+}
+
+.card,
+.metric,
+.story-card,
+.rsvp-card,
+.profile-card,
+.wall-posts article,
+.song-wall article,
+.contact-list article,
+.kanban div,
+.page-header,
+.hero-card {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 700px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .sidebar {
+    padding: 1rem;
+  }
+
+  .brand-seal {
+    border-radius: 14px;
+    margin-bottom: 1rem;
+  }
+
+  .sidebar nav {
+    gap: 0.55rem;
+  }
+
+  .sidebar nav button {
+    min-height: 48px;
+    padding: 0.8rem 0.85rem;
+    text-align: center;
+  }
+
+  .page-header,
+  .card,
+  .metric,
+  .story-card,
+  .rsvp-card,
+  .profile-card,
+  .wall-posts article,
+  .song-wall article,
+  .contact-list article,
+  .kanban div {
+    border-radius: 18px;
+    padding: 1rem;
+  }
+
+  .page-header h2 {
+    font-size: 2rem;
+  }
+
+  .big-number {
+    font-size: 3rem;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 430px) {
+  .sidebar nav {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-card h1 {
+    font-size: 2.7rem;
+  }
+
+  .heart {
+    height: 40px;
+    width: 40px;
+  }
+}

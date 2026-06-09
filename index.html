@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
   <div class="site-shell">
     <aside class="sidebar">
       <div class="brand-seal">
@@ -16,7 +17,7 @@
           <small>19 June 2027</small>
         </div>
       </div>
-      <nav>
+      <nav aria-label="Portal sections">
         <button data-screen="landing" class="active">Public Landing</button>
         <button data-screen="guest-home">Guest Home</button>
         <button data-screen="rsvp">RSVP</button>
@@ -32,7 +33,7 @@
       <div class="sidebar-note">Prototype: household invite-code wedding portal + calm command centre.</div>
     </aside>
 
-    <main>
+    <main id="main-content" tabindex="-1">
       <section id="landing" class="screen active hero-screen">
         <div class="pattern-band"></div>
         <div class="hero-card">

@@ -1,5 +1,6 @@
 const buttons = document.querySelectorAll('[data-screen]');
 const screens = document.querySelectorAll('.screen');
+const mainContent = document.querySelector('main');
 
 const mealOptions = [
   'Jerk chicken with rice & peas',
@@ -79,14 +80,27 @@ const state = {
   ],
 };
 
-function showScreen(id) {
+function showScreen(id, focusContent = false) {
   screens.forEach((screen) => screen.classList.toggle('active', screen.id === id));
   document.querySelectorAll('.sidebar nav button').forEach((button) => {
-    button.classList.toggle('active', button.dataset.screen === id);
+    const active = button.dataset.screen === id;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-current', active ? 'page' : 'false');
   });
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (focusContent && mainContent) mainContent.focus({ preventScroll: true });
 }
 
+function setupAccessibility() {
+  document.querySelectorAll('button:not([type])').forEach((button) => {
+    button.type = 'button';
+  });
+  buttons.forEach((button) => {
+    if (!button.dataset.screen) return;
+    button.setAttribute('aria-controls', button.dataset.screen);
+    button.setAttribute('aria-current', button.classList.contains('active') ? 'page' : 'false');
+  });
+}
 function escapeHtml(value) {
   return String(value)
     .replace(/&/g, '&amp;')
@@ -224,7 +238,7 @@ function initSongRequests() {
         <strong>${escapeHtml(song.title)}</strong>
         <span>${escapeHtml(song.artist)}</span>
         <p>${escapeHtml(song.dedication)}</p>
-        <button type="button" data-like-song="${escapeHtml(song.id)}">&hearts; ${song.likes}</button>
+        <button type="button" data-like-song="${escapeHtml(song.id)}" aria-label="Like ${escapeHtml(song.title)} by ${escapeHtml(song.artist)}">&hearts; ${song.likes}</button>
       </article>
     `).join('');
   }
@@ -298,7 +312,7 @@ function initBlessingsWall() {
         ${blessing.pinned ? '<span class="pin">Pinned</span>' : ''}
         <h3>${escapeHtml(blessing.author)}</h3>
         <p>${escapeHtml(blessing.message)}</p>
-        <button type="button" data-like-blessing="${escapeHtml(blessing.id)}">&hearts; ${blessing.likes}</button>
+        <button type="button" data-like-blessing="${escapeHtml(blessing.id)}" aria-label="Like blessing from ${escapeHtml(blessing.author)}">&hearts; ${blessing.likes}</button>
       </article>
     `).join('');
   }
@@ -339,7 +353,8 @@ function initBlessingsWall() {
   renderBlessings();
 }
 
-buttons.forEach((button) => button.addEventListener('click', () => showScreen(button.dataset.screen)));
+setupAccessibility();
+buttons.forEach((button) => button.addEventListener('click', () => showScreen(button.dataset.screen, true)));
 initRsvp();
 initSongRequests();
 initBlessingsWall();
