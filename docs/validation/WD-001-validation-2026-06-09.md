@@ -30,22 +30,23 @@ No backend, database, deployment, real guest data, real RSVP data, real contact 
 
 ## Browser Smoke Test
 
-Not executed in this Codex turn.
+Executed with Microsoft Edge headless through the Chrome DevTools Protocol.
 
-Reason:
+| Check | Result |
+|---|---|
+| Active final screen | `wall` |
+| RSVP status after interaction | `1 of 2 guests marked attending in this browser-only preview.` |
+| Dashboard RSVP metric | `1 / 2` |
+| Added music request | `Demo Validation Song` |
+| Music like count after click | `2 likes` |
+| Added blessing author | `Demo Validator` |
+| Blessing like count after click | `2 likes` |
+| Demo invite present | `DEMO-042` found |
+| Old placeholder names/code | No findings |
+| Screen count | 11 |
+| Screenshot | `C:\tmp\wd4-wedding-dashboard-wall.png` |
 
-- no msedge.exe, chrome.exe, chromium.exe, or firefox.exe command was found on PATH
-- npx.cmd playwright --version timed out and was not used for validation
-
-Manual browser validation still needed before merging or closing issue #1:
-
-1. Open index.html in a browser.
-2. Navigate landing -> guest home -> RSVP.
-3. Toggle attendance, change a meal, submit RSVP, and confirm guest-home/dashboard status updates.
-4. Add a music request and like a song.
-5. Add a blessing and like a blessing.
-6. Resize to phone width and confirm content remains readable.
-7. Confirm only demo/synthetic guest data is visible.
+No browser assertion errors were reported.
 
 ## Privacy Check
 
