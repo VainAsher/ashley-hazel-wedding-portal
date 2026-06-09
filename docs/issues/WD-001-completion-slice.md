@@ -1,10 +1,12 @@
-﻿# WD-001 - Safe Static Dashboard Completion Slice
+# WD-001 - Safe Static Dashboard Completion Slice
 
-Status: Open
+Status: In review on feature branch
 Project: Wedding Dashboard
 Repo: `C:\dev\ashley-hazel-wedding-portal-prototype`
 Created: 2026-06-09
 GitHub Issue: https://github.com/VainAsher/ashley-hazel-wedding-portal/issues/1
+Feature Branch: feature/wd-001-static-dashboard-slice
+Validation Note: docs/validation/WD-001-validation-2026-06-09.md
 
 ## Goal
 
