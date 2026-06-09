@@ -1,4 +1,4 @@
-﻿# Current State
+# Current State
 
 Date: 2026-06-09
 Status: Canonical private GitHub repo baseline
@@ -31,9 +31,9 @@ Do not commit:
 
 ## Immediate Next Slice
 
-`docs/issues/WD-001-completion-slice.md` is the first issue-backed completion slice.
+`docs/issues/WD-002-responsive-accessibility-review-slice.md` is the next issue-backed completion slice.
 
-The next implementation should turn the clickable prototype into a safe, testable dashboard baseline without introducing real guest data.
+The next implementation should make the validated static baseline review-ready on phone, tablet, and desktop by improving responsive behavior, keyboard/focus states, labels, and validation evidence without introducing real data, storage, backend services, or deployment.
 
 ## GitHub remote
 
@@ -41,5 +41,3 @@ The next implementation should turn the clickable prototype into a safe, testabl
 - Visibility: private
 - Default branch: main
 - First issue: https://github.com/VainAsher/ashley-hazel-wedding-portal/issues/1
-
-

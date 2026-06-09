@@ -1,4 +1,4 @@
-﻿# Roadmap
+# Roadmap
 
 ## Phase 1 - Safe Prototype Baseline
 
@@ -8,6 +8,11 @@ Goal: make the current static prototype canonical, reviewable, and safe to itera
 - define synthetic data rules
 - add manual validation script
 - avoid backend/storage until data boundary is approved
+
+## Phase 1 Status
+
+- WD-001 complete: static/browser-only interaction baseline validated and merged.
+- WD-002 next: responsive and accessibility review readiness.
 
 ## Phase 2 - Usable Local Dashboard
 
