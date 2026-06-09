@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ashley & Hazel — Wedding Portal Prototype</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="site-shell">
+    <aside class="sidebar">
+      <div class="brand-seal">
+        <span class="heart">♥</span>
+        <div>
+          <strong>Ashley & Hazel</strong>
+          <small>19 June 2027</small>
+        </div>
+      </div>
+      <nav>
+        <button data-screen="landing" class="active">Public Landing</button>
+        <button data-screen="guest-home">Guest Home</button>
+        <button data-screen="rsvp">RSVP</button>
+        <button data-screen="story">Our Story</button>
+        <button data-screen="profiles">Profiles</button>
+        <button data-screen="dancefloor">Dancefloor</button>
+        <button data-screen="wall">Blessings Wall</button>
+        <button data-screen="dashboard">Dashboard</button>
+        <button data-screen="budget">Budget</button>
+        <button data-screen="planning">Planning</button>
+        <button data-screen="contacts">Contacts</button>
+      </nav>
+      <div class="sidebar-note">Prototype: household invite-code wedding portal + calm command centre.</div>
+    </aside>
+
+    <main>
+      <section id="landing" class="screen active hero-screen">
+        <div class="pattern-band"></div>
+        <div class="hero-card">
+          <p class="eyebrow">You are warmly invited</p>
+          <h1>Ashley <span>&</span> Hazel</h1>
+          <p class="date">Saturday 19 June 2027</p>
+          <p class="hero-copy">Two families, two cultures, one celebration — love, blessings, music, food, laughter, and the people who made us who we are.</p>
+          <div class="invite-box">
+            <label for="invite">Enter your household invite code</label>
+            <div class="code-row"><input id="invite" value="BLESS-042" /><button data-screen="guest-home">Enter the celebration</button></div>
+            <small>Guest-only areas include RSVP, profiles, music requests, and the blessings wall.</small>
+          </div>
+        </div>
+      </section>
+
+      <section id="guest-home" class="screen">
+        <header class="page-header old-web-header">
+          <p class="eyebrow">Welcome, Auntie Denise & Uncle Mark</p>
+          <h2>The celebration starts here</h2>
+          <p>You have <strong>2 day guest places</strong> reserved. RSVP once, then any changes go through Ashley & Hazel.</p>
+        </header>
+        <div class="grid three">
+          <article class="card focus"><span class="stamp">♥</span><h3>RSVP status</h3><p>Not submitted yet.</p><button data-screen="rsvp">Complete RSVP</button></article>
+          <article class="card"><h3>Countdown</h3><p class="big-number">377</p><p>days to go</p></article>
+          <article class="card music-widget"><p>Currently playing</p><h3>No Woman, No Cry</h3><p>Bob Marley & The Wailers</p><small>Selected by Ashley & Hazel</small></article>
+        </div>
+        <div class="grid two">
+          <article class="card"><h3>Travel & Stay</h3><p>Venue, parking, train, taxi, hotel suggestions and practical notes for travelling guests.</p></article>
+          <article class="card"><h3>Blessings & Contributions</h3><p>Your love and presence mean the most. If you wish, there will be a gentle way to contribute to our next chapter.</p></article>
+        </div>
+      </section>
+
+      <section id="rsvp" class="screen">
+        <header class="page-header"><p class="eyebrow">Guest-specific RSVP</p><h2>We’ve saved your places</h2><p>Please confirm each invited guest. Meal, allergy, dietary and accessibility notes are recorded per person.</p></header>
+        <div class="rsvp-card">
+          <div class="guest-row"><div><h3>Denise Johnson</h3><p>Day guest · adult meal</p></div><label><input type="checkbox" checked /> Attending</label></div>
+          <div class="form-grid"><label>Meal choice<select><option>Jerk chicken with rice & peas</option><option>Vegetarian celebration plate</option><option>Children's meal</option></select></label><label>Dietary/allergy notes<input placeholder="e.g. nut allergy" /></label></div>
+          <div class="guest-row"><div><h3>Mark Johnson</h3><p>Day guest · adult meal</p></div><label><input type="checkbox" checked /> Attending</label></div>
+          <div class="form-grid"><label>Meal choice<select><option>Vegetarian celebration plate</option><option>Jerk chicken with rice & peas</option><option>Children's meal</option></select></label><label>Accessibility notes<input placeholder="Optional" /></label></div>
+          <div class="notice">After submission, RSVP changes require admin approval.</div>
+          <button class="primary">Submit RSVP</button>
+        </div>
+      </section>
+
+      <section id="story" class="screen">
+        <header class="page-header"><p class="eyebrow">Story-led About Us</p><h2>Our story, our roots, our blessing</h2></header>
+        <article class="story-card">
+          <p>This day is built from the people, places, prayers, jokes, lessons, late-night talks, and dancefloor memories that shaped us.</p>
+          <p>Hazel’s Shona heritage and Ashley’s Jamaican descent are woven through the celebration visually and emotionally — in the warmth, the rhythm, the colour, the family feeling, and the blessings carried into the room.</p>
+          <p>The heart is more than decoration here. It is Hazel’s symbol of love, care and connection, repeated gently across the site as a sign that something has been received, completed, or shared with love.</p>
+        </article>
+      </section>
+
+      <section id="profiles" class="screen">
+        <header class="page-header"><p class="eyebrow">Old-web profile cards</p><h2>Meet the wedding party</h2><p>Funny, warm, guest-only profile cards for bride, groom, best man, parents, children and special family.</p></header>
+        <div class="profile-grid">
+          <article class="profile-card"><div class="avatar">H</div><h3>Hazel.exe</h3><p class="role">Bride</p><p><strong>Status:</strong> getting married, somehow calmly.</p><p><strong>Known for:</strong> accounting precision, warm heart, and being right about the budget.</p><p><strong>Favourite song:</strong> TBC</p></article>
+          <article class="profile-card"><div class="avatar">A</div><h3>Ashley.html</h3><p class="role">Groom</p><p><strong>Status:</strong> building the wedding website because of course he is.</p><p><strong>Known for:</strong> tech, storytelling, and turning simple ideas into systems.</p><p><strong>Favourite song:</strong> TBC</p></article>
+          <article class="profile-card"><div class="avatar">B</div><h3>BestMan_01</h3><p class="role">Best Man</p><p><strong>Known for:</strong> being trusted just enough to hold a microphone.</p><p><strong>Message:</strong> Bring your best dancefloor energy.</p></article>
+        </div>
+      </section>
+
+      <section id="dancefloor" class="screen">
+        <header class="page-header"><p class="eyebrow">Public fun feature</p><h2>Build the wedding soundtrack</h2><p>All submitted songs appear publicly, guests can react, and Ashley & Hazel can mark tracks for the DJ.</p></header>
+        <div class="grid two">
+          <article class="card request-form"><h3>Request a song</h3><label>Song title<input value="Candy" /></label><label>Artist<input value="Cameo" /></label><label>Dedication<textarea>Because the aunties will riot if this does not play.</textarea></label><button class="primary">Add to the wall</button></article>
+          <article class="card playlist"><p class="eyebrow">Currently playing</p><h3>September</h3><p>Earth, Wind & Fire</p><small>Rotating from approved/manual picks only.</small></article>
+        </div>
+        <div class="song-wall">
+          <article><strong>Candy</strong><span>Cameo</span><p>Requested by Auntie Denise</p><button>♥ 12</button></article>
+          <article><strong>Could You Be Loved</strong><span>Bob Marley</span><p>Requested by Mark</p><button>♥ 9</button></article>
+          <article><strong>Essence</strong><span>Wizkid ft. Tems</span><p>Requested by Cousin T</p><button>♥ 7</button></article>
+        </div>
+      </section>
+
+      <section id="wall" class="screen">
+        <header class="page-header"><p class="eyebrow">Sign the wall</p><h2>Leave us a blessing</h2><p>Old-school guestbook love: messages appear instantly, can be reacted to, and can be pinned or hidden by admins.</p></header>
+        <div class="wall-posts">
+          <article><span class="pin">Pinned</span><h3>Auntie Denise</h3><p>May your home be full of laughter, music, patience, and good food. Blessings always.</p><button>♥ 18</button></article>
+          <article><h3>The Johnsons</h3><p>We cannot wait to celebrate with you both. Also, Ashley, please do not deploy the website during the speeches.</p><button>♥ 23</button></article>
+          <article><h3>Cousin T</h3><p>Old web guestbook? Say less. This is already iconic.</p><button>♥ 15</button></article>
+        </div>
+      </section>
+
+      <section id="dashboard" class="screen dashboard-screen">
+        <header class="page-header"><p class="eyebrow">Private Command Centre</p><h2>Good evening, Hazel & Ashley</h2><p class="calm">You’re on track. There are 3 things worth your attention this week. Nothing is overdue today.</p></header>
+        <div class="grid four">
+          <article class="metric"><span>Budget health</span><strong>£820 risk</strong><small>Forecast over current allocation</small></article>
+          <article class="metric"><span>Planning</span><strong>7 tasks</strong><small>3 due this month</small></article>
+          <article class="metric"><span>Contacts</span><strong>2 follow-ups</strong><small>Photographer + venue</small></article>
+          <article class="metric"><span>RSVPs</span><strong>21 / 48</strong><small>Guest replies received</small></article>
+        </div>
+        <div class="grid two">
+          <article class="card"><h3>What matters this week</h3><ol><li>Confirm accommodation recommendations.</li><li>Review photographer quote.</li><li>Choose meal wording for RSVP.</li></ol></article>
+          <article class="card"><h3>Open decisions</h3><p>2 decisions need both of you: contribution wording and evening schedule visibility.</p></article>
+        </div>
+      </section>
+
+      <section id="budget" class="screen">
+        <header class="page-header"><p class="eyebrow">Accountant-friendly budget</p><h2>Honest, legitimate budget tracking</h2><p>Estimated, quoted, committed, invoiced, paid, due, variance and contingency are kept separate.</p></header>
+        <table>
+          <thead><tr><th>Category</th><th>Allocated</th><th>Forecast</th><th>Paid</th><th>Variance</th><th>Status</th></tr></thead>
+          <tbody><tr><td>Venue</td><td>£4,500</td><td>£4,500</td><td>£1,000</td><td>£0</td><td>On track</td></tr><tr><td>Photography</td><td>£1,200</td><td>£1,650</td><td>£0</td><td>+£450</td><td>Review</td></tr><tr><td>Decor</td><td>£900</td><td>£1,270</td><td>£100</td><td>+£370</td><td>Forecast risk</td></tr></tbody>
+        </table>
+      </section>
+
+      <section id="planning" class="screen">
+        <header class="page-header"><p class="eyebrow">Planning board</p><h2>Tasks, owners, decisions and waiting-on</h2></header>
+        <div class="kanban"><div><h3>To do</h3><p>Draft travel page</p><p>Confirm meal options</p></div><div><h3>Doing</h3><p>Build guest list</p><p>Source profile photos</p></div><div><h3>Waiting</h3><p>Venue parking details</p><p>Photographer quote</p></div><div><h3>Done</h3><p>Core feature rules accepted</p></div></div>
+      </section>
+
+      <section id="contacts" class="screen">
+        <header class="page-header"><p class="eyebrow">Contacts</p><h2>Suppliers, venue, family helpers</h2><p>Contacts link to tasks and budget items so nothing floats loose.</p></header>
+        <div class="contact-list"><article><h3>Venue Coordinator</h3><p>Linked tasks: parking details, final numbers, payment schedule.</p><p>Linked budget: Venue deposit and balance.</p></article><article><h3>Photographer</h3><p>Linked tasks: review quote, confirm package.</p><p>Linked budget: Photography forecast risk.</p></article><article><h3>DJ</h3><p>Linked tasks: export approved playlist, confirm do-not-play list.</p><p>Linked data: song request statuses.</p></article></div>
+      </section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

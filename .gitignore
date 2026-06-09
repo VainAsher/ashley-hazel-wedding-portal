@@ -1,0 +1,29 @@
+﻿# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Dependencies/build outputs
+node_modules/
+dist/
+build/
+.cache/
+coverage/
+
+# Runtime/local data
+.env
+.env.*
+!.env.example
+*.log
+
+# Wedding/private data - keep real guest data out of Git by default
+/data/private/
+/data/exports/
+/data/imports/
+*.csv
+*.xlsx
+*.xls
+*.sqlite
+*.sqlite3
+*.db
