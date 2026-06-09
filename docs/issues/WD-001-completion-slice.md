@@ -4,6 +4,7 @@ Status: Open
 Project: Wedding Dashboard
 Repo: `C:\dev\ashley-hazel-wedding-portal-prototype`
 Created: 2026-06-09
+GitHub Issue: https://github.com/VainAsher/ashley-hazel-wedding-portal/issues/1
 
 ## Goal
 
@@ -46,3 +47,4 @@ Turn the clickable static prototype into a safe, reviewable baseline for Wedding
 ## Privacy Gate
 
 Before using real wedding data, create a separate data-handling issue and update `docs/privacy/DATA_BOUNDARY.md`.
+

@@ -28,8 +28,9 @@ Open `index.html` in a browser.
 - Honest accountant-friendly budget dashboard
 
 ## Canonical status
-This folder is now the canonical local Git repo for the Wedding Dashboard prototype baseline. Use synthetic data only until the data boundary in docs/privacy/DATA_BOUNDARY.md is approved for real wedding data.
+This folder is now the canonical Git repo for the Wedding Dashboard prototype baseline, backed by a private GitHub remote at https://github.com/VainAsher/ashley-hazel-wedding-portal. Use synthetic data only until the data boundary in docs/privacy/DATA_BOUNDARY.md is approved for real wedding data.
 
 ## First issue-backed slice
 Start with docs/issues/WD-001-completion-slice.md.
+
 

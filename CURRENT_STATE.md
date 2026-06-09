@@ -1,7 +1,7 @@
 ﻿# Current State
 
 Date: 2026-06-09
-Status: Canonical local Git repo baseline
+Status: Canonical private GitHub repo baseline
 
 ## Summary
 
@@ -34,3 +34,12 @@ Do not commit:
 `docs/issues/WD-001-completion-slice.md` is the first issue-backed completion slice.
 
 The next implementation should turn the clickable prototype into a safe, testable dashboard baseline without introducing real guest data.
+
+## GitHub remote
+
+- Repository: https://github.com/VainAsher/ashley-hazel-wedding-portal
+- Visibility: private
+- Default branch: main
+- First issue: https://github.com/VainAsher/ashley-hazel-wedding-portal/issues/1
+
+
