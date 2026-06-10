@@ -9,5 +9,8 @@ SQL migration files for the wedding dashboard database.
 
 ## Applying Migrations
 ```bash
-PGPASSWORD='wedding_dev_2026' psql -h localhost -U wedding_dev -d wedding -f migrations/NNN_description.sql
+cd ~/wedding-dashboard/production/backend
+set -a && . ./.env && set +a
+cd ../database
+psql "$DATABASE_URL" -f migrations/NNN_description.sql
 ```
