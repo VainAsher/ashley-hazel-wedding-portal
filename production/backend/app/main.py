@@ -21,7 +21,12 @@ app.include_router(guests.router)
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy"}
+    return {"status": "healthy", "message": "Wedding Dashboard API is running!"}
+
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to Wedding Dashboard API"}
 
 
 if __name__ == "__main__":
