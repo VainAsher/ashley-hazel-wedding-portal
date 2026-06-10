@@ -41,3 +41,13 @@
 - Notes: Added pytest coverage for guest CRUD endpoints and added `httpx` so FastAPI `TestClient` can run.
 - Verification: Ran `PYTHONPATH=. venv/bin/pytest tests/test_guests.py -v`; 8 tests passed.
 - Follow-up: Tests isolate cleanup to guests with emails beginning `pytest-guest` and follow the actual `wedding_id`/`name` schema.
+
+### TASK-005: Create Guest List Component
+- Status: COMPLETE
+- Date: 2026-06-10
+- Time: 60 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/13
+- Commit: 539516a
+- Notes: Added typed React `GuestList` component with API fetch, loading, empty, error, table, and imperative refresh states.
+- Verification: Ran `npm run build` in `production/frontend`; build passed in the VM frontend state.
+- Follow-up: Frontend app shell files are still untracked setup state on the VM, so TASK-005 staged only the component file.
