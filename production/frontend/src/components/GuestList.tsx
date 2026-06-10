@@ -30,6 +30,10 @@ export interface Guest {
 interface GuestListProps {
   apiBaseUrl?: string
   onCountChange?: (count: number) => void
+  onDeleteGuest?: (guest: Guest) => void
+  onEditGuest?: (guest: Guest) => void
+  onSelectGuest?: (guest: Guest) => void
+  selectedGuestId?: number | null
 }
 
 export interface GuestListHandle {
@@ -45,10 +49,21 @@ function formatValue(value: string | number | null): string {
 }
 
 export const GuestList = forwardRef<GuestListHandle, GuestListProps>(
-  function GuestList({ apiBaseUrl = API_BASE_URL, onCountChange }, ref) {
+  function GuestList(
+    {
+      apiBaseUrl = API_BASE_URL,
+      onCountChange,
+      onDeleteGuest,
+      onEditGuest,
+      onSelectGuest,
+      selectedGuestId,
+    },
+    ref,
+  ) {
     const [guests, setGuests] = useState<Guest[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const hasActions = Boolean(onDeleteGuest || onEditGuest || onSelectGuest)
 
     const fetchGuests = useCallback(async () => {
       setLoading(true)
@@ -99,6 +114,7 @@ export const GuestList = forwardRef<GuestListHandle, GuestListProps>(
         <table style={tableStyle}>
           <thead>
             <tr>
+              {hasActions && <th style={headerCellStyle}>Actions</th>}
               <th style={headerCellStyle}>Name</th>
               <th style={headerCellStyle}>Email</th>
               <th style={headerCellStyle}>Phone</th>
@@ -114,22 +130,59 @@ export const GuestList = forwardRef<GuestListHandle, GuestListProps>(
             </tr>
           </thead>
           <tbody>
-            {guests.map((guest) => (
-              <tr key={guest.id}>
-                <td style={cellStyle}>{guest.name}</td>
-                <td style={cellStyle}>{formatValue(guest.email)}</td>
-                <td style={cellStyle}>{formatValue(guest.phone)}</td>
-                <td style={cellStyle}>{formatValue(guest.relationship)}</td>
-                <td style={cellStyle}>{guest.rsvp_status}</td>
-                <td style={cellStyle}>{formatValue(guest.dietary_restrictions)}</td>
-                <td style={cellStyle}>{formatValue(guest.plus_one_name)}</td>
-                <td style={cellStyle}>{formatValue(guest.plus_one_rsvp)}</td>
-                <td style={cellStyle}>{formatValue(guest.plus_one_dietary)}</td>
-                <td style={cellStyle}>{formatValue(guest.table_number)}</td>
-                <td style={cellStyle}>{formatValue(guest.seat_number)}</td>
-                <td style={cellStyle}>{formatValue(guest.notes)}</td>
-              </tr>
-            ))}
+            {guests.map((guest) => {
+              const isSelected = selectedGuestId === guest.id
+              return (
+                <tr key={guest.id} style={isSelected ? selectedRowStyle : undefined}>
+                  {hasActions && (
+                    <td style={{ ...cellStyle, ...actionCellStyle }}>
+                      {onSelectGuest && (
+                        <button
+                          aria-label={`View ${guest.name}`}
+                          onClick={() => onSelectGuest(guest)}
+                          style={actionButtonStyle}
+                          type="button"
+                        >
+                          View
+                        </button>
+                      )}
+                      {onEditGuest && (
+                        <button
+                          aria-label={`Edit ${guest.name}`}
+                          onClick={() => onEditGuest(guest)}
+                          style={actionButtonStyle}
+                          type="button"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {onDeleteGuest && (
+                        <button
+                          aria-label={`Delete ${guest.name}`}
+                          onClick={() => onDeleteGuest(guest)}
+                          style={{ ...actionButtonStyle, ...dangerButtonStyle }}
+                          type="button"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </td>
+                  )}
+                  <td style={cellStyle}>{guest.name}</td>
+                  <td style={cellStyle}>{formatValue(guest.email)}</td>
+                  <td style={cellStyle}>{formatValue(guest.phone)}</td>
+                  <td style={cellStyle}>{formatValue(guest.relationship)}</td>
+                  <td style={cellStyle}>{guest.rsvp_status}</td>
+                  <td style={cellStyle}>{formatValue(guest.dietary_restrictions)}</td>
+                  <td style={cellStyle}>{formatValue(guest.plus_one_name)}</td>
+                  <td style={cellStyle}>{formatValue(guest.plus_one_rsvp)}</td>
+                  <td style={cellStyle}>{formatValue(guest.plus_one_dietary)}</td>
+                  <td style={cellStyle}>{formatValue(guest.table_number)}</td>
+                  <td style={cellStyle}>{formatValue(guest.seat_number)}</td>
+                  <td style={cellStyle}>{formatValue(guest.notes)}</td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -157,7 +210,7 @@ const tableWrapStyle = {
 
 const tableStyle = {
   borderCollapse: 'collapse' as const,
-  minWidth: '1120px',
+  minWidth: '1260px',
   width: '100%',
 }
 
@@ -178,4 +231,32 @@ const cellStyle = {
   fontSize: '14px',
   padding: '10px',
   verticalAlign: 'top' as const,
+}
+
+const selectedRowStyle = {
+  background: '#f0f7f4',
+}
+
+const actionCellStyle = {
+  display: 'flex',
+  flexWrap: 'wrap' as const,
+  gap: '6px',
+  minWidth: '180px',
+}
+
+const actionButtonStyle = {
+  background: '#fff',
+  border: '1px solid #a9b1bd',
+  borderRadius: '4px',
+  color: '#1f2933',
+  cursor: 'pointer',
+  font: 'inherit',
+  fontSize: '13px',
+  fontWeight: 700,
+  padding: '6px 8px',
+}
+
+const dangerButtonStyle = {
+  borderColor: '#d64545',
+  color: '#9f1d1d',
 }
