@@ -13,8 +13,18 @@ Full-stack wedding planning and coordination platform.
 ```bash
 cd backend
 pip install -r requirements.txt
+cp .env.example .env
+# Edit .env and set DATABASE_URL for your local PostgreSQL database.
 python main.py
 ```
+
+The backend fails fast when required configuration is missing. At minimum, set:
+
+```bash
+DATABASE_URL=postgresql://user:password@localhost:5432/wedding
+```
+
+Never commit `.env`; only `.env.example` belongs in git.
 
 ### Frontend
 ```bash
