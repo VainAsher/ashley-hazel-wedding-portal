@@ -1,6 +1,7 @@
 from enum import Enum
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +19,14 @@ class Settings(BaseSettings):
     )
 
     environment: Environment = Environment.DEVELOPMENT
+    debug: bool = False
+
+    database_url: str = Field(min_length=1)
+    db_pool_size: int = Field(default=10, ge=1)
+    db_max_overflow: int = Field(default=20, ge=0)
+
+    app_host: str = "0.0.0.0"
+    app_port: int = Field(default=3001, ge=1, le=65535)
 
     cors_origins_development: str = (
         "http://localhost:3000,"

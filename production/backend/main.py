@@ -1,9 +1,11 @@
 """Compatibility entrypoint for running the backend from this directory."""
 
 from app.main import app
+from app.config import get_settings
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=3001)
+    settings = get_settings()
+    uvicorn.run(app, host=settings.app_host, port=settings.app_port)
