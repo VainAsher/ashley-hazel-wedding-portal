@@ -124,3 +124,38 @@ export function GuestsPage() {
 
 ### Verification
 TASK-006 bundled `GuestForm.tsx` directly with esbuild and ran `npm run build` in `production/frontend`; both passed in the VM frontend state.
+
+## Guests Page
+
+Path: `production/frontend/src/pages/Guests.tsx`
+
+### Purpose
+Combines guest creation and guest listing into one guest-management page.
+
+### Exports
+- `Guests`: React page component.
+
+### Behavior
+- Shows `Guest Management` heading.
+- Tracks and displays the current guest count from `GuestList`.
+- Toggles the `GuestForm` with Add Guest / Cancel.
+- Hides the form after successful guest creation.
+- Calls `GuestListHandle.refresh()` after guest creation so the table reloads.
+
+### Dependencies
+- `GuestForm`
+- `GuestList`
+- `GuestListHandle`
+
+### Usage
+
+```tsx
+import { Guests } from './pages/Guests'
+
+export function App() {
+  return <Guests />
+}
+```
+
+### Verification
+TASK-007 bundled `Guests.tsx` directly with esbuild and ran `npm run build` in `production/frontend`; both passed in the VM frontend state.

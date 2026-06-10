@@ -61,3 +61,13 @@
 - Notes: Added typed React `GuestForm` component with all guest-create fields, client validation, API submission, success/error states, form reset, and success callback.
 - Verification: Bundled `GuestForm.tsx` directly with esbuild and ran `npm run build`; both passed in the VM frontend state.
 - Follow-up: TASK-006 staged only the component file because the frontend app shell remains untracked setup state on the VM.
+
+### TASK-007: Build Guests Page
+- Status: COMPLETE
+- Date: 2026-06-10
+- Time: 60 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/17
+- Commit: f2d6add
+- Notes: Added `Guests` page combining `GuestForm` and `GuestList` with add/cancel toggle, count state, and refresh-after-create behavior.
+- Verification: Bundled `Guests.tsx` directly with esbuild and ran `npm run build`; both passed in the VM frontend state.
+- Follow-up: TASK-008 will wire the page into the app shell and navigation.
