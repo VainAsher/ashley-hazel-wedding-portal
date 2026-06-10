@@ -1,12 +1,19 @@
 """FastAPI main application"""
 
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api import guests
 from app.config import Environment, get_settings
+from app.logging import configure_logging
+from app.utils.secrets import SecretMasker
 
 
+configure_logging()
+logger = logging.getLogger(__name__)
 app = FastAPI(title="Wedding Dashboard API", version="0.1.0")
 settings = get_settings()
 
@@ -34,6 +41,15 @@ async def add_security_headers(_request: Request, call_next):
             "max-age=31536000; includeSubDomains"
         )
     return response
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(_request: Request, exc: Exception):
+    logger.error("Unhandled application error: %s", SecretMasker.mask(exc))
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
 
 
 @app.get("/health")
