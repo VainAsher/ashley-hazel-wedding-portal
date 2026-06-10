@@ -71,3 +71,13 @@
 - Notes: Added `Guests` page combining `GuestForm` and `GuestList` with add/cancel toggle, count state, and refresh-after-create behavior.
 - Verification: Bundled `Guests.tsx` directly with esbuild and ran `npm run build`; both passed in the VM frontend state.
 - Follow-up: TASK-008 will wire the page into the app shell and navigation.
+
+### TASK-008: Add Navigation & Integration
+- Status: COMPLETE
+- Date: 2026-06-10
+- Time: 90 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/19
+- Commit: 5e41e43
+- Notes: Added React Router v6 app routing with Home, `/guests`, and fallback routes; tracked the Vite app shell files; configured Vite host/proxy behavior; and switched guest API defaults to relative `/api` paths for browser access and testability.
+- Verification: Ran `npm run build`; ran `npm run test:browser` with Playwright desktop Chromium and Pixel 5 mobile projects covering home-to-guests navigation, direct `/guests` access, fallback routing, mocked guest data rendering, and no browser console/page errors.
+- Follow-up: TASK-009 should expand the browser E2E coverage now that Playwright is installed and routed app access is available.

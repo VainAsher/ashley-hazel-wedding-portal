@@ -1,5 +1,35 @@
 # Wedding Dashboard Component Catalog
 
+## App Shell
+
+Path: `production/frontend/src/App.tsx`
+
+### Purpose
+Provides the browser app shell, primary navigation, and route integration for dashboard pages.
+
+### Exports
+- `App`: React root component wrapped in `BrowserRouter`.
+
+### Routes
+| Route | Component | Notes |
+|---|---|---|
+| `/` | Home dashboard view | Provides the entry point and link to guest management |
+| `/guests` | `Guests` | Renders guest creation and guest list workflow |
+| `*` | Redirect to `/` | Keeps unknown browser routes accessible and recoverable |
+
+### Behavior
+- Shows persistent primary navigation with Home and Guests links.
+- Applies active navigation styling through `NavLink`.
+- Allows direct browser access to `/guests`.
+- Redirects unknown routes back to Home.
+
+### Dependencies
+- `react-router-dom`
+- `Guests`
+
+### Verification
+TASK-008 ran `npm run build` and `npm run test:browser`. Browser validation covered desktop Chromium and Pixel 5 mobile scenarios for home-to-guests navigation, direct `/guests` access, fallback routing, mocked guest data rendering, and no console/page errors.
+
 ## GuestList
 
 Path: `production/frontend/src/components/GuestList.tsx`
@@ -16,7 +46,7 @@ Fetches guests from the backend API and renders them in a responsive, horizontal
 
 | Prop | Type | Required | Default | Notes |
 |---|---|---:|---|---|
-| `apiBaseUrl` | string | no | `http://192.168.0.32:3001` | Override for alternate environments |
+| `apiBaseUrl` | string | no | `import.meta.env.VITE_API_BASE_URL ?? ''` | Empty default uses relative `/api/guests` requests through the active host/proxy |
 | `onCountChange` | `(count: number) => void` | no | none | Called after successful load or error reset |
 
 ### Ref Handle
@@ -65,7 +95,7 @@ export function GuestsPage() {
 ```
 
 ### Verification
-TASK-005 ran `npm run build` in `production/frontend` and the build passed in the VM frontend state.
+TASK-005 ran `npm run build` in `production/frontend` and the build passed in the VM frontend state. TASK-008 added browser coverage for routed guest list rendering with mocked guest API data.
 
 ## GuestForm
 
@@ -81,7 +111,7 @@ Creates guests through `POST /api/guests` using the live guest schema.
 
 | Prop | Type | Required | Default | Notes |
 |---|---|---:|---|---|
-| `apiBaseUrl` | string | no | `http://192.168.0.32:3001` | Override for alternate environments |
+| `apiBaseUrl` | string | no | `import.meta.env.VITE_API_BASE_URL ?? ''` | Empty default uses relative `/api/guests` requests through the active host/proxy |
 | `defaultWeddingId` | number | no | `1` | Initial value for the required `wedding_id` field |
 | `onSuccess` | `(guest: Guest) => void` | no | none | Called with the created guest after a successful submit |
 
@@ -123,7 +153,7 @@ export function GuestsPage() {
 ```
 
 ### Verification
-TASK-006 bundled `GuestForm.tsx` directly with esbuild and ran `npm run build` in `production/frontend`; both passed in the VM frontend state.
+TASK-006 bundled `GuestForm.tsx` directly with esbuild and ran `npm run build` in `production/frontend`; both passed in the VM frontend state. TASK-008 confirmed the routed app shell can load guest-management UI in desktop and mobile browser contexts.
 
 ## Guests Page
 
@@ -158,4 +188,4 @@ export function App() {
 ```
 
 ### Verification
-TASK-007 bundled `Guests.tsx` directly with esbuild and ran `npm run build` in `production/frontend`; both passed in the VM frontend state.
+TASK-007 bundled `Guests.tsx` directly with esbuild and ran `npm run build` in `production/frontend`; both passed in the VM frontend state. TASK-008 added Playwright route coverage that exercises this page through `/guests` on desktop and mobile browser projects.
