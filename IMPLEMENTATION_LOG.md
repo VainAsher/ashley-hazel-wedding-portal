@@ -31,3 +31,13 @@
 - Notes: Added FastAPI guest CRUD routes, Pydantic create/update/response schemas, and router registration in `app/main.py`.
 - Verification: Ran compile checks and curl-tested create, list, detail, update, validation error, missing guest 404, delete, and post-delete 404 on temporary port 3101.
 - Follow-up: API follows the live schema with `wedding_id` and `name`, not the simplified `first_name`/`last_name` snippet.
+
+### TASK-004: Create Guest API Tests
+- Status: COMPLETE
+- Date: 2026-06-10
+- Time: 60 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/11
+- Commit: 3e199eb
+- Notes: Added pytest coverage for guest CRUD endpoints and added `httpx` so FastAPI `TestClient` can run.
+- Verification: Ran `PYTHONPATH=. venv/bin/pytest tests/test_guests.py -v`; 8 tests passed.
+- Follow-up: Tests isolate cleanup to guests with emails beginning `pytest-guest` and follow the actual `wedding_id`/`name` schema.
