@@ -21,3 +21,13 @@
 - Notes: Added the backend DB package with SQLAlchemy engine/session helpers, shared `Base`, `RsvpStatus`, `Wedding`, and `Guest` mapped to the imported schema.
 - Verification: Confirmed model imports, `Guest.__tablename__`, 16 mapped columns, `Base.metadata.tables`, live `SessionLocal` query against `guests`, and `compileall app/db`.
 - Follow-up: The task snippet used `first_name`/`last_name`, but the actual imported schema has a single `name` column and RSVP/plus-one/seating fields.
+
+### TASK-003: Create Guest CRUD API Endpoints
+- Status: COMPLETE
+- Date: 2026-06-10
+- Time: 90 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/9
+- Commit: fd1a7eb
+- Notes: Added FastAPI guest CRUD routes, Pydantic create/update/response schemas, and router registration in `app/main.py`.
+- Verification: Ran compile checks and curl-tested create, list, detail, update, validation error, missing guest 404, delete, and post-delete 404 on temporary port 3101.
+- Follow-up: API follows the live schema with `wedding_id` and `name`, not the simplified `first_name`/`last_name` snippet.
