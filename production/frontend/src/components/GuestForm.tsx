@@ -1,14 +1,18 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 
 import type { Guest } from './GuestList'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 type RsvpStatus = 'pending' | 'accepted' | 'declined' | 'tentative'
+type GuestFormMode = 'create' | 'edit'
 
 interface GuestFormProps {
   apiBaseUrl?: string
   defaultWeddingId?: number
+  guest?: Guest | null
+  mode?: GuestFormMode
+  onCancel?: () => void
   onSuccess?: (guest: Guest) => void
 }
 
@@ -46,6 +50,28 @@ function initialFormState(defaultWeddingId: number): GuestFormState {
   }
 }
 
+function formStateFromGuest(guest: Guest | null | undefined, defaultWeddingId: number) {
+  if (!guest) {
+    return initialFormState(defaultWeddingId)
+  }
+
+  return {
+    wedding_id: String(guest.wedding_id),
+    name: guest.name,
+    email: guest.email ?? '',
+    phone: guest.phone ?? '',
+    relationship: guest.relationship ?? '',
+    rsvp_status: guest.rsvp_status,
+    dietary_restrictions: guest.dietary_restrictions ?? '',
+    plus_one_name: guest.plus_one_name ?? '',
+    plus_one_rsvp: guest.plus_one_rsvp ?? '',
+    plus_one_dietary: guest.plus_one_dietary ?? '',
+    table_number: guest.table_number === null ? '' : String(guest.table_number),
+    seat_number: guest.seat_number === null ? '' : String(guest.seat_number),
+    notes: guest.notes ?? '',
+  }
+}
+
 function optionalText(value: string): string | null {
   const trimmed = value.trim()
   return trimmed === '' ? null : trimmed
@@ -59,13 +85,13 @@ function optionalNumber(value: string): number | null {
   return Number(value)
 }
 
-function extractErrorMessage(payload: unknown): string {
+function extractErrorMessage(payload: unknown, fallback: string): string {
   if (typeof payload === 'string') {
     return payload
   }
 
   if (!payload || typeof payload !== 'object') {
-    return 'Failed to add guest'
+    return fallback
   }
 
   const detail = 'detail' in payload ? payload.detail : null
@@ -84,20 +110,48 @@ function extractErrorMessage(payload: unknown): string {
       .join(', ')
   }
 
-  return 'Failed to add guest'
+  return fallback
+}
+
+function buildGuestPayload(formData: GuestFormState) {
+  return {
+    wedding_id: Number(formData.wedding_id),
+    name: formData.name.trim(),
+    email: optionalText(formData.email),
+    phone: optionalText(formData.phone),
+    relationship: optionalText(formData.relationship),
+    rsvp_status: formData.rsvp_status,
+    dietary_restrictions: optionalText(formData.dietary_restrictions),
+    plus_one_name: optionalText(formData.plus_one_name),
+    plus_one_rsvp: formData.plus_one_rsvp || null,
+    plus_one_dietary: optionalText(formData.plus_one_dietary),
+    table_number: optionalNumber(formData.table_number),
+    seat_number: optionalNumber(formData.seat_number),
+    notes: optionalText(formData.notes),
+  }
 }
 
 export function GuestForm({
   apiBaseUrl = API_BASE_URL,
   defaultWeddingId = 1,
+  guest,
+  mode = 'create',
+  onCancel,
   onSuccess,
 }: GuestFormProps) {
+  const isEditing = mode === 'edit'
   const [formData, setFormData] = useState<GuestFormState>(() =>
-    initialFormState(defaultWeddingId),
+    formStateFromGuest(isEditing ? guest : null, defaultWeddingId),
   )
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+
+  useEffect(() => {
+    setFormData(formStateFromGuest(isEditing ? guest : null, defaultWeddingId))
+    setError(null)
+    setSuccess(null)
+  }, [defaultWeddingId, guest, isEditing])
 
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
@@ -141,47 +195,56 @@ export function GuestForm({
       return
     }
 
+    if (isEditing && !guest) {
+      setError('Select a guest to edit.')
+      return
+    }
+
     setLoading(true)
 
     try {
-      const response = await fetch(`${apiBaseUrl}/api/guests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wedding_id: Number(formData.wedding_id),
-          name: formData.name.trim(),
-          email: optionalText(formData.email),
-          phone: optionalText(formData.phone),
-          relationship: optionalText(formData.relationship),
-          rsvp_status: formData.rsvp_status,
-          dietary_restrictions: optionalText(formData.dietary_restrictions),
-          plus_one_name: optionalText(formData.plus_one_name),
-          plus_one_rsvp: formData.plus_one_rsvp || null,
-          plus_one_dietary: optionalText(formData.plus_one_dietary),
-          table_number: optionalNumber(formData.table_number),
-          seat_number: optionalNumber(formData.seat_number),
-          notes: optionalText(formData.notes),
-        }),
-      })
+      const response = await fetch(
+        isEditing ? `${apiBaseUrl}/api/guests/${guest?.id}` : `${apiBaseUrl}/api/guests`,
+        {
+          method: isEditing ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(buildGuestPayload(formData)),
+        },
+      )
 
       const payload = await response.json().catch(() => null)
       if (!response.ok) {
-        throw new Error(extractErrorMessage(payload))
+        throw new Error(
+          extractErrorMessage(
+            payload,
+            isEditing ? 'Failed to update guest' : 'Failed to add guest',
+          ),
+        )
       }
 
-      const createdGuest = payload as Guest
-      setFormData(initialFormState(defaultWeddingId))
-      setSuccess('Guest added successfully.')
-      onSuccess?.(createdGuest)
+      const savedGuest = payload as Guest
+      setFormData(
+        isEditing
+          ? formStateFromGuest(savedGuest, defaultWeddingId)
+          : initialFormState(defaultWeddingId),
+      )
+      setSuccess(isEditing ? 'Guest updated successfully.' : 'Guest added successfully.')
+      onSuccess?.(savedGuest)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add guest')
+      setError(
+        err instanceof Error
+          ? err.message
+          : isEditing
+            ? 'Failed to update guest'
+            : 'Failed to add guest',
+      )
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} style={formStyle}>
+    <form noValidate onSubmit={handleSubmit} style={formStyle}>
       {success && <div style={successStyle}>{success}</div>}
       {error && (
         <div role="alert" style={errorStyle}>
@@ -252,6 +315,7 @@ export function GuestForm({
         <label style={labelStyle}>
           RSVP
           <select
+            aria-label="RSVP"
             name="rsvp_status"
             onChange={handleChange}
             style={inputStyle}
@@ -278,6 +342,7 @@ export function GuestForm({
         <label style={labelStyle}>
           Plus One RSVP
           <select
+            aria-label="Plus One RSVP"
             name="plus_one_rsvp"
             onChange={handleChange}
             style={inputStyle}
@@ -349,9 +414,16 @@ export function GuestForm({
         />
       </label>
 
-      <button disabled={loading} style={buttonStyle} type="submit">
-        {loading ? 'Adding...' : 'Add Guest'}
-      </button>
+      <div style={buttonGroupStyle}>
+        <button disabled={loading} style={buttonStyle} type="submit">
+          {loading ? (isEditing ? 'Saving...' : 'Adding...') : isEditing ? 'Save Guest' : 'Add Guest'}
+        </button>
+        {onCancel && (
+          <button disabled={loading} onClick={onCancel} style={secondaryButtonStyle} type="button">
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   )
 }
@@ -394,6 +466,12 @@ const textareaStyle = {
   resize: 'vertical' as const,
 }
 
+const buttonGroupStyle = {
+  display: 'flex',
+  flexWrap: 'wrap' as const,
+  gap: '10px',
+}
+
 const buttonStyle = {
   background: '#1f6f5b',
   border: '1px solid #1f6f5b',
@@ -402,8 +480,13 @@ const buttonStyle = {
   cursor: 'pointer',
   font: 'inherit',
   fontWeight: 700,
-  justifySelf: 'start',
   padding: '10px 14px',
+}
+
+const secondaryButtonStyle = {
+  ...buttonStyle,
+  background: '#fff',
+  color: '#1f6f5b',
 }
 
 const successStyle = {
