@@ -2,83 +2,9 @@ const buttons = document.querySelectorAll('[data-screen]');
 const screens = document.querySelectorAll('.screen');
 const mainContent = document.querySelector('main');
 
-const mealOptions = [
-  'Jerk chicken with rice & peas',
-  'Vegetarian celebration plate',
-  "Children's meal",
-];
-
-const state = {
-  rsvpSubmitted: false,
-  guests: [
-    {
-      id: 'denise',
-      name: 'Demo Guest One',
-      description: 'Day guest - adult meal',
-      attending: true,
-      meal: 'Jerk chicken with rice & peas',
-      notesLabel: 'Dietary/allergy notes',
-      notesPlaceholder: 'e.g. nut allergy',
-      notes: '',
-    },
-    {
-      id: 'mark',
-      name: 'Demo Guest Two',
-      description: 'Day guest - adult meal',
-      attending: true,
-      meal: 'Vegetarian celebration plate',
-      notesLabel: 'Accessibility notes',
-      notesPlaceholder: 'Optional',
-      notes: '',
-    },
-  ],
-  songs: [
-    {
-      id: 'song-candy',
-      title: 'Candy',
-      artist: 'Cameo',
-      dedication: 'Requested by Demo Guest One',
-      likes: 12,
-    },
-    {
-      id: 'song-marley',
-      title: 'Could You Be Loved',
-      artist: 'Bob Marley',
-      dedication: 'Requested by Demo Guest Two',
-      likes: 9,
-    },
-    {
-      id: 'song-essence',
-      title: 'Essence',
-      artist: 'Wizkid ft. Tems',
-      dedication: 'Requested by Cousin T',
-      likes: 7,
-    },
-  ],
-  blessings: [
-    {
-      id: 'blessing-denise',
-      author: 'Demo Guest One',
-      message: 'May your home be full of laughter, music, patience, and good food. Blessings always.',
-      likes: 18,
-      pinned: true,
-    },
-    {
-      id: 'blessing-johnsons',
-      author: 'Demo Household',
-      message: 'We cannot wait to celebrate with you both. Also, Ashley, please do not deploy the website during the speeches.',
-      likes: 23,
-      pinned: false,
-    },
-    {
-      id: 'blessing-cousin-t',
-      author: 'Cousin T',
-      message: 'Old web guestbook? Say less. This is already iconic.',
-      likes: 15,
-      pinned: false,
-    },
-  ],
-};
+// Load state from synthetic fixture
+const mealOptions = SYNTHETIC_FIXTURE.mealOptions;
+const state = createAppState();
 
 function showScreen(id, focusContent = false) {
   screens.forEach((screen) => screen.classList.toggle('active', screen.id === id));
