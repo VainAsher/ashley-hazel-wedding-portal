@@ -35,7 +35,7 @@ TASK-008 ran `npm run build` and `npm run test:browser`. Browser validation cove
 Path: `production/frontend/src/components/GuestList.tsx`
 
 ### Purpose
-Fetches guests from the backend API and renders them in a responsive, horizontally scrollable table.
+Fetches guests from the backend API and renders them in a responsive, horizontally scrollable table with optional row-level actions.
 
 ### Exports
 - `GuestList`: React component using `forwardRef`.
@@ -48,6 +48,10 @@ Fetches guests from the backend API and renders them in a responsive, horizontal
 |---|---|---:|---|---|
 | `apiBaseUrl` | string | no | `import.meta.env.VITE_API_BASE_URL ?? ''` | Empty default uses relative `/api/guests` requests through the active host/proxy |
 | `onCountChange` | `(count: number) => void` | no | none | Called after successful load or error reset |
+| `onSelectGuest` | `(guest: Guest) => void` | no | none | Adds a View action for opening details |
+| `onEditGuest` | `(guest: Guest) => void` | no | none | Adds an Edit action for loading the guest into `GuestForm` |
+| `onDeleteGuest` | `(guest: Guest) => void` | no | none | Adds a Delete action for parent-owned deletion |
+| `selectedGuestId` | `number | null` | no | none | Highlights the selected guest row |
 
 ### Ref Handle
 
@@ -59,15 +63,16 @@ interface GuestListHandle {
 }
 ```
 
-Use this from parent pages to refresh the table after form submission.
+Use this from parent pages to refresh the table after form submission or deletion.
 
 ### States
 - Loading: shows a loading message while fetching.
 - Error: shows an alert-style error message when the API request fails.
 - Empty: shows an empty state when the API returns no guests.
-- Loaded: shows a table of guest fields.
+- Loaded: shows a table of guest fields and optional actions.
 
 ### Displayed Fields
+- Actions, when action callbacks are supplied
 - Name
 - Email
 - Phone
@@ -85,35 +90,44 @@ Use this from parent pages to refresh the table after form submission.
 
 ```tsx
 import { useRef } from 'react'
-import { GuestList, type GuestListHandle } from '../components/GuestList'
+import { GuestList, type Guest, type GuestListHandle } from '../components/GuestList'
 
 export function GuestsPage() {
   const listRef = useRef<GuestListHandle>(null)
 
-  return <GuestList ref={listRef} />
+  return (
+    <GuestList
+      ref={listRef}
+      onEditGuest={(guest: Guest) => undefined}
+      onSelectGuest={(guest: Guest) => undefined}
+    />
+  )
 }
 ```
 
 ### Verification
-TASK-005 ran `npm run build` in `production/frontend` and the build passed in the VM frontend state. TASK-008 added browser coverage for routed guest list rendering with mocked guest API data.
+TASK-005 ran `npm run build` in `production/frontend` and the build passed in the VM frontend state. TASK-009 added desktop/mobile Playwright coverage for guest row view, edit, and delete actions.
 
 ## GuestForm
 
 Path: `production/frontend/src/components/GuestForm.tsx`
 
 ### Purpose
-Creates guests through `POST /api/guests` using the live guest schema.
+Creates guests through `POST /api/guests` and updates guests through `PUT /api/guests/{id}` using the live guest schema.
 
 ### Exports
-- `GuestForm`: React component for guest creation.
+- `GuestForm`: React component for guest creation and editing.
 
 ### Props
 
 | Prop | Type | Required | Default | Notes |
 |---|---|---:|---|---|
 | `apiBaseUrl` | string | no | `import.meta.env.VITE_API_BASE_URL ?? ''` | Empty default uses relative `/api/guests` requests through the active host/proxy |
-| `defaultWeddingId` | number | no | `1` | Initial value for the required `wedding_id` field |
-| `onSuccess` | `(guest: Guest) => void` | no | none | Called with the created guest after a successful submit |
+| `defaultWeddingId` | number | no | `1` | Initial value for the required `wedding_id` field in create mode |
+| `guest` | `Guest | null` | no | none | Guest to load when `mode="edit"` |
+| `mode` | `'create' | 'edit'` | no | `'create'` | Selects POST or PUT behavior and submit labels |
+| `onCancel` | `() => void` | no | none | Shows a Cancel button when supplied |
+| `onSuccess` | `(guest: Guest) => void` | no | none | Called with the saved guest after a successful submit |
 
 ### Fields
 - Wedding ID
@@ -132,11 +146,12 @@ Creates guests through `POST /api/guests` using the live guest schema.
 
 ### States
 - Idle: shows the form.
-- Loading: disables submit and shows `Adding...`.
-- Success: shows a success message and clears the form.
+- Loading: disables submit and shows `Adding...` or `Saving...`.
+- Success: shows a success message and clears or refreshes form state.
 - Error: shows validation or API error text.
 
 ### Validation
+- Browser-native validation is disabled with `noValidate` so app-owned validation messages are visible and testable.
 - Wedding ID must be at least `1`.
 - Name is required.
 - Email must contain `@` when provided.
@@ -148,19 +163,19 @@ Creates guests through `POST /api/guests` using the live guest schema.
 import { GuestForm } from '../components/GuestForm'
 
 export function GuestsPage() {
-  return <GuestForm onSuccess={() => undefined} />
+  return <GuestForm mode="create" onSuccess={() => undefined} />
 }
 ```
 
 ### Verification
-TASK-006 bundled `GuestForm.tsx` directly with esbuild and ran `npm run build` in `production/frontend`; both passed in the VM frontend state. TASK-008 confirmed the routed app shell can load guest-management UI in desktop and mobile browser contexts.
+TASK-006 bundled `GuestForm.tsx` directly with esbuild and ran `npm run build` in `production/frontend`; both passed in the VM frontend state. TASK-009 added Playwright coverage for create mode, edit mode, validation errors, API errors, and recovery after success.
 
 ## Guests Page
 
 Path: `production/frontend/src/pages/Guests.tsx`
 
 ### Purpose
-Combines guest creation and guest listing into one guest-management page.
+Combines guest creation, listing, details, editing, and deletion into one guest-management page.
 
 ### Exports
 - `Guests`: React page component.
@@ -168,13 +183,17 @@ Combines guest creation and guest listing into one guest-management page.
 ### Behavior
 - Shows `Guest Management` heading.
 - Tracks and displays the current guest count from `GuestList`.
-- Toggles the `GuestForm` with Add Guest / Cancel.
-- Hides the form after successful guest creation.
-- Calls `GuestListHandle.refresh()` after guest creation so the table reloads.
+- Toggles create mode with Add Guest / Cancel.
+- Shows a detail panel for the selected guest.
+- Loads a selected guest into `GuestForm` for editing.
+- Deletes guests through `DELETE /api/guests/{id}` after browser confirmation.
+- Refreshes `GuestList` after create, update, or delete operations.
+- Shows page-level success and error feedback.
 
 ### Dependencies
 - `GuestForm`
 - `GuestList`
+- `Guest`
 - `GuestListHandle`
 
 ### Usage
@@ -188,4 +207,34 @@ export function App() {
 ```
 
 ### Verification
-TASK-007 bundled `Guests.tsx` directly with esbuild and ran `npm run build` in `production/frontend`; both passed in the VM frontend state. TASK-008 added Playwright route coverage that exercises this page through `/guests` on desktop and mobile browser projects.
+TASK-007 bundled `Guests.tsx` directly with esbuild and ran `npm run build` in `production/frontend`; both passed in the VM frontend state. TASK-009 validated add, view, edit, delete, API error, and validation recovery scenarios in desktop Chromium and Pixel 5 mobile browser projects.
+
+## Browser Tests
+
+Paths:
+- `production/frontend/playwright.config.ts`
+- `production/frontend/tests/browser/navigation.spec.ts`
+- `production/frontend/tests/browser/guest-management.spec.ts`
+- `production/frontend/tests/browser/guest-management-live.spec.ts`
+
+### Purpose
+Provides browser-based validation for routed frontend access and guest-management workflows.
+
+### Coverage
+- Navigation between `/` and `/guests`.
+- Direct `/guests` access and fallback routing.
+- Guest list rendering with mocked API data.
+- Add, view, edit, and delete guest flow with mocked API state.
+- Validation and API error recovery.
+- Optional live full-stack flow that verifies database persistence via the real API.
+
+### Projects
+- `chromium-desktop`: Desktop Chrome viewport, 1366x900.
+- `chromium-mobile`: Pixel 5 emulation.
+
+### Commands
+- `npm run test:browser`: runs deterministic browser tests; live tests are skipped by default.
+- `LIVE_E2E=1 LIVE_API_URL=http://127.0.0.1:3201 VITE_API_BASE_URL=http://127.0.0.1:3201 npx playwright test tests/browser/guest-management-live.spec.ts`: runs the live database-backed browser spec when a FastAPI server is available.
+
+### Verification
+TASK-009 ran `npm run test:browser` with `8 passed` and `2 skipped`, then ran the live full-stack spec with `2 passed` across desktop and mobile projects.

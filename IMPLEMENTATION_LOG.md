@@ -81,3 +81,13 @@
 - Notes: Added React Router v6 app routing with Home, `/guests`, and fallback routes; tracked the Vite app shell files; configured Vite host/proxy behavior; and switched guest API defaults to relative `/api` paths for browser access and testability.
 - Verification: Ran `npm run build`; ran `npm run test:browser` with Playwright desktop Chromium and Pixel 5 mobile projects covering home-to-guests navigation, direct `/guests` access, fallback routing, mocked guest data rendering, and no browser console/page errors.
 - Follow-up: TASK-009 should expand the browser E2E coverage now that Playwright is installed and routed app access is available.
+
+### TASK-009: End-to-End Testing
+- Status: COMPLETE
+- Date: 2026-06-10
+- Time: 120 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/21
+- Commit: 5bbc189
+- Notes: Added the missing UI affordances needed for E2E coverage: guest detail viewing, edit mode, delete actions, page-level success/error feedback, stable browser labels, and deterministic Playwright tests for guest-management flows.
+- Verification: Ran backend pytest (`8 passed`), `npm run build`, `npm run test:browser` (`8 passed`, `2 skipped` live tests by default), and a live full-stack Playwright run with `LIVE_E2E=1` against a temporary FastAPI server (`2 passed` across desktop Chromium and Pixel 5 mobile). Confirmed no leftover `live-e2e-*` database guests after validation.
+- Follow-up: TASK-010 can use the merged per-task PRs and validation evidence to prepare the final Week 1 review package.
