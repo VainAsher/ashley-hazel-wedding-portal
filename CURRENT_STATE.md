@@ -29,11 +29,13 @@ Do not commit:
 - addresses, phone numbers, email addresses, or private notes
 - budget records that should remain private
 
-## Immediate Next Slice
+## Current Work
 
-`docs/issues/WD-002-responsive-accessibility-review-slice.md` is the next issue-backed completion slice.
+`docs/issues/WD-003-interactive-fixture-slice.md` is in progress on branch `feature/wd-003-interactive-fixture-slice`.
 
-The next implementation should make the validated static baseline review-ready on phone, tablet, and desktop by improving responsive behavior, keyboard/focus states, labels, and validation evidence without introducing real data, storage, backend services, or deployment.
+**WD-003** makes the dashboard interactive with synthetic data: replace hard-coded values with a data fixture, enable RSVP and request flows, improve mobile layout, keep all data local to browser.
+
+**GitHub issue:** https://github.com/VainAsher/ashley-hazel-wedding-portal/issues/3
 
 ## GitHub remote
 
