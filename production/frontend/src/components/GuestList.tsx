@@ -6,7 +6,7 @@ import {
   useState,
 } from 'react'
 
-const API_BASE_URL = 'http://192.168.0.32:3001'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export interface Guest {
   id: number
