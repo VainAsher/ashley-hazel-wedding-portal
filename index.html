@@ -133,7 +133,7 @@
       </section>
 
       <section id="budget" class="screen">
-        <header class="page-header"><p class="eyebrow">Accountant-friendly budget</p><h2>Honest, legitimate budget tracking</h2><p>Estimated, quoted, committed, invoiced, paid, due, variance and contingency are kept separate.</p></header>
+        <header class="page-header"><p class="eyebrow">Accountant-friendly budget</p><h2>Honest, legitimate budget tracking</h2><p>Estimated, quoted, committed, invoiced, paid, due, variance and contingency are kept separate.</p><div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button onclick="window.print()" class="primary">🖨️ Print to PDF</button><button onclick="exportBudgetAsText()" class="primary" style="background: #16001f; color: #f6c445;">💾 Export CSV</button></div></header>
         <table>
           <thead><tr><th>Category</th><th>Allocated</th><th>Forecast</th><th>Paid</th><th>Variance</th><th>Status</th></tr></thead>
           <tbody><tr><td>Venue</td><td>£4,500</td><td>£4,500</td><td>£1,000</td><td>£0</td><td>On track</td></tr><tr><td>Photography</td><td>£1,200</td><td>£1,650</td><td>£0</td><td>+£450</td><td>Review</td></tr><tr><td>Decor</td><td>£900</td><td>£1,270</td><td>£100</td><td>+£370</td><td>Forecast risk</td></tr></tbody>
@@ -141,7 +141,7 @@
       </section>
 
       <section id="planning" class="screen">
-        <header class="page-header"><p class="eyebrow">Planning board</p><h2>Tasks, owners, decisions and waiting-on</h2></header>
+        <header class="page-header"><p class="eyebrow">Planning board</p><h2>Tasks, owners, decisions and waiting-on</h2><div style="display: flex; gap: 0.5rem; margin-top: 1rem;"><button onclick="window.print()" class="primary">🖨️ Print to PDF</button><button onclick="exportPlanningAsText()" class="primary" style="background: #16001f; color: #f6c445;">💾 Export Tasks</button></div></header>
         <div class="kanban"><div><h3>To do</h3><p>Draft travel page</p><p>Confirm meal options</p></div><div><h3>Doing</h3><p>Build guest list</p><p>Source profile photos</p></div><div><h3>Waiting</h3><p>Venue parking details</p><p>Photographer quote</p></div><div><h3>Done</h3><p>Core feature rules accepted</p></div></div>
       </section>
 

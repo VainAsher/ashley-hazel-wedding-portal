@@ -279,6 +279,59 @@ function initBlessingsWall() {
   renderBlessings();
 }
 
+// Export functions for WD-004
+function exportBudgetAsText() {
+  const budgetItems = [
+    { category: 'Venue', allocated: '£4,500', forecast: '£4,500', paid: '£1,000', variance: '£0', status: 'On track' },
+    { category: 'Photography', allocated: '£1,200', forecast: '£1,650', paid: '£0', variance: '+£450', status: 'Review' },
+    { category: 'Decor', allocated: '£900', forecast: '£1,270', paid: '£100', variance: '+£370', status: 'Forecast risk' },
+  ];
+
+  let csv = 'WEDDING BUDGET SUMMARY\n';
+  csv += 'Ashley & Hazel - 19 June 2027\n';
+  csv += 'Generated: ' + new Date().toLocaleDateString() + '\n\n';
+  csv += 'Category,Allocated,Forecast,Paid,Variance,Status\n';
+
+  budgetItems.forEach((item) => {
+    csv += `${item.category},${item.allocated},${item.forecast},${item.paid},${item.variance},${item.status}\n`;
+  });
+
+  downloadFile(csv, 'wedding-budget-' + new Date().toISOString().split('T')[0] + '.txt');
+}
+
+function exportPlanningAsText() {
+  const planningTasks = {
+    'To do': ['Draft travel page', 'Confirm meal options'],
+    'Doing': ['Build guest list', 'Source profile photos'],
+    'Waiting': ['Venue parking details', 'Photographer quote'],
+    'Done': ['Core feature rules accepted'],
+  };
+
+  let text = 'WEDDING PLANNING BOARD\n';
+  text += 'Ashley & Hazel - 19 June 2027\n';
+  text += 'Generated: ' + new Date().toLocaleDateString() + '\n\n';
+
+  Object.keys(planningTasks).forEach((status) => {
+    text += status.toUpperCase() + ' (' + planningTasks[status].length + ')\n';
+    planningTasks[status].forEach((task) => {
+      text += '  • ' + task + '\n';
+    });
+    text += '\n';
+  });
+
+  downloadFile(text, 'wedding-planning-' + new Date().toISOString().split('T')[0] + '.txt');
+}
+
+function downloadFile(content, filename) {
+  const element = document.createElement('a');
+  element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
+  element.setAttribute('download', filename);
+  element.style.display = 'none';
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
+}
+
 setupAccessibility();
 buttons.forEach((button) => button.addEventListener('click', () => showScreen(button.dataset.screen, true)));
 initRsvp();
