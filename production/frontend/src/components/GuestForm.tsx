@@ -2,7 +2,7 @@ import { useState, type ChangeEvent, type FormEvent } from 'react'
 
 import type { Guest } from './GuestList'
 
-const API_BASE_URL = 'http://192.168.0.32:3001'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 type RsvpStatus = 'pending' | 'accepted' | 'declined' | 'tentative'
 
