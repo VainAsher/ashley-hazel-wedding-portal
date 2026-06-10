@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 from datetime import date, datetime, time
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Integer, String, Text, Time, text
+from sqlalchemy import Date, DateTime, Enum, ForeignKey, Index, Integer, String, Text, Time, text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship as orm_relationship
 
 
@@ -48,6 +48,20 @@ class Wedding(Base):
 
 class Guest(Base):
     __tablename__ = "guests"
+    __table_args__ = (
+        Index("idx_guests_email", "email", postgresql_where=text("email IS NOT NULL")),
+        Index("idx_guests_name", "name"),
+        Index("idx_guests_created_at", "created_at"),
+        Index("idx_guests_wedding_rsvp", "wedding_id", "rsvp_status"),
+        Index("idx_guests_wedding_created", "wedding_id", text("created_at DESC")),
+        Index(
+            "idx_guests_table_assignment",
+            "wedding_id",
+            "table_number",
+            "seat_number",
+            postgresql_where=text("table_number IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     wedding_id: Mapped[int] = mapped_column(
