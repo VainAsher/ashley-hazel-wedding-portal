@@ -15,7 +15,7 @@ This is the canonical local source for the Ashley and Hazel Wedding Portal (Wedd
 - ✅ WD-003: Interactive fixture and state management (merged, issue #3 closed)
 
 **Current Slice:**
-- 🔄 WD-004: Print and export functionality (in progress)
+- ✅ WD-004: Print and export functionality (COMPLETE & VALIDATED)
 
 ## Data Safety
 
