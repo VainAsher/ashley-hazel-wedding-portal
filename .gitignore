@@ -5,11 +5,16 @@ Thumbs.db
 .idea/
 
 # Dependencies/build outputs
+__pycache__/
+*.py[cod]
+.pytest_cache/
+venv/
 node_modules/
 dist/
 build/
 .cache/
 coverage/
+test-results/
 
 # Runtime/local data
 .env
