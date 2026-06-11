@@ -1,0 +1,109 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows:
+      - Tests
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Deployment environment
+        required: true
+        type: choice
+        default: staging
+        options:
+          - staging
+          - production
+      revision:
+        description: Git revision to deploy. Defaults to the selected branch tip.
+        required: false
+        type: string
+      action:
+        description: Deployment action
+        required: true
+        type: choice
+        default: deploy
+        options:
+          - deploy
+          - rollback
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy
+    if: >-
+      ${{
+        vars.DEPLOY_ENABLED == 'true' &&
+        (
+          github.event_name == 'workflow_dispatch' ||
+          github.event.workflow_run.conclusion == 'success'
+        )
+      }}
+    runs-on: ubuntu-22.04
+    environment: ${{ inputs.environment || 'production' }}
+    concurrency:
+      group: deploy-${{ inputs.environment || 'production' }}
+      cancel-in-progress: false
+
+    env:
+      DEPLOY_ACTION: ${{ inputs.action || 'deploy' }}
+      DEPLOY_ENVIRONMENT: ${{ inputs.environment || 'production' }}
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/home/deploy/wedding-dashboard' }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+      DEPLOY_REVISION: ${{ inputs.revision || github.event.workflow_run.head_sha || github.sha }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate deployment secrets
+        run: |
+          required=(DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY)
+          missing=()
+          for name in "${required[@]}"; do
+            if [ -z "${!name}" ]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing required deployment secrets: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
+      - name: Configure SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "$DEPLOY_PORT" "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy on server
+        run: |
+          remote_env=(
+            "DEPLOY_ENVIRONMENT=$DEPLOY_ENVIRONMENT"
+            "DEPLOY_REVISION=$DEPLOY_REVISION"
+            "DEPLOY_BRANCH=main"
+          )
+
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd '$DEPLOY_PATH' && git fetch origin main && git checkout --force '$DEPLOY_REVISION' && chmod +x production/scripts/deploy.sh && ${remote_env[*]} production/scripts/deploy.sh '$DEPLOY_ACTION'"
+
+      - name: Deployment summary
+        run: |
+          {
+            echo "### Deployment"
+            echo "- Environment: $DEPLOY_ENVIRONMENT"
+            echo "- Action: $DEPLOY_ACTION"
+            echo "- Revision: $DEPLOY_REVISION"
+            echo "- Host: $DEPLOY_HOST"
+          } >> "$GITHUB_STEP_SUMMARY"
