@@ -77,6 +77,11 @@ record_revision_state() {
   local previous_revision="$1"
   local deployed_revision="$2"
 
+  if [ "$DRY_RUN" = "1" ]; then
+    log "Dry run: skipping deployment state update"
+    return 0
+  fi
+
   mkdir -p "$DEPLOY_STATE_DIR"
   printf '%s\n' "$previous_revision" > "$PREVIOUS_REVISION_FILE"
   printf '%s\n' "$deployed_revision" > "$CURRENT_REVISION_FILE"
@@ -149,6 +154,12 @@ start_backend() {
   log "Starting backend"
   cd "$BACKEND_DIR"
   run setsid -f venv/bin/python main.py > "$BACKEND_LOG_FILE" 2>&1 < /dev/null
+
+  if [ "$DRY_RUN" = "1" ]; then
+    log "Dry run: skipping backend start verification"
+    return 0
+  fi
+
   sleep 1
 
   local pid
