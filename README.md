@@ -1,5 +1,7 @@
 ﻿# Ashley & Hazel Wedding Portal Prototype
 
+[![Tests](https://github.com/VainAsher/ashley-hazel-wedding-portal/actions/workflows/test.yml/badge.svg)](https://github.com/VainAsher/ashley-hazel-wedding-portal/actions/workflows/test.yml)
+
 Static clickable prototype for the wedding website and planning dashboard concept.
 
 ## How to view

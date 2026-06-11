@@ -1,17 +1,20 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const port = process.env.PLAYWRIGHT_PORT ?? '3100'
+const baseURL = `http://127.0.0.1:${port}`
+
 export default defineConfig({
   testDir: './tests/browser',
   use: {
-    baseURL: 'http://127.0.0.1:3100',
+    baseURL,
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: 'npm run dev -- --host 127.0.0.1 --port 3100 --strictPort',
+    command: `npm run dev -- --host 127.0.0.1 --port ${port} --strictPort`,
     reuseExistingServer: false,
     timeout: 30_000,
-    url: 'http://127.0.0.1:3100',
+    url: baseURL,
   },
   projects: [
     {
