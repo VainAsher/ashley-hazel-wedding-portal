@@ -23,12 +23,32 @@ log() {
   printf '[deploy] %s\n' "$*"
 }
 
+redact_arg() {
+  local arg="$1"
+
+  if [ -n "${DATABASE_URL:-}" ] && [ "$arg" = "$DATABASE_URL" ]; then
+    printf '$DATABASE_URL'
+    return 0
+  fi
+
+  case "$arg" in
+    postgresql://*@*|postgres://*@*)
+      printf '<database-url>'
+      ;;
+    *)
+      printf '%q' "$arg"
+      ;;
+  esac
+}
+
 run() {
   if [ "$DRY_RUN" = "1" ]; then
-    printf '[dry-run] %q' "$1"
+    printf '[dry-run] '
+    redact_arg "$1"
     shift || true
     for arg in "$@"; do
-      printf ' %q' "$arg"
+      printf ' '
+      redact_arg "$arg"
     done
     printf '\n'
     return 0
