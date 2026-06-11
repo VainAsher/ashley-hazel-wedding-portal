@@ -17,6 +17,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship as orm_relationship
 
 
@@ -127,3 +128,29 @@ class Guest(Base):
     )
 
     wedding: Mapped[Wedding] = orm_relationship(back_populates="guests")
+
+
+class GuestAudit(Base):
+    __tablename__ = "guest_audit"
+    __table_args__ = (
+        CheckConstraint(
+            "action IN ('INSERT', 'UPDATE', 'DELETE')",
+            name="ck_guest_audit_action",
+        ),
+        Index("idx_guest_audit_guest_id", "guest_id"),
+        Index("idx_guest_audit_changed_at", text("changed_at DESC")),
+        Index("idx_guest_audit_guest_changed_at", "guest_id", text("changed_at DESC")),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    guest_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    wedding_id: Mapped[int | None] = mapped_column(Integer)
+    action: Mapped[str] = mapped_column(String(50), nullable=False)
+    old_values: Mapped[dict[str, object] | None] = mapped_column(JSONB)
+    new_values: Mapped[dict[str, object] | None] = mapped_column(JSONB)
+    changed_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    changed_by: Mapped[str | None] = mapped_column(
+        String(255), server_default=text("CURRENT_USER")
+    )
