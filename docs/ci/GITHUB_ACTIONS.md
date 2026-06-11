@@ -4,6 +4,9 @@ Week 2 Task 007 adds `.github/workflows/test.yml` to run backend and frontend
 tests automatically on pushes to `main` and `week2/**`, pull requests targeting
 `main`, and manual dispatches.
 
+The workflow pins `ubuntu-22.04` because the current Playwright version's
+`install --with-deps` command expects Ubuntu 22.04 package names.
+
 ## Backend Job
 
 The backend job starts PostgreSQL 15, initializes the test database with the
