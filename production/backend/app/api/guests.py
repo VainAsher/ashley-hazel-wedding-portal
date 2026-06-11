@@ -10,6 +10,21 @@ from app.db.schemas import GuestCreate, GuestResponse, GuestUpdate
 router = APIRouter(prefix="/api/guests", tags=["guests"])
 
 
+CONSTRAINT_MESSAGES = {
+    "uq_guests_wedding_email": "Guest email already exists for this wedding",
+    "ck_guests_email_format": "Guest email must be a valid address",
+    "ck_guests_name_not_blank": "Guest name is required",
+    "ck_guests_table_number_positive": "Table number must be positive",
+    "ck_guests_seat_number_positive": "Seat number must be positive",
+}
+
+
+def guest_constraint_message(exc: IntegrityError, action: str) -> str:
+    diag = getattr(getattr(exc, "orig", None), "diag", None)
+    constraint_name = getattr(diag, "constraint_name", None)
+    return CONSTRAINT_MESSAGES.get(constraint_name, f"Guest could not be {action}")
+
+
 def get_guest_or_404(db: Session, guest_id: int) -> Guest:
     guest = db.get(Guest, guest_id)
     if guest is None:
@@ -38,7 +53,7 @@ async def create_guest(guest: GuestCreate, db: Session = Depends(get_db)) -> Gue
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Guest could not be created",
+            detail=guest_constraint_message(exc, "created"),
         ) from exc
 
     db.refresh(db_guest)
@@ -80,7 +95,7 @@ async def update_guest(
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Guest could not be updated",
+            detail=guest_constraint_message(exc, "updated"),
         ) from exc
 
     db.refresh(db_guest)
