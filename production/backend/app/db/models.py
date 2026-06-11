@@ -3,7 +3,20 @@ from __future__ import annotations
 import enum
 from datetime import date, datetime, time
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Index, Integer, String, Text, Time, text
+from sqlalchemy import (
+    CheckConstraint,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    Time,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship as orm_relationship
 
 
@@ -49,6 +62,29 @@ class Wedding(Base):
 class Guest(Base):
     __tablename__ = "guests"
     __table_args__ = (
+        UniqueConstraint("wedding_id", "email", name="uq_guests_wedding_email"),
+        CheckConstraint("length(btrim(name)) > 0", name="ck_guests_name_not_blank"),
+        CheckConstraint(
+            "email IS NULL OR email ~* '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$'",
+            name="ck_guests_email_format",
+        ),
+        CheckConstraint(
+            "rsvp_status::text IN ('pending', 'accepted', 'declined', 'tentative')",
+            name="ck_guests_rsvp_status_valid",
+        ),
+        CheckConstraint(
+            "plus_one_rsvp IS NULL OR plus_one_rsvp::text IN "
+            "('pending', 'accepted', 'declined', 'tentative')",
+            name="ck_guests_plus_one_rsvp_valid",
+        ),
+        CheckConstraint(
+            "table_number IS NULL OR table_number > 0",
+            name="ck_guests_table_number_positive",
+        ),
+        CheckConstraint(
+            "seat_number IS NULL OR seat_number > 0",
+            name="ck_guests_seat_number_positive",
+        ),
         Index("idx_guests_email", "email", postgresql_where=text("email IS NOT NULL")),
         Index("idx_guests_name", "name"),
         Index("idx_guests_created_at", "created_at"),
@@ -71,8 +107,10 @@ class Guest(Base):
     email: Mapped[str | None] = mapped_column(String(255))
     phone: Mapped[str | None] = mapped_column(String(20))
     relationship: Mapped[str | None] = mapped_column(String(100))
-    rsvp_status: Mapped[RsvpStatus | None] = mapped_column(
-        rsvp_status_enum, server_default=text("'pending'::rsvp_status")
+    rsvp_status: Mapped[RsvpStatus] = mapped_column(
+        rsvp_status_enum,
+        nullable=False,
+        server_default=text("'pending'::rsvp_status"),
     )
     dietary_restrictions: Mapped[str | None] = mapped_column(Text)
     plus_one_name: Mapped[str | None] = mapped_column(String(255))
@@ -81,11 +119,11 @@ class Guest(Base):
     table_number: Mapped[int | None] = mapped_column(Integer)
     seat_number: Mapped[int | None] = mapped_column(Integer)
     notes: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime | None] = mapped_column(
-        DateTime, server_default=text("CURRENT_TIMESTAMP")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
-    updated_at: Mapped[datetime | None] = mapped_column(
-        DateTime, server_default=text("CURRENT_TIMESTAMP")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
 
     wedding: Mapped[Wedding] = orm_relationship(back_populates="guests")

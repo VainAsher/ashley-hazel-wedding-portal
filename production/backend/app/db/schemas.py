@@ -1,8 +1,12 @@
+import re
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.db.models import RsvpStatus
+
+
+EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 class GuestBase(BaseModel):
@@ -34,8 +38,8 @@ class GuestBase(BaseModel):
         if value is None or value == "":
             return None
         email = value.strip()
-        if "@" not in email:
-            raise ValueError("Email must contain @")
+        if not EMAIL_PATTERN.fullmatch(email):
+            raise ValueError("Email must be a valid address")
         return email
 
 
@@ -74,8 +78,8 @@ class GuestUpdate(BaseModel):
         if value is None or value == "":
             return None
         email = value.strip()
-        if "@" not in email:
-            raise ValueError("Email must contain @")
+        if not EMAIL_PATTERN.fullmatch(email):
+            raise ValueError("Email must be a valid address")
         return email
 
 
