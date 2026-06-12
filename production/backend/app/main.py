@@ -16,6 +16,7 @@ configure_logging()
 logger = logging.getLogger(__name__)
 app = FastAPI(title="Wedding Dashboard API", version="0.1.0")
 settings = get_settings()
+settings.validate_for_startup()
 
 app.add_middleware(
     CORSMiddleware,

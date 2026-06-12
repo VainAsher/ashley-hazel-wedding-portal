@@ -97,9 +97,11 @@ DRY_RUN=1 DEPLOY_REVISION=origin/main production/scripts/deploy.sh deploy
 2. Confirm the server can clone and fetch the GitHub repository.
 3. Confirm `production/backend/.env` exists on the server and contains
    `DATABASE_URL`.
-4. Confirm PostgreSQL client tools, Python 3, Node, npm, and rsync are installed.
-5. Set repository variable `DEPLOY_ENABLED=true`.
-6. Merge to `main` and verify that `Tests` completes before `Deploy` starts.
+4. Validate the server environment with
+   `cd production/backend && venv/bin/python scripts/validate_config.py`.
+5. Confirm PostgreSQL client tools, Python 3, Node, npm, and rsync are installed.
+6. Set repository variable `DEPLOY_ENABLED=true`.
+7. Merge to `main` and verify that `Tests` completes before `Deploy` starts.
 
 ## Rollback From GitHub
 
