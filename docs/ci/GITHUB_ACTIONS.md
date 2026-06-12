@@ -64,3 +64,5 @@ PLAYWRIGHT_PORT=3101 npm test
 Pull requests should keep both CI jobs green before merge. Backend coverage is
 available from the workflow artifacts; frontend browser evidence is available in
 the Playwright report artifact.
+
+Deployment automation is documented in [DEPLOYMENT.md](DEPLOYMENT.md).
