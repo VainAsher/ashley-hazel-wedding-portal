@@ -32,6 +32,7 @@ def main() -> int:
         cors_origins = f"<invalid: {exc}>"
     print(f"CORS origins: {cors_origins}")
     print(f"Log level: {settings.log_level}")
+    print(f"Log file: {settings.log_file_path or '<disabled>'}")
 
     errors = settings.environment_errors()
     if errors:

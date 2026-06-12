@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     jwt_secret: str = ""
     api_key_secret: str = ""
     log_level: str = "INFO"
+    log_file_path: str | None = "logs/app.log"
+    log_max_bytes: int = Field(default=10_485_760, ge=1)
+    log_backup_count: int = Field(default=5, ge=0)
 
     @field_validator("log_level")
     @classmethod
