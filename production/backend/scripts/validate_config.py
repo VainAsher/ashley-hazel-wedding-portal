@@ -40,6 +40,8 @@ def main() -> int:
     print(f"Metrics: {'enabled' if settings.metrics_enabled else 'disabled'}")
     print(f"Slow request threshold ms: {settings.slow_request_threshold_ms}")
     print(f"Slow query threshold ms: {settings.slow_query_threshold_ms}")
+    print(f"Session cookie secure: {settings.session_cookie_secure}")
+    print(f"Session max age seconds: {settings.session_max_age_seconds}")
 
     errors = settings.environment_errors()
     if errors:

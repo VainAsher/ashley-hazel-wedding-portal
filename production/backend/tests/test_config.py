@@ -26,6 +26,9 @@ def test_settings_load_database_and_pool_values() -> None:
         log_level="debug",
         log_max_bytes=2048,
         metrics_enabled=False,
+        session_cookie_secure=True,
+        session_max_age_seconds=3600,
+        session_secret_key="test-session-secret-32-characters",
         slow_query_threshold_ms=750.0,
         slow_request_threshold_ms=250.0,
         sentry_dsn="https://public@example.invalid/123",
@@ -46,6 +49,9 @@ def test_settings_load_database_and_pool_values() -> None:
     assert settings.log_level == "DEBUG"
     assert settings.log_max_bytes == 2048
     assert settings.metrics_enabled is False
+    assert settings.session_cookie_secure is True
+    assert settings.session_max_age_seconds == 3600
+    assert settings.session_secret_key == "test-session-secret-32-characters"
     assert settings.slow_query_threshold_ms == 750.0
     assert settings.slow_request_threshold_ms == 250.0
     assert settings.sentry_dsn == "https://public@example.invalid/123"
@@ -138,6 +144,7 @@ def test_production_environment_validation_rejects_unsafe_values() -> None:
         cors_origins_raw="http://localhost:3000",
         jwt_secret="replace-with-production-jwt-secret",
         api_key_secret="dev-api-key-secret",
+        session_secret_key="dev-session-secret",
         _env_file=None,
     )
 
@@ -149,6 +156,7 @@ def test_production_environment_validation_rejects_unsafe_values() -> None:
     assert "API_URL must use HTTPS in production" in errors
     assert any("JWT_SECRET must be replaced" in error for error in errors)
     assert any("API_KEY_SECRET must be replaced" in error for error in errors)
+    assert any("SESSION_SECRET_KEY must be replaced" in error for error in errors)
 
 
 def test_production_environment_validation_accepts_safe_values() -> None:
@@ -161,6 +169,8 @@ def test_production_environment_validation_accepts_safe_values() -> None:
         cors_origins_raw="https://example.test",
         jwt_secret="production-jwt-secret-32-chars",
         api_key_secret="production-api-secret-32-chars",
+        session_cookie_secure=True,
+        session_secret_key="production-session-secret-32-chars",
         _env_file=None,
     )
 
