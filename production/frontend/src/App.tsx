@@ -1,19 +1,12 @@
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 
 import { Guests } from './pages/Guests'
+import { Invite } from './pages/Invite'
 
-function Home() {
+function RsvpPlaceholder() {
   return (
     <main style={homeStyle}>
-      <h1 style={titleStyle}>Wedding Dashboard</h1>
-      <div style={summaryGridStyle}>
-        <section style={summaryPanelStyle}>
-          <span style={summaryLabelStyle}>Guest Management</span>
-          <NavLink style={actionLinkStyle} to="/guests">
-            Open Guests
-          </NavLink>
-        </section>
-      </div>
+      <h1 style={titleStyle}>RSVP</h1>
     </main>
   )
 }
@@ -28,9 +21,9 @@ function App() {
               ...navLinkStyle,
               ...(isActive ? activeNavLinkStyle : null),
             })}
-            to="/"
+            to="/invite"
           >
-            Home
+            Invite
           </NavLink>
           <NavLink
             style={({ isActive }) => ({
@@ -44,9 +37,11 @@ function App() {
         </nav>
 
         <Routes>
-          <Route element={<Home />} path="/" />
+          <Route element={<Navigate replace to="/invite" />} path="/" />
+          <Route element={<Invite />} path="/invite" />
+          <Route element={<RsvpPlaceholder />} path="/rsvp" />
           <Route element={<Guests />} path="/guests" />
-          <Route element={<Navigate replace to="/" />} path="*" />
+          <Route element={<Navigate replace to="/invite" />} path="*" />
         </Routes>
       </div>
     </BrowserRouter>
@@ -94,32 +89,6 @@ const titleStyle = {
   fontSize: '28px',
   lineHeight: 1.2,
   margin: 0,
-}
-
-const summaryGridStyle = {
-  display: 'grid',
-  gap: '12px',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-}
-
-const summaryPanelStyle = {
-  border: '1px solid #d6d9df',
-  borderRadius: '6px',
-  display: 'grid',
-  gap: '12px',
-  padding: '16px',
-}
-
-const summaryLabelStyle = {
-  color: '#586272',
-  fontSize: '13px',
-  fontWeight: 700,
-}
-
-const actionLinkStyle = {
-  color: '#1f6f5b',
-  fontSize: '16px',
-  fontWeight: 700,
 }
 
 export default App
