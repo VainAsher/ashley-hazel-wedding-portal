@@ -1,8 +1,8 @@
-# TASK-016 Implementation Prompt
+﻿# TASK-016 Implementation Prompt
 
-**Task:** Auth — Invite-Code Session Middleware  
-**Branch:** `week3/task-016-auth-invite-code`  
-**Estimated time:** 90 minutes  
+**Task:** Auth — Invite-Code Session Middleware
+**Branch:** `week3/task-016-auth-invite-code`
+**Estimated time:** 90 minutes
 **Prerequisites:** TASK-015 merged, PostgreSQL running, local dev environment ready
 
 ---
@@ -93,7 +93,7 @@ Update `production/backend/app/config.py`:
 class Settings(BaseSettings):
     # ... existing fields ...
     session_secret_key: str = Field(default="dev-secret-change-in-production", alias="SESSION_SECRET_KEY")
-    
+
     class Config:
         env_file = ".env"
 ```
@@ -115,7 +115,7 @@ from sqlalchemy.orm import relationship
 
 class Invite(Base):
     __tablename__ = "invites"
-    
+
     id = Column(Integer, primary_key=True)
     code = Column(String(50), unique=True, nullable=False)
     wedding_id = Column(Integer, ForeignKey("weddings.id"), nullable=False)
@@ -124,7 +124,7 @@ class Invite(Base):
     redeemed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     wedding = relationship("Wedding", back_populates="invites")
 ```
 
@@ -147,7 +147,7 @@ class UserResponse(BaseModel):
     id: int
     name: str
     role: str  # couple, coordinator, guest
-    
+
     class Config:
         from_attributes = True  # SQLAlchemy compat
 
@@ -178,32 +178,32 @@ async def login(request_body: LoginRequest, request: Request, db: Session = Depe
     Accept invite code, validate, create session, return user.
     """
     invite_code = request_body.invite_code.strip().upper()
-    
+
     # Validate invite code exists
     invite = db.query(Invite).filter(Invite.code == invite_code).first()
     if not invite:
         logger.warning(f"Invalid invite code attempted: {invite_code}")
         raise HTTPException(status_code=401, detail="Invalid invite code")
-    
+
     # For now, map invite code to a test guest (or create a user record)
     # This is a simplification: in production, you'd have a users table with many guests per household
     # For MVP, one invite = one guest household. Couple shares one invite.
-    
+
     # Get the first guest associated with this wedding (for testing)
     # TODO: link invites to specific guests/households in real schema
     guest = db.query(Guest).filter(Guest.wedding_id == invite.wedding_id).first()
     if not guest:
         logger.error(f"No guest found for wedding_id {invite.wedding_id}")
         raise HTTPException(status_code=500, detail="No guest found for this invite")
-    
+
     # Store session data
     request.session["user_id"] = guest.id
     request.session["invite_code"] = invite_code
     request.session["role"] = invite.role
-    
+
     # Log the login
     logger.info(f"User logged in with invite {invite_code}, guest_id {guest.id}, role {invite.role}")
-    
+
     return LoginResponse(
         user=UserResponse(id=guest.id, name=guest.name, role=invite.role)
     )
@@ -226,11 +226,11 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
     user_id = request.session.get("user_id")
     if not user_id:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
+
     guest = db.query(Guest).filter(Guest.id == user_id).first()
     if not guest:
         raise HTTPException(status_code=401, detail="User not found")
-    
+
     return {
         "id": guest.id,
         "name": guest.name,
@@ -272,11 +272,11 @@ def setup_test_data(db: Session):
     invite = Invite(code="TEST-001", wedding_id=1, household_name="Test", role="guest")
     db.add(invite)
     db.commit()
-    
+
     guest = Guest(name="Test Guest", email="test-auth-001@example.com", wedding_id=1)
     db.add(guest)
     db.commit()
-    
+
     return {"invite_code": "TEST-001", "guest_id": guest.id}
 
 
@@ -314,7 +314,7 @@ def test_multiple_logins_same_code(client: TestClient, setup_test_data):
     # First login
     response1 = client.post("/api/auth/login", json={"invite_code": "TEST-001"})
     assert response1.status_code == 200
-    
+
     # Second login with same code
     response2 = client.post("/api/auth/login", json={"invite_code": "TEST-001"})
     assert response2.status_code == 200

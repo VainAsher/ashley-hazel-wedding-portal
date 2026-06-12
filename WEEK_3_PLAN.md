@@ -1,7 +1,7 @@
-# Week 3 Implementation Plan
+﻿# Week 3 Implementation Plan
 
-**Date:** 2026-06-12  
-**Status:** Ready for implementation  
+**Date:** 2026-06-12
+**Status:** Ready for implementation
 **Goal:** Auth + RSVP flow (guest-facing value) + planning board foundation (admin capability)
 
 ---
@@ -10,8 +10,8 @@
 
 ### Current State (as of TASK-015 merge)
 
-**Backend:** Python/FastAPI/PostgreSQL, fully tested, deployable, metrics-instrumented  
-**Frontend:** React 18 + TypeScript + Vite, guest CRUD working, Playwright E2E passing  
+**Backend:** Python/FastAPI/PostgreSQL, fully tested, deployable, metrics-instrumented
+**Frontend:** React 18 + TypeScript + Vite, guest CRUD working, Playwright E2E passing
 **Missing:** Auth, RSVP flow, admin planning features
 
 **Canonical repos:**
@@ -48,7 +48,7 @@
 
 ### TASK-016: Auth: Invite-code Session Middleware
 
-**Branch:** `week3/task-016-auth-invite-code`  
+**Branch:** `week3/task-016-auth-invite-code`
 **Type:** Backend (Python/FastAPI)
 
 **Scope:**
@@ -77,7 +77,7 @@ Create an invite-code-based session system. Replace Discord OAuth with a simple 
 
 ### TASK-017: Auth: Role-Based Route Protection
 
-**Branch:** `week3/task-017-auth-rbac`  
+**Branch:** `week3/task-017-auth-rbac`
 **Type:** Backend (Python/FastAPI)
 
 **Scope:**
@@ -101,7 +101,7 @@ Build role-based access control on top of `get_current_user()`. Create middlewar
 
 ### TASK-018: Auth: Invite-Code Form (Guest Portal)
 
-**Branch:** `week3/task-018-invite-form`  
+**Branch:** `week3/task-018-invite-form`
 **Type:** Frontend (React/TypeScript)
 
 **Scope:**
@@ -124,7 +124,7 @@ Build a guest-facing invite entry screen. Replace the landing page (or gate it b
 
 ### TASK-019: RSVP: Extend Guest Model + Schema
 
-**Branch:** `week3/task-019-rsvp-schema`  
+**Branch:** `week3/task-019-rsvp-schema`
 **Type:** Backend (SQL + SQLAlchemy)
 
 **Scope:**
@@ -146,7 +146,7 @@ Extend the `guests` table to capture RSVP state. Add columns: `rsvp_status` (enu
 
 ### TASK-020: RSVP: Update Guest API (Accept/Decline/Meal)
 
-**Branch:** `week3/task-020-rsvp-api`  
+**Branch:** `week3/task-020-rsvp-api`
 **Type:** Backend (FastAPI)
 
 **Scope:**
@@ -168,7 +168,7 @@ Add/update guest CRUD routes to handle RSVP submission. New route: `PATCH /api/g
 
 ### TASK-021: RSVP: Guest Form (Accept/Decline/Meal Picker)
 
-**Branch:** `week3/task-021-rsvp-form`  
+**Branch:** `week3/task-021-rsvp-form`
 **Type:** Frontend (React/TypeScript)
 
 **Scope:**
@@ -193,7 +193,7 @@ Build a guest RSVP form. Display guest name (from session), 3 radio buttons (Acc
 
 ### TASK-022: RSVP: Guest Page Routing (Invite → RSVP)
 
-**Branch:** `week3/task-022-guest-routing`  
+**Branch:** `week3/task-022-guest-routing`
 **Type:** Frontend (React/TypeScript)
 
 **Scope:**
@@ -215,7 +215,7 @@ Wire together invite entry, RSVP form, and home page. Create a routing structure
 
 ### TASK-023: RSVP: Full-Stack E2E Tests
 
-**Branch:** `week3/task-023-e2e-rsvp`  
+**Branch:** `week3/task-023-e2e-rsvp`
 **Type:** Both (Playwright)
 
 **Scope:**
@@ -238,7 +238,7 @@ Write end-to-end tests covering the full RSVP flow: guest enters invite code →
 
 ### TASK-024: Planning: Task Model + API Skeleton
 
-**Branch:** `week3/task-024-planning-model`  
+**Branch:** `week3/task-024-planning-model`
 **Type:** Backend (SQL + FastAPI)
 
 **Scope:**
@@ -261,7 +261,7 @@ Start building the planning board backend. Add `tasks` table (title, status enum
 
 ### TASK-025: Week 3 Validation Report
 
-**Branch:** `week3/task-025-validation`  
+**Branch:** `week3/task-025-validation`
 **Type:** Documentation
 
 **Scope:**

@@ -1,7 +1,7 @@
-# Week 3 Handoff Summary
+﻿# Week 3 Handoff Summary
 
-**Date:** 2026-06-12  
-**Status:** TASK-015 merged; Week 3 docs complete and committed  
+**Date:** 2026-06-12
+**Status:** TASK-015 merged; Week 3 docs complete and committed
 **Handoff to:** Next implementer (Codex or engineer)
 
 ---
@@ -135,14 +135,14 @@ Also committed to GitHub: `VainAsher/ashley-hazel-wedding-portal` (private repo)
 
 By end of Week 3 (target 2026-06-19):
 
-✅ Guest can enter invite code and log in  
-✅ Guest sees RSVP form with pre-filled current state  
-✅ Guest can submit RSVP (accept/decline/meal choice/dietary notes)  
-✅ RSVP state persists across page reload  
-✅ Couple can see guest list (API + no UI yet)  
-✅ Couple can see task list skeleton (API + no UI yet)  
-✅ All tests pass (pytest backend + Playwright E2E)  
-✅ WEEK_3_VALIDATION_REPORT.md exists with evidence  
+✅ Guest can enter invite code and log in
+✅ Guest sees RSVP form with pre-filled current state
+✅ Guest can submit RSVP (accept/decline/meal choice/dietary notes)
+✅ RSVP state persists across page reload
+✅ Couple can see guest list (API + no UI yet)
+✅ Couple can see task list skeleton (API + no UI yet)
+✅ All tests pass (pytest backend + Playwright E2E)
+✅ WEEK_3_VALIDATION_REPORT.md exists with evidence
 
 ---
 

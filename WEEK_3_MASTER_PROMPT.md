@@ -1,7 +1,7 @@
-# Week 3 Master Prompt — Wedding Portal Auth + RSVP
+﻿# Week 3 Master Prompt — Wedding Portal Auth + RSVP
 
-**For:** Codex or implementer continuing Week 3 work  
-**Context date:** 2026-06-12 (TASK-015 merged)  
+**For:** Codex or implementer continuing Week 3 work
+**Context date:** 2026-06-12 (TASK-015 merged)
 **Goal:** Complete guest-facing RSVP flow + auth system + planning board foundation
 
 ---
