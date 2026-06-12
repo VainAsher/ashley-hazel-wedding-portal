@@ -108,7 +108,7 @@ jobs:
 
       - name: Run frontend browser tests
         working-directory: production/frontend
-        run: npm test -- --reporter=line,html
+        run: npm run test:e2e -- --reporter=line,html
 
       - name: Upload Playwright report
         if: always()
