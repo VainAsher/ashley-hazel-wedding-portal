@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     sentry_environment: str = "development"
     sentry_release: str | None = None
     sentry_sample_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    metrics_enabled: bool = True
+    slow_request_threshold_ms: float = Field(default=500.0, ge=0.0)
+    slow_query_threshold_ms: float = Field(default=500.0, ge=0.0)
 
     @field_validator("log_level")
     @classmethod
