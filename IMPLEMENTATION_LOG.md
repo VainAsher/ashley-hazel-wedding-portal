@@ -113,3 +113,13 @@
 - Notes: Added invite-code authentication with an `invites` table, deterministic optional `guest_id` ownership mapping, Starlette session middleware, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`, session config, CI migration wiring, and demo invite seed data.
 - Verification: Ran TDD red check (`Invite` missing), local-safe auth/config subset (`14 passed`), config validation, import smoke, disposable PostgreSQL schema plus migrations `002`-`005`, focused auth/config tests (`21 passed`), full backend pytest (`100 passed`), curl login/me/logout/invalid-invite verification, `git diff --check`, and GitHub Backend/Frontend CI.
 - Follow-up: TASK-017 should add role-based FastAPI dependencies and apply coordinator/couple protection to guest-management routes while preserving authenticated guest access for future RSVP endpoints.
+
+### TASK-017: Auth Role-Based Route Protection
+- Status: COMPLETE
+- Date: 2026-06-12
+- Time: 90 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/44
+- Commit: 2f34b4e
+- Notes: Added reusable role gates (`require_couple()`, `require_coordinator()`, `require_guest()`), protected guest CRUD routes with coordinator/couple access, and updated guest-management, integration, and logging tests to use authenticated coordinator sessions.
+- Verification: Ran `python -m pytest tests/test_auth.py -v` (`16 passed`), full backend pytest (`107 passed`), `git diff --check`, and GitHub Backend/Frontend CI on PR #44.
+- Follow-up: TASK-018 should add the frontend invite-code form and route unauthenticated guests through `/invite`.
