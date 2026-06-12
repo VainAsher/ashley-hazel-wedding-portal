@@ -1,17 +1,9 @@
-import os
-
 from fastapi.testclient import TestClient
 
-os.environ.setdefault("DATABASE_URL", "postgresql://user:password@localhost:5432/wedding")
-
 from app.config import Environment, Settings
-from app.main import app
 
 
-client = TestClient(app)
-
-
-def test_cors_allows_localhost_development_origin() -> None:
+def test_cors_allows_localhost_development_origin(client: TestClient) -> None:
     response = client.options(
         "/api/guests",
         headers={
@@ -24,7 +16,7 @@ def test_cors_allows_localhost_development_origin() -> None:
     assert response.headers.get("Access-Control-Allow-Origin") == "http://localhost:3000"
 
 
-def test_cors_blocks_unconfigured_origin() -> None:
+def test_cors_blocks_unconfigured_origin(client: TestClient) -> None:
     response = client.options(
         "/api/guests",
         headers={
@@ -36,7 +28,7 @@ def test_cors_blocks_unconfigured_origin() -> None:
     assert "Access-Control-Allow-Origin" not in response.headers
 
 
-def test_cors_preflight_lists_allowed_methods_and_headers() -> None:
+def test_cors_preflight_lists_allowed_methods_and_headers(client: TestClient) -> None:
     response = client.options(
         "/api/guests",
         headers={
@@ -52,7 +44,7 @@ def test_cors_preflight_lists_allowed_methods_and_headers() -> None:
     assert "Content-Type" in response.headers.get("Access-Control-Allow-Headers", "")
 
 
-def test_security_headers_present() -> None:
+def test_security_headers_present(client: TestClient) -> None:
     response = client.get("/health")
 
     assert response.headers.get("X-Content-Type-Options") == "nosniff"
