@@ -101,3 +101,15 @@
 - Notes: Added `WEEK_1_VALIDATION_REPORT.md` as the final review package because Tasks 1-9 were already merged through separate implementation and documentation PRs.
 - Verification: Re-ran validation from merged `main`: backend pytest (`8 passed`), `npm run build`, `npm run test:browser` (`8 passed`, `2 skipped` live tests by default), and live full-stack Playwright (`2 passed` across desktop Chromium and Pixel 5 mobile). Confirmed `0` leftover `live-e2e-*` guests.
 - Follow-up: Week 1 foundation is ready for human review and Week 2 planning.
+
+## Week 3: Auth + RSVP
+
+### TASK-016: Auth Invite-Code Session Middleware
+- Status: COMPLETE
+- Date: 2026-06-12
+- Time: 90 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/42
+- Commit: 1f70a84
+- Notes: Added invite-code authentication with an `invites` table, deterministic optional `guest_id` ownership mapping, Starlette session middleware, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`, session config, CI migration wiring, and demo invite seed data.
+- Verification: Ran TDD red check (`Invite` missing), local-safe auth/config subset (`14 passed`), config validation, import smoke, disposable PostgreSQL schema plus migrations `002`-`005`, focused auth/config tests (`21 passed`), full backend pytest (`100 passed`), curl login/me/logout/invalid-invite verification, `git diff --check`, and GitHub Backend/Frontend CI.
+- Follow-up: TASK-017 should add role-based FastAPI dependencies and apply coordinator/couple protection to guest-management routes while preserving authenticated guest access for future RSVP endpoints.
