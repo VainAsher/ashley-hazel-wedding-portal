@@ -10,6 +10,7 @@ from app.api import guests
 from app.config import Environment, get_settings
 from app.error_tracking import init_error_tracking
 from app.logging import configure_logging
+from app.metrics import metrics_middleware, metrics_response
 from app.utils.secrets import SecretMasker
 
 
@@ -21,6 +22,7 @@ init_error_tracking(settings)
 
 # Sentry must be initialized before FastAPI app creation so framework integrations attach.
 app = FastAPI(title="Wedding Dashboard API", version="0.1.0")
+app.middleware("http")(metrics_middleware(settings))
 
 app.add_middleware(
     CORSMiddleware,
@@ -55,6 +57,11 @@ async def unhandled_exception_handler(_request: Request, exc: Exception):
         status_code=500,
         content={"detail": "Internal server error"},
     )
+
+
+@app.get("/metrics", include_in_schema=False)
+async def metrics():
+    return metrics_response(settings)
 
 
 @app.get("/health")

@@ -25,6 +25,9 @@ def test_settings_load_database_and_pool_values() -> None:
         log_file_path="logs/test.log",
         log_level="debug",
         log_max_bytes=2048,
+        metrics_enabled=False,
+        slow_query_threshold_ms=750.0,
+        slow_request_threshold_ms=250.0,
         sentry_dsn="https://public@example.invalid/123",
         sentry_environment="staging",
         sentry_release="abc123def",
@@ -42,6 +45,9 @@ def test_settings_load_database_and_pool_values() -> None:
     assert settings.log_file_path == "logs/test.log"
     assert settings.log_level == "DEBUG"
     assert settings.log_max_bytes == 2048
+    assert settings.metrics_enabled is False
+    assert settings.slow_query_threshold_ms == 750.0
+    assert settings.slow_request_threshold_ms == 250.0
     assert settings.sentry_dsn == "https://public@example.invalid/123"
     assert settings.sentry_environment == "staging"
     assert settings.sentry_release == "abc123def"
@@ -79,6 +85,23 @@ def test_settings_validate_sentry_sample_rate() -> None:
         )
 
     assert "sentry_sample_rate" in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    "field_name",
+    ["slow_request_threshold_ms", "slow_query_threshold_ms"],
+)
+def test_settings_validate_metrics_thresholds(field_name: str) -> None:
+    values: dict[str, object] = {
+        "database_url": "postgresql://user:password@localhost:5432/wedding",
+        "_env_file": None,
+    }
+    values[field_name] = -1.0
+
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(**values)
+
+    assert field_name in str(exc_info.value)
 
 
 def test_environment_validation_rejects_invalid_sentry_dsn() -> None:
