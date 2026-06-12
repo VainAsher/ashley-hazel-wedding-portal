@@ -5,8 +5,9 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.sessions import SessionMiddleware
 
-from app.api import guests
+from app.api import auth, guests
 from app.config import Environment, get_settings
 from app.error_tracking import init_error_tracking
 from app.logging import configure_logging
@@ -25,6 +26,14 @@ app = FastAPI(title="Wedding Dashboard API", version="0.1.0")
 app.middleware("http")(metrics_middleware(settings))
 
 app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.session_secret_key,
+    max_age=settings.session_max_age_seconds,
+    same_site="lax",
+    https_only=settings.is_production or settings.session_cookie_secure,
+)
+
+app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.get_cors_origins(),
     allow_credentials=True,
@@ -33,6 +42,7 @@ app.add_middleware(
     max_age=3600,
 )
 
+app.include_router(auth.router)
 app.include_router(guests.router)
 
 

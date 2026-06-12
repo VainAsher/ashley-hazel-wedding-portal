@@ -58,6 +58,7 @@ class Wedding(Base):
     )
 
     guests: Mapped[list["Guest"]] = orm_relationship(back_populates="wedding")
+    invites: Mapped[list["Invite"]] = orm_relationship(back_populates="wedding")
 
 
 class Guest(Base):
@@ -128,6 +129,44 @@ class Guest(Base):
     )
 
     wedding: Mapped[Wedding] = orm_relationship(back_populates="guests")
+    invites: Mapped[list["Invite"]] = orm_relationship(back_populates="guest")
+
+
+class Invite(Base):
+    __tablename__ = "invites"
+    __table_args__ = (
+        CheckConstraint("length(btrim(code)) > 0", name="ck_invites_code_not_blank"),
+        CheckConstraint(
+            "role IN ('couple', 'coordinator', 'guest')",
+            name="ck_invites_role_valid",
+        ),
+        Index("idx_invites_code", "code", unique=True),
+        Index("idx_invites_wedding_role", "wedding_id", "role"),
+        Index("idx_invites_guest_id", "guest_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    code: Mapped[str] = mapped_column(String(50), nullable=False)
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), nullable=False
+    )
+    guest_id: Mapped[int | None] = mapped_column(
+        ForeignKey("guests.id", ondelete="SET NULL")
+    )
+    household_name: Mapped[str | None] = mapped_column(String(255))
+    role: Mapped[str] = mapped_column(
+        String(50), nullable=False, server_default=text("'guest'")
+    )
+    redeemed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    wedding: Mapped[Wedding] = orm_relationship(back_populates="invites")
+    guest: Mapped[Guest | None] = orm_relationship(back_populates="invites")
 
 
 class GuestAudit(Base):
