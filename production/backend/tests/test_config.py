@@ -21,7 +21,10 @@ def test_settings_load_database_and_pool_values() -> None:
         db_max_overflow=7,
         api_url="http://localhost:3001",
         frontend_url="http://localhost:3000",
+        log_backup_count=3,
+        log_file_path="logs/test.log",
         log_level="debug",
+        log_max_bytes=2048,
         _env_file=None,
     )
 
@@ -31,7 +34,10 @@ def test_settings_load_database_and_pool_values() -> None:
     assert settings.db_max_overflow == 7
     assert settings.api_url == "http://localhost:3001"
     assert settings.frontend_url == "http://localhost:3000"
+    assert settings.log_backup_count == 3
+    assert settings.log_file_path == "logs/test.log"
     assert settings.log_level == "DEBUG"
+    assert settings.log_max_bytes == 2048
 
 
 def test_settings_validate_app_port() -> None:

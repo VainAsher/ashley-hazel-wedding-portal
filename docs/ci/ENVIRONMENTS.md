@@ -23,6 +23,8 @@ All environments require:
 - `APP_HOST`
 - `APP_PORT`
 - CORS origins through `CORS_ORIGINS_RAW` or the environment-specific CORS key.
+- Logging settings through `LOG_LEVEL`, `LOG_FILE_PATH`, `LOG_MAX_BYTES`, and
+  `LOG_BACKUP_COUNT`.
 
 Staging and production also require:
 
