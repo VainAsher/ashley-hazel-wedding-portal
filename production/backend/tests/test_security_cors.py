@@ -1,4 +1,8 @@
+import os
+
 from fastapi.testclient import TestClient
+
+os.environ.setdefault("DATABASE_URL", "postgresql://user:password@localhost:5432/wedding")
 
 from app.config import Environment, Settings
 from app.main import app
@@ -59,12 +63,16 @@ def test_security_headers_present() -> None:
 
 def test_settings_use_environment_specific_origins() -> None:
     staging = Settings(
+        database_url="postgresql://user:password@localhost:5432/wedding",
         environment=Environment.STAGING,
         cors_origins_staging="https://staging.example.test",
+        _env_file=None,
     )
     production = Settings(
+        database_url="postgresql://user:password@localhost:5432/wedding",
         environment=Environment.PRODUCTION,
         cors_origins_production="https://example.test",
+        _env_file=None,
     )
 
     assert staging.get_cors_origins() == ["https://staging.example.test"]
@@ -72,7 +80,11 @@ def test_settings_use_environment_specific_origins() -> None:
 
 
 def test_settings_reject_wildcard_origins() -> None:
-    settings = Settings(cors_origins_development="*")
+    settings = Settings(
+        database_url="postgresql://user:password@localhost:5432/wedding",
+        cors_origins_development="*",
+        _env_file=None,
+    )
 
     try:
         settings.get_cors_origins()

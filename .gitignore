@@ -20,6 +20,8 @@ test-results/
 .env
 .env.*
 !.env.example
+!production/backend/.env.staging
+!production/backend/.env.production
 *.log
 
 # Wedding/private data - keep real guest data out of Git by default
