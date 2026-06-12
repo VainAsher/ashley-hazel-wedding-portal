@@ -1,10 +1,29 @@
 from __future__ import annotations
 
+import logging
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
+from fastapi.testclient import TestClient
 
-from app.metrics import endpoint_label, sql_operation, statement_summary
+from app.config import Settings
+from app.main import settings as app_settings
+from app.metrics import (
+    endpoint_label,
+    observe_request,
+    sql_operation,
+    statement_summary,
+)
+
+
+def make_settings(**overrides: Any) -> Settings:
+    values: dict[str, Any] = {
+        "database_url": "postgresql://user:password@localhost:5432/wedding",
+        "_env_file": None,
+    }
+    values.update(overrides)
+    return Settings(**values)
 
 
 def test_endpoint_label_uses_fastapi_route_template() -> None:
@@ -52,3 +71,53 @@ def test_statement_summary_redacts_literals_and_limits_output() -> None:
     assert "5551234567" not in summary
     assert "12345" not in summary
     assert len(summary) <= 120
+
+
+def test_metrics_endpoint_returns_prometheus_format(client: TestClient) -> None:
+    response = client.get("/metrics")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/plain")
+    assert "# HELP http_requests_total" in response.text
+    assert "# HELP http_request_duration_seconds" in response.text
+    assert "# HELP http_active_requests" in response.text
+
+
+def test_metrics_endpoint_returns_404_when_disabled(client: TestClient) -> None:
+    original = app_settings.metrics_enabled
+    app_settings.metrics_enabled = False
+
+    try:
+        response = client.get("/metrics")
+    finally:
+        app_settings.metrics_enabled = original
+
+    assert response.status_code == 404
+
+
+def test_request_metrics_are_recorded_with_route_label(client: TestClient) -> None:
+    health_response = client.get("/health")
+    metrics_response = client.get("/metrics")
+
+    assert health_response.status_code == 200
+    assert metrics_response.status_code == 200
+    assert "http_requests_total" in metrics_response.text
+    assert 'endpoint="/health"' in metrics_response.text
+    assert 'method="GET"' in metrics_response.text
+    assert 'status="200"' in metrics_response.text
+
+
+def test_observe_request_logs_slow_request(caplog: pytest.LogCaptureFixture) -> None:
+    settings = make_settings(slow_request_threshold_ms=1.0)
+
+    with caplog.at_level(logging.WARNING, logger="app.metrics"):
+        observe_request("GET", "/api/guests", 200, 0.002, settings)
+
+    record = next(
+        item for item in caplog.records if item.message == "slow_http_request"
+    )
+    assert record.method == "GET"
+    assert record.endpoint == "/api/guests"
+    assert record.status == "200"
+    assert record.duration_ms >= 2.0
+    assert record.threshold_ms == 1.0
