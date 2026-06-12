@@ -6,6 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from uvicorn.logging import AccessFormatter
 
 from app.config import Settings
 from app.logging import configure_logging, get_logger
@@ -67,6 +68,33 @@ def test_log_level_filters_debug_records(tmp_path: Path) -> None:
 
     assert "info message should be written" in contents
     assert "debug message should not be written" not in contents
+
+
+def test_configure_logging_preserves_uvicorn_access_args(tmp_path: Path) -> None:
+    settings = Settings(
+        database_url="postgresql://localhost/wedding",
+        log_file_path=str(tmp_path / "app.log"),
+        _env_file=None,
+    )
+    configure_logging(settings, force=True)
+
+    record = logging.getLogger("uvicorn.access").makeRecord(
+        "uvicorn.access",
+        logging.INFO,
+        __file__,
+        1,
+        '%s - "%s %s HTTP/%s" %d',
+        ("127.0.0.1:54321", "GET", "/api/guests", "1.1", 200),
+        None,
+    )
+
+    formatted = AccessFormatter(
+        '%(client_addr)s - "%(request_line)s" %(status_code)s'
+    ).format(record)
+
+    assert "127.0.0.1:54321" in formatted
+    assert "GET /api/guests HTTP/1.1" in formatted
+    assert "200" in formatted
 
 
 def test_guest_creation_logs_business_events(
