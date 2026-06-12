@@ -11,6 +11,8 @@ from app.config import Settings
 from app.main import settings as app_settings
 from app.metrics import (
     endpoint_label,
+    install_database_metrics,
+    observe_db_query,
     observe_request,
     sql_operation,
     statement_summary,
@@ -121,3 +123,41 @@ def test_observe_request_logs_slow_request(caplog: pytest.LogCaptureFixture) -> 
     assert record.status == "200"
     assert record.duration_ms >= 2.0
     assert record.threshold_ms == 1.0
+
+
+def test_observe_db_query_logs_slow_query_without_parameters(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    settings = make_settings(slow_query_threshold_ms=1.0)
+    statement = "SELECT * FROM guests WHERE email = 'guest@example.com'"
+
+    with caplog.at_level(logging.WARNING, logger="app.metrics"):
+        observe_db_query(statement, 0.002, "success", settings)
+
+    record = next(item for item in caplog.records if item.message == "slow_db_query")
+    assert record.operation == "SELECT"
+    assert record.status == "success"
+    assert record.duration_ms >= 2.0
+    assert record.threshold_ms == 1.0
+    assert "guest@example.com" not in record.statement_summary
+
+
+def test_install_database_metrics_is_idempotent(monkeypatch: pytest.MonkeyPatch) -> None:
+    import app.metrics as metrics
+
+    calls: list[tuple[object, str, object]] = []
+
+    def fake_listen(target: object, identifier: str, fn: object) -> None:
+        calls.append((target, identifier, fn))
+
+    monkeypatch.setattr(metrics.event, "listen", fake_listen)
+    monkeypatch.setattr(metrics, "_DB_LISTENERS_INSTALLED", False)
+
+    install_database_metrics()
+    install_database_metrics()
+
+    assert [call[1] for call in calls] == [
+        "before_cursor_execute",
+        "after_cursor_execute",
+        "handle_error",
+    ]
