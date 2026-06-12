@@ -1,3 +1,6 @@
+from collections.abc import Callable, Coroutine
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
@@ -16,6 +19,10 @@ SESSION_NAME = "name"
 SESSION_ROLE = "role"
 SESSION_USER_ID = "user_id"
 SESSION_WEDDING_ID = "wedding_id"
+
+ROLE_COUPLE = "couple"
+ROLE_COORDINATOR = "coordinator"
+ROLE_GUEST = "guest"
 
 
 def normalize_invite_code(invite_code: str) -> str:
@@ -110,6 +117,46 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)) -> U
         )
 
     return invite_to_user(invite)
+
+
+def require_roles(
+    *allowed_roles: str,
+) -> Callable[..., Coroutine[Any, Any, UserResponse]]:
+    allowed = set(allowed_roles)
+
+    async def dependency(
+        current_user: UserResponse = Depends(get_current_user),
+    ) -> UserResponse:
+        if current_user.role not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient role",
+            )
+        return current_user
+
+    return dependency
+
+
+async def require_couple(
+    current_user: UserResponse = Depends(require_roles(ROLE_COUPLE)),
+) -> UserResponse:
+    return current_user
+
+
+async def require_coordinator(
+    current_user: UserResponse = Depends(
+        require_roles(ROLE_COUPLE, ROLE_COORDINATOR)
+    ),
+) -> UserResponse:
+    return current_user
+
+
+async def require_guest(
+    current_user: UserResponse = Depends(
+        require_roles(ROLE_COUPLE, ROLE_COORDINATOR, ROLE_GUEST)
+    ),
+) -> UserResponse:
+    return current_user
 
 
 @router.get("/me", response_model=UserResponse)
