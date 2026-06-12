@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.api.auth import require_coordinator
+from app.api.schemas_auth import UserResponse
 from app.db.database import get_db
 from app.db.models import Guest, Wedding
 from app.db.schemas import GuestCreate, GuestResponse, GuestUpdate
@@ -45,7 +47,11 @@ def ensure_wedding_exists(db: Session, wedding_id: int, action: str) -> None:
 
 
 @router.post("", response_model=GuestResponse, status_code=status.HTTP_201_CREATED)
-async def create_guest(guest: GuestCreate, db: Session = Depends(get_db)) -> Guest:
+async def create_guest(
+    guest: GuestCreate,
+    db: Session = Depends(get_db),
+    _current_user: UserResponse = Depends(require_coordinator),
+) -> Guest:
     logger.info("guest_create_started", extra={"wedding_id": guest.wedding_id})
     ensure_wedding_exists(db, guest.wedding_id, "create_guest")
 
@@ -81,6 +87,7 @@ async def list_guests(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
+    _current_user: UserResponse = Depends(require_coordinator),
 ) -> list[Guest]:
     logger.debug("guest_list_started", extra={"skip": skip, "limit": limit})
     guests = db.query(Guest).order_by(Guest.id).offset(skip).limit(limit).all()
@@ -89,7 +96,11 @@ async def list_guests(
 
 
 @router.get("/{guest_id}", response_model=GuestResponse)
-async def get_guest(guest_id: int, db: Session = Depends(get_db)) -> Guest:
+async def get_guest(
+    guest_id: int,
+    db: Session = Depends(get_db),
+    _current_user: UserResponse = Depends(require_coordinator),
+) -> Guest:
     logger.debug("guest_read_started", extra={"guest_id": guest_id})
     guest = get_guest_or_404(db, guest_id, "get_guest")
     logger.debug("guest_read_completed", extra={"guest_id": guest_id})
@@ -101,6 +112,7 @@ async def update_guest(
     guest_id: int,
     guest: GuestUpdate,
     db: Session = Depends(get_db),
+    _current_user: UserResponse = Depends(require_coordinator),
 ) -> Guest:
     logger.info("guest_update_started", extra={"guest_id": guest_id})
     db_guest = get_guest_or_404(db, guest_id, "update_guest")
@@ -141,7 +153,11 @@ async def update_guest(
 
 
 @router.delete("/{guest_id}")
-async def delete_guest(guest_id: int, db: Session = Depends(get_db)) -> dict[str, int | str]:
+async def delete_guest(
+    guest_id: int,
+    db: Session = Depends(get_db),
+    _current_user: UserResponse = Depends(require_coordinator),
+) -> dict[str, int | str]:
     logger.info("guest_delete_started", extra={"guest_id": guest_id})
     db_guest = get_guest_or_404(db, guest_id, "delete_guest")
     wedding_id = db_guest.wedding_id

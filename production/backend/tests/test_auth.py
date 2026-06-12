@@ -63,6 +63,28 @@ def create_invite(
     return invite
 
 
+def login_with_role(
+    client: TestClient,
+    db_session: Session,
+    role: str,
+    code_suffix: str,
+) -> Guest | None:
+    guest = None
+    if role == "guest":
+        guest = create_auth_guest(db_session, name=f"{role.title()} Auth Guest")
+
+    invite = create_invite(
+        db_session,
+        f"{TEST_INVITE_PREFIX}-{code_suffix}",
+        role=role,
+        guest=guest,
+        household_name=f"{role.title()} Household",
+    )
+    response = client.post("/api/auth/login", json={"invite_code": invite.code})
+    assert response.status_code == 200
+    return guest
+
+
 class TestAuthRoutes:
     def test_login_valid_guest_invite_sets_session_cookie(
         self,
@@ -204,3 +226,99 @@ class TestAuthRoutes:
 
         assert first_response.status_code == 200
         assert second_response.status_code == 200
+
+
+@pytest.mark.usefixtures("clean_test_auth_data", "clean_test_guests")
+class TestRoleBasedGuestAccess:
+    def test_unauthenticated_guest_list_returns_401(self, client: TestClient) -> None:
+        response = client.get("/api/guests")
+
+        assert response.status_code == 401
+        assert response.json() == {"detail": "Not authenticated"}
+
+    def test_guest_role_cannot_list_guests(
+        self,
+        client: TestClient,
+        db_session: Session,
+    ) -> None:
+        login_with_role(client, db_session, "guest", "GUEST-LIST")
+
+        response = client.get("/api/guests")
+
+        assert response.status_code == 403
+        assert response.json() == {"detail": "Insufficient role"}
+
+    def test_coordinator_role_can_list_guests(
+        self,
+        client: TestClient,
+        db_session: Session,
+    ) -> None:
+        login_with_role(client, db_session, "coordinator", "COORD-LIST")
+
+        response = client.get("/api/guests")
+
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+
+    def test_couple_role_can_create_guest(
+        self,
+        client: TestClient,
+        db_session: Session,
+        guest_payload_factory,
+    ) -> None:
+        login_with_role(client, db_session, "couple", "COUPLE-CREATE")
+
+        response = client.post(
+            "/api/guests",
+            json=guest_payload_factory(name="Couple Created Guest"),
+        )
+
+        assert response.status_code == 201
+        assert response.json()["name"] == "Couple Created Guest"
+
+    def test_guest_role_cannot_create_guest(
+        self,
+        client: TestClient,
+        db_session: Session,
+        guest_payload_factory,
+    ) -> None:
+        login_with_role(client, db_session, "guest", "GUEST-CREATE")
+
+        response = client.post(
+            "/api/guests",
+            json=guest_payload_factory(name="Denied Guest Create"),
+        )
+
+        assert response.status_code == 403
+        assert response.json() == {"detail": "Insufficient role"}
+
+    def test_coordinator_role_can_update_guest(
+        self,
+        client: TestClient,
+        db_session: Session,
+        create_guest_via_api,
+    ) -> None:
+        created = create_guest_via_api(name="Coordinator Update Target")
+        login_with_role(client, db_session, "coordinator", "COORD-UPDATE")
+
+        response = client.put(
+            f"/api/guests/{created['id']}",
+            json={"notes": "Updated by coordinator"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["notes"] == "Updated by coordinator"
+
+    def test_guest_role_cannot_delete_guest(
+        self,
+        client: TestClient,
+        db_session: Session,
+        create_guest_via_api,
+    ) -> None:
+        created = create_guest_via_api(name="Guest Delete Denied Target")
+        login_with_role(client, db_session, "guest", "GUEST-DELETE")
+
+        response = client.delete(f"/api/guests/{created['id']}")
+
+        assert response.status_code == 403
+        assert response.json() == {"detail": "Insufficient role"}

@@ -100,13 +100,13 @@ def test_configure_logging_preserves_uvicorn_access_args(tmp_path: Path) -> None
 def test_guest_creation_logs_business_events(
     caplog,
     clean_test_guests: None,
-    client: TestClient,
+    authorized_client: TestClient,
     guest_payload_factory: Callable[..., dict[str, object]],
 ) -> None:
     payload = guest_payload_factory(name="Logged Guest")
 
     with caplog.at_level(logging.INFO, logger="app.api.guests"):
-        response = client.post("/api/guests", json=payload)
+        response = authorized_client.post("/api/guests", json=payload)
 
     assert response.status_code == 201
     messages = [record.getMessage() for record in caplog.records]
@@ -118,14 +118,14 @@ def test_guest_creation_logs_business_events(
 def test_guest_duplicate_logs_rejection_without_email(
     caplog,
     clean_test_guests: None,
-    client: TestClient,
+    authorized_client: TestClient,
     guest_payload_factory: Callable[..., dict[str, object]],
 ) -> None:
     payload = guest_payload_factory(name="Duplicate Logged Guest")
-    assert client.post("/api/guests", json=payload).status_code == 201
+    assert authorized_client.post("/api/guests", json=payload).status_code == 201
 
     with caplog.at_level(logging.WARNING, logger="app.api.guests"):
-        response = client.post("/api/guests", json=payload)
+        response = authorized_client.post("/api/guests", json=payload)
 
     assert response.status_code == 400
     messages = [record.getMessage() for record in caplog.records]
@@ -133,9 +133,9 @@ def test_guest_duplicate_logs_rejection_without_email(
     assert str(payload["email"]) not in caplog.text
 
 
-def test_missing_guest_logs_warning(caplog, client: TestClient) -> None:
+def test_missing_guest_logs_warning(caplog, authorized_client: TestClient) -> None:
     with caplog.at_level(logging.WARNING, logger="app.api.guests"):
-        response = client.get("/api/guests/999999")
+        response = authorized_client.get("/api/guests/999999")
 
     assert response.status_code == 404
     assert "guest_not_found" in [record.getMessage() for record in caplog.records]
