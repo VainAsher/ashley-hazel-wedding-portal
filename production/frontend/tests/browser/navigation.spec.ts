@@ -45,9 +45,10 @@ test.afterEach(async ({ page }) => {
   expect(browserErrors ?? []).toEqual([])
 })
 
-test('routes from home to guests and renders guest data', async ({ page }) => {
+test('routes from invite entry to guests and renders guest data', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Wedding Dashboard' })).toBeVisible()
+  await expect(page).toHaveURL(/\/invite$/)
+  await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toBeVisible()
 
   await page.getByRole('link', { name: 'Guests', exact: true }).click()
   await expect(page).toHaveURL(/\/guests$/)
@@ -61,5 +62,6 @@ test('direct guests route and fallback route are browser-accessible', async ({ p
   await expect(page.getByRole('heading', { name: 'Guest Management' })).toBeVisible()
 
   await page.goto('/not-a-real-route')
-  await expect(page.getByRole('heading', { name: 'Wedding Dashboard' })).toBeVisible()
+  await expect(page).toHaveURL(/\/invite$/)
+  await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toBeVisible()
 })
