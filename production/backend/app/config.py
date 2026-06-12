@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     log_file_path: str | None = "logs/app.log"
     log_max_bytes: int = Field(default=10_485_760, ge=1)
     log_backup_count: int = Field(default=5, ge=0)
+    sentry_dsn: str | None = None
+    sentry_environment: str = "development"
+    sentry_release: str | None = None
+    sentry_sample_rate: float = Field(default=0.0, ge=0.0, le=1.0)
 
     @field_validator("log_level")
     @classmethod
@@ -123,6 +127,15 @@ class Settings(BaseSettings):
                 lowered = value.lower()
                 if "replace-with" in lowered or "dev-" in lowered:
                     errors.append(f"{name} must be replaced for {self.environment.value}")
+
+        if self.sentry_dsn:
+            parsed_sentry_dsn = urlparse(self.sentry_dsn)
+            if (
+                parsed_sentry_dsn.scheme != "https"
+                or not parsed_sentry_dsn.netloc
+                or not parsed_sentry_dsn.path.strip("/")
+            ):
+                errors.append("SENTRY_DSN must be a valid HTTPS Sentry DSN")
 
         if self.is_production:
             for origin in cors_origins:
