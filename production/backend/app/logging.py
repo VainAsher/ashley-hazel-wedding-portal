@@ -62,12 +62,17 @@ def mask_value(value: Any, key: str | None = None) -> Any:
     return value
 
 
+def mask_log_record(record: logging.LogRecord) -> None:
+    record.msg = mask_value(record.msg)
+    if record.args:
+        record.args = mask_value(record.args)
+
+
 class SecretMaskingFilter(logging.Filter):
     """Redact secret-looking values from log records."""
 
     def filter(self, record: logging.LogRecord) -> bool:
-        record.msg = SecretMasker.mask(record.getMessage())
-        record.args = ()
+        mask_log_record(record)
         if record.exc_text:
             record.exc_text = SecretMasker.mask(record.exc_text)
 
@@ -120,8 +125,7 @@ def configure_logging(settings: Settings | None = None, *, force: bool = False) 
     if not _RECORD_FACTORY_CONFIGURED:
         def secret_masking_record_factory(*args: Any, **kwargs: Any) -> logging.LogRecord:
             record = _ORIGINAL_RECORD_FACTORY(*args, **kwargs)
-            record.msg = SecretMasker.mask(record.getMessage())
-            record.args = ()
+            mask_log_record(record)
             return record
 
         logging.setLogRecordFactory(secret_masking_record_factory)
