@@ -8,15 +8,19 @@ from fastapi.responses import JSONResponse
 
 from app.api import guests
 from app.config import Environment, get_settings
+from app.error_tracking import init_error_tracking
 from app.logging import configure_logging
 from app.utils.secrets import SecretMasker
 
 
-configure_logging()
-logger = logging.getLogger(__name__)
-app = FastAPI(title="Wedding Dashboard API", version="0.1.0")
 settings = get_settings()
 settings.validate_for_startup()
+configure_logging(settings)
+logger = logging.getLogger(__name__)
+init_error_tracking(settings)
+
+# Sentry must be initialized before FastAPI app creation so framework integrations attach.
+app = FastAPI(title="Wedding Dashboard API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,

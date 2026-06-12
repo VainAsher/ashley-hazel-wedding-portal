@@ -21,7 +21,14 @@ def test_settings_load_database_and_pool_values() -> None:
         db_max_overflow=7,
         api_url="http://localhost:3001",
         frontend_url="http://localhost:3000",
+        log_backup_count=3,
+        log_file_path="logs/test.log",
         log_level="debug",
+        log_max_bytes=2048,
+        sentry_dsn="https://public@example.invalid/123",
+        sentry_environment="staging",
+        sentry_release="abc123def",
+        sentry_sample_rate=0.25,
         _env_file=None,
     )
 
@@ -31,7 +38,14 @@ def test_settings_load_database_and_pool_values() -> None:
     assert settings.db_max_overflow == 7
     assert settings.api_url == "http://localhost:3001"
     assert settings.frontend_url == "http://localhost:3000"
+    assert settings.log_backup_count == 3
+    assert settings.log_file_path == "logs/test.log"
     assert settings.log_level == "DEBUG"
+    assert settings.log_max_bytes == 2048
+    assert settings.sentry_dsn == "https://public@example.invalid/123"
+    assert settings.sentry_environment == "staging"
+    assert settings.sentry_release == "abc123def"
+    assert settings.sentry_sample_rate == 0.25
 
 
 def test_settings_validate_app_port() -> None:
@@ -54,6 +68,27 @@ def test_settings_validate_log_level() -> None:
         )
 
     assert "LOG_LEVEL" in str(exc_info.value)
+
+
+def test_settings_validate_sentry_sample_rate() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        Settings(
+            database_url="postgresql://user:password@localhost:5432/wedding",
+            sentry_sample_rate=1.1,
+            _env_file=None,
+        )
+
+    assert "sentry_sample_rate" in str(exc_info.value)
+
+
+def test_environment_validation_rejects_invalid_sentry_dsn() -> None:
+    settings = Settings(
+        database_url="postgresql://user:password@localhost:5432/wedding",
+        sentry_dsn="http://not-sentry.example/123",
+        _env_file=None,
+    )
+
+    assert "SENTRY_DSN must be a valid HTTPS Sentry DSN" in settings.environment_errors()
 
 
 def test_settings_use_raw_cors_override() -> None:

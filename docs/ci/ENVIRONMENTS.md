@@ -23,6 +23,10 @@ All environments require:
 - `APP_HOST`
 - `APP_PORT`
 - CORS origins through `CORS_ORIGINS_RAW` or the environment-specific CORS key.
+- Logging settings through `LOG_LEVEL`, `LOG_FILE_PATH`, `LOG_MAX_BYTES`, and
+  `LOG_BACKUP_COUNT`.
+- Optional Sentry settings through `SENTRY_DSN`, `SENTRY_ENVIRONMENT`,
+  `SENTRY_RELEASE`, and `SENTRY_SAMPLE_RATE`.
 
 Staging and production also require:
 
@@ -54,7 +58,7 @@ python scripts/validate_config.py
 ```
 
 The validator prints a masked database location and never prints raw
-credentials.
+credentials. It prints whether Sentry is enabled, but never prints the DSN.
 
 ## Deployment
 
