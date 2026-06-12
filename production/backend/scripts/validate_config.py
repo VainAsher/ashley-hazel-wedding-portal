@@ -33,6 +33,10 @@ def main() -> int:
     print(f"CORS origins: {cors_origins}")
     print(f"Log level: {settings.log_level}")
     print(f"Log file: {settings.log_file_path or '<disabled>'}")
+    print(f"Sentry: {'enabled' if settings.sentry_dsn else 'disabled'}")
+    print(f"Sentry environment: {settings.sentry_environment}")
+    print(f"Sentry release: {settings.sentry_release or '<not set>'}")
+    print(f"Sentry sample rate: {settings.sentry_sample_rate}")
 
     errors = settings.environment_errors()
     if errors:
