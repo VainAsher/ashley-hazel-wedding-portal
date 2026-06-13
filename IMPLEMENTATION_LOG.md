@@ -133,3 +133,13 @@
 - Notes: Added a typed frontend auth API helper, `/invite` page, invite-code validation, invalid-code and network-error states, success redirect to `/rsvp`, and invite-first routing for `/` and fallback routes.
 - Verification: Captured TDD red check for missing `/invite` redirect, ran `npm run build`, focused invite Playwright (`5 passed`), full browser matrix (`38 passed`, `2 skipped`), GitHub Backend/Frontend CI, deployed revision `935a0a1` to homelab staging, seeded demo invite codes, and validated `DEMO-001` login through the staging tunnel.
 - Follow-up: TASK-019 should add missing RSVP schema fields (`meal_choice`, `dietary_notes`) while preserving existing `rsvp_status`, plus-one, and timestamp fields.
+
+### TASK-019: RSVP Guest Schema Fields
+- Status: COMPLETE
+- Date: 2026-06-13
+- Time: 75 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/46
+- Commit: 125e50d
+- Notes: Added `meal_choice` and `dietary_notes` to the guests table, SQLAlchemy model, API schemas, base schema, migration set, fixtures, and RSVP persistence tests while preserving existing RSVP status, plus-one, and timestamp fields.
+- Verification: Captured TDD red check for missing RSVP detail fields, applied disposable PostgreSQL schema plus migrations `002`-`006`, verified column types, ran focused schema tests (`4 passed`), focused DB-backed RSVP persistence (`1 passed`), guest-focused backend suite (`35 passed`), full backend pytest (`112 passed`), `git diff --check`, and GitHub Backend/Frontend CI on PR #46.
+- Follow-up: TASK-020 should add an authenticated RSVP-specific PATCH endpoint so guests can update only their own RSVP and coordinators/couple can update any guest RSVP.
