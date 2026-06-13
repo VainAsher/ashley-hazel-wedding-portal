@@ -1,5 +1,3 @@
-import type { AuthUser } from './auth'
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export type RsvpStatus = 'pending' | 'accepted' | 'declined' | 'tentative'
@@ -75,15 +73,6 @@ async function requestJson<T>(
   }
 
   return response.json() as Promise<T>
-}
-
-export async function fetchCurrentUser(apiBaseUrl = API_BASE_URL): Promise<AuthUser> {
-  return requestJson<AuthUser>(
-    '/api/auth/me',
-    {},
-    'Unable to load invite session.',
-    apiBaseUrl,
-  )
 }
 
 export async function fetchGuestRsvp(

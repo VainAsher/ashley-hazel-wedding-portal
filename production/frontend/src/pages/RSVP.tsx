@@ -1,8 +1,8 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 
+import { AuthApiError, fetchCurrentUser } from '../api/auth'
 import {
   RsvpApiError,
-  fetchCurrentUser,
   fetchGuestRsvp,
   saveGuestRsvp,
   type GuestRsvp,
@@ -35,6 +35,13 @@ function formDataFromGuest(guest: GuestRsvp): RsvpFormData {
 }
 
 function errorMessage(error: unknown): string {
+  if (error instanceof AuthApiError) {
+    if (error.status === 401) {
+      return 'Please enter your invite code to RSVP.'
+    }
+    return error.message
+  }
+
   if (error instanceof RsvpApiError) {
     if (error.status === 401) {
       return 'Please enter your invite code to RSVP.'

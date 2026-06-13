@@ -42,10 +42,21 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(async ({ page }) => {
   const browserErrors = Reflect.get(page, 'browserErrors') as string[] | undefined
-  expect(browserErrors ?? []).toEqual([])
+  const unexpectedErrors = (browserErrors ?? []).filter(
+    (message) => !message.includes('the server responded with a status of 401'),
+  )
+  expect(unexpectedErrors).toEqual([])
 })
 
 test('routes from invite entry to guests and renders guest data', async ({ page }) => {
+  await page.route('**/api/auth/me', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      status: 401,
+      body: JSON.stringify({ detail: 'Not authenticated' }),
+    })
+  })
+
   await page.goto('/')
   await expect(page).toHaveURL(/\/invite$/)
   await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toBeVisible()

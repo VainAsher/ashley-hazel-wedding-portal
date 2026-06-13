@@ -38,6 +38,10 @@ test.afterEach(async ({ page }) => {
 })
 
 test('redirects unauthenticated root traffic to invite form', async ({ page }) => {
+  await page.route('**/api/auth/me', async (route) => {
+    await json(route, { detail: 'Not authenticated' }, 401)
+  })
+
   await page.goto('/')
 
   await expect(page).toHaveURL(/\/invite$/)
