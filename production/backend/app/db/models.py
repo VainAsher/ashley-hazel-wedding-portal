@@ -114,6 +114,8 @@ class Guest(Base):
         nullable=False,
         server_default=text("'pending'::rsvp_status"),
     )
+    meal_choice: Mapped[str | None] = mapped_column(String(100))
+    dietary_notes: Mapped[str | None] = mapped_column(Text)
     dietary_restrictions: Mapped[str | None] = mapped_column(Text)
     plus_one_name: Mapped[str | None] = mapped_column(String(255))
     plus_one_rsvp: Mapped[RsvpStatus | None] = mapped_column(rsvp_status_enum)
