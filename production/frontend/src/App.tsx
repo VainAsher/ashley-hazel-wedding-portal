@@ -2,14 +2,7 @@ import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-do
 
 import { Guests } from './pages/Guests'
 import { Invite } from './pages/Invite'
-
-function RsvpPlaceholder() {
-  return (
-    <main style={homeStyle}>
-      <h1 style={titleStyle}>RSVP</h1>
-    </main>
-  )
-}
+import { RSVP } from './pages/RSVP'
 
 function App() {
   return (
@@ -39,7 +32,7 @@ function App() {
         <Routes>
           <Route element={<Navigate replace to="/invite" />} path="/" />
           <Route element={<Invite />} path="/invite" />
-          <Route element={<RsvpPlaceholder />} path="/rsvp" />
+          <Route element={<RSVP />} path="/rsvp" />
           <Route element={<Guests />} path="/guests" />
           <Route element={<Navigate replace to="/invite" />} path="*" />
         </Routes>
@@ -77,18 +70,6 @@ const navLinkStyle = {
 const activeNavLinkStyle = {
   borderBottomColor: '#1f6f5b',
   color: '#1f2933',
-}
-
-const homeStyle = {
-  display: 'grid',
-  gap: '18px',
-  padding: '20px',
-}
-
-const titleStyle = {
-  fontSize: '28px',
-  lineHeight: 1.2,
-  margin: 0,
 }
 
 export default App
