@@ -343,6 +343,38 @@ class TestGuestIntegration:
         assert getattr(persisted.plus_one_rsvp, "value", persisted.plus_one_rsvp) == "accepted"
         assert persisted.plus_one_dietary == "Gluten-free"
 
+    def test_rsvp_detail_fields_persist(
+        self,
+        authorized_client: TestClient,
+        db_session: Session,
+        guest_payload_factory: Callable[..., dict[str, object]],
+    ) -> None:
+        created = create_guest(
+            authorized_client,
+            guest_payload_factory,
+            name="RSVP Details",
+            meal_choice="vegetarian",
+            dietary_notes="No nuts",
+        )
+
+        assert created["meal_choice"] == "vegetarian"
+        assert created["dietary_notes"] == "No nuts"
+
+        update_response = authorized_client.put(
+            f"/api/guests/{created['id']}",
+            json={"meal_choice": "fish", "dietary_notes": "Dairy-free"},
+        )
+
+        assert update_response.status_code == 200
+        updated = update_response.json()
+        assert updated["meal_choice"] == "fish"
+        assert updated["dietary_notes"] == "Dairy-free"
+
+        persisted = fetch_guest(db_session, int(created["id"]))
+        assert persisted is not None
+        assert persisted.meal_choice == "fish"
+        assert persisted.dietary_notes == "Dairy-free"
+
     def test_concurrent_guest_creation(
         self,
         db_session: Session,

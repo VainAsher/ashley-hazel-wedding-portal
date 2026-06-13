@@ -60,6 +60,8 @@ CREATE TABLE guests (
   phone VARCHAR(20),
   relationship VARCHAR(100), -- 'family', 'friend', 'work', 'other'
   rsvp_status rsvp_status DEFAULT 'pending',
+  meal_choice VARCHAR(100),
+  dietary_notes TEXT,
   dietary_restrictions TEXT,
   plus_one_name VARCHAR(255),
   plus_one_rsvp rsvp_status,

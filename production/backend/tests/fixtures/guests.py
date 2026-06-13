@@ -21,6 +21,8 @@ def guest_payload(**overrides: object) -> dict[str, object]:
         "phone": "555-0199",
         "relationship": "test",
         "rsvp_status": "pending",
+        "meal_choice": None,
+        "dietary_notes": None,
     }
     payload.update(overrides)
     return payload

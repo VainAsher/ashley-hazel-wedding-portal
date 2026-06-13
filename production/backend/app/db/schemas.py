@@ -16,6 +16,8 @@ class GuestBase(BaseModel):
     phone: str | None = Field(default=None, max_length=20)
     relationship: str | None = Field(default=None, max_length=100)
     rsvp_status: RsvpStatus = RsvpStatus.pending
+    meal_choice: str | None = Field(default=None, max_length=100)
+    dietary_notes: str | None = Field(default=None, max_length=500)
     dietary_restrictions: str | None = None
     plus_one_name: str | None = Field(default=None, max_length=255)
     plus_one_rsvp: RsvpStatus | None = None
@@ -54,6 +56,8 @@ class GuestUpdate(BaseModel):
     phone: str | None = Field(default=None, max_length=20)
     relationship: str | None = Field(default=None, max_length=100)
     rsvp_status: RsvpStatus | None = None
+    meal_choice: str | None = Field(default=None, max_length=100)
+    dietary_notes: str | None = Field(default=None, max_length=500)
     dietary_restrictions: str | None = None
     plus_one_name: str | None = Field(default=None, max_length=255)
     plus_one_rsvp: RsvpStatus | None = None
