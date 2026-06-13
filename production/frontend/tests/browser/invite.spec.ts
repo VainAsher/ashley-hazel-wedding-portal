@@ -81,17 +81,42 @@ test('shows network error when login request cannot complete', async ({ page }) 
 
 test('submits trimmed invite code and redirects to rsvp on success', async ({ page }) => {
   const requests: LoginRequestRecord[] = []
+  const user = {
+    id: 10,
+    name: 'Demo Guest',
+    role: 'guest',
+    wedding_id: 1,
+    invite_id: 20,
+    guest_id: 10,
+  }
+
   await page.route('**/api/auth/login', async (route) => {
     requests.push(route.request().postDataJSON() as LoginRequestRecord)
+    await json(route, { user })
+  })
+  await page.route('**/api/auth/me', async (route) => {
+    await json(route, user)
+  })
+  await page.route('**/api/guests/10', async (route) => {
     await json(route, {
-      user: {
-        id: 10,
-        name: 'Demo Guest',
-        role: 'guest',
-        wedding_id: 1,
-        invite_id: 20,
-        guest_id: 10,
-      },
+      id: 10,
+      wedding_id: 1,
+      name: 'Demo Guest',
+      email: null,
+      phone: null,
+      relationship: null,
+      rsvp_status: 'pending',
+      meal_choice: null,
+      dietary_notes: null,
+      dietary_restrictions: null,
+      plus_one_name: null,
+      plus_one_rsvp: null,
+      plus_one_dietary: null,
+      table_number: null,
+      seat_number: null,
+      notes: null,
+      created_at: null,
+      updated_at: null,
     })
   })
 
