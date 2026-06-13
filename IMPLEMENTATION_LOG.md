@@ -123,3 +123,13 @@
 - Notes: Added reusable role gates (`require_couple()`, `require_coordinator()`, `require_guest()`), protected guest CRUD routes with coordinator/couple access, and updated guest-management, integration, and logging tests to use authenticated coordinator sessions.
 - Verification: Ran `python -m pytest tests/test_auth.py -v` (`16 passed`), full backend pytest (`107 passed`), `git diff --check`, and GitHub Backend/Frontend CI on PR #44.
 - Follow-up: TASK-018 should add the frontend invite-code form and route unauthenticated guests through `/invite`.
+
+### TASK-018: Auth Invite-Code Form
+- Status: COMPLETE
+- Date: 2026-06-13
+- Time: 75 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/45
+- Commit: 8621c1f
+- Notes: Added a typed frontend auth API helper, `/invite` page, invite-code validation, invalid-code and network-error states, success redirect to `/rsvp`, and invite-first routing for `/` and fallback routes.
+- Verification: Captured TDD red check for missing `/invite` redirect, ran `npm run build`, focused invite Playwright (`5 passed`), full browser matrix (`38 passed`, `2 skipped`), GitHub Backend/Frontend CI, deployed revision `935a0a1` to homelab staging, seeded demo invite codes, and validated `DEMO-001` login through the staging tunnel.
+- Follow-up: TASK-019 should add missing RSVP schema fields (`meal_choice`, `dietary_notes`) while preserving existing `rsvp_status`, plus-one, and timestamp fields.
