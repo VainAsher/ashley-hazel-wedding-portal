@@ -52,7 +52,7 @@ test('redirects unauthenticated root traffic to invite form', async ({ page }) =
 test('requires an invite code before submitting', async ({ page }) => {
   await page.goto('/invite')
 
-  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Enter' }).click()
 
   await expect(page.getByRole('alert')).toHaveText('Invite code is required.')
 })
@@ -64,7 +64,7 @@ test('shows code not found for invalid invite response', async ({ page }) => {
 
   await page.goto('/invite')
   await page.getByLabel('Invite Code').fill('bad-code')
-  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Enter' }).click()
 
   await expect(page.getByRole('alert')).toHaveText('Code not found')
   await expect(page).toHaveURL(/\/invite$/)
@@ -77,7 +77,7 @@ test('shows network error when login request cannot complete', async ({ page }) 
 
   await page.goto('/invite')
   await page.getByLabel('Invite Code').fill('DEMO-001')
-  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Enter' }).click()
 
   await expect(page.getByRole('alert')).toHaveText('Unable to reach the server. Try again.')
   await expect(page).toHaveURL(/\/invite$/)
@@ -126,7 +126,7 @@ test('submits trimmed invite code and redirects to rsvp on success', async ({ pa
 
   await page.goto('/invite')
   await page.getByLabel('Invite Code').fill('  demo-001  ')
-  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Enter' }).click()
 
   await expect(page).toHaveURL(/\/rsvp$/)
   await expect(page.getByRole('heading', { name: 'RSVP' })).toBeVisible()
