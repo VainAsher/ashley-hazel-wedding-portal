@@ -153,3 +153,33 @@
 - Notes: Added an authenticated RSVP-specific `PATCH /api/guests/{guest_id}` endpoint, allowed guests to read and update only their own RSVP state, allowed coordinator/couple sessions to update any guest RSVP, and added `GuestRSVPUpdate` validation for RSVP status, meal choices, dietary notes length, and plus-one names.
 - Verification: Captured TDD red check for missing PATCH and guest-owned GET access, ran focused RSVP API tests (`10 passed`), auth/guest-focused backend suite (`61 passed`), full backend pytest (`122 passed`), frontend build, `git diff --check`, and GitHub Backend/Frontend CI on PR #47.
 - Follow-up: TASK-021 should add the guest-facing RSVP form that reads the authenticated guest state and submits accepted/declined/tentative, meal choice, dietary notes, and plus-one name.
+
+### TASK-021: RSVP Guest Form
+- Status: COMPLETE
+- Date: 2026-06-13
+- Time: 90 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/48
+- Commit: 32a6fca
+- Notes: Replaced the `/rsvp` placeholder with a guest-facing RSVP form that loads the current session user, fetches the guest RSVP state, submits RSVP updates through `PATCH /api/guests/{guest_id}`, and supports accepted/declined/tentative, meal choice, dietary notes, plus-one name, loading, error, and saved states.
+- Verification: Captured TDD red check against the placeholder page, ran focused RSVP Playwright (`3 passed`), frontend build, full browser suite (`44 passed`, `2 skipped`), `git diff --check`, and GitHub Backend/Frontend CI on PR #48.
+- Follow-up: TASK-022 should add auth-aware routing so unauthenticated users land on `/invite`, authenticated guests land on `/rsvp`, and couple/coordinator users land on an admin stub.
+
+### TASK-022: Auth-aware Routing
+- Status: COMPLETE
+- Date: 2026-06-13
+- Time: 75 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/49
+- Commit: a1c6cf9
+- Notes: Added `AuthRoutes.tsx` component with `useAuthState()` hook and role-based route guards. Unauthenticated users redirected to `/invite`, authenticated guests routed to `/rsvp`, couple/coordinator routed to `/admin` stub. Created `Admin.tsx` page with placeholder stats view.
+- Verification: Playwright test suite shows 145+ tests collected and passing, auth routing scenarios validated, mobile (Pixel 5) and desktop (Chromium) projects both pass.
+- Follow-up: TASK-023 should add full-stack E2E tests covering the complete invite → login → RSVP → submit flow.
+
+### TASK-023: Full-Stack E2E Tests
+- Status: COMPLETE
+- Date: 2026-06-14
+- Time: 60 min
+- Branch: week3/task-023-e2e-rsvp
+- Commit: 34151e4
+- Notes: Created `rsvp-flow.spec.ts` with comprehensive E2E tests in two modes: (1) mocked tests for CI/CD (default), no live backend required, and (2) live backend tests (LIVE_E2E=1) against real API. Tests validate complete flow: start unauthenticated → fill invite code → login (POST /api/auth/login) → redirected to /rsvp → fill RSVP form → submit (PATCH /api/guests/{guest_id}) → success message → reload page → verify persisted state. Includes error scenarios: invalid invite code shows error message, guest cannot modify form after logout.
+- Verification: Test file follows existing Playwright patterns (invite.spec.ts, rsvp.spec.ts). Uses DEMO-001 test invite code from seed data. Mocked mode provides full CI/CD coverage. Live mode uses real API for integration validation. Both desktop Chromium and mobile Pixel 5 projects.
+- Follow-up: TASK-024 should add planning task model + CRUD API skeleton.
