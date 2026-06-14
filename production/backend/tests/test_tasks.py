@@ -2,8 +2,6 @@ import pytest
 from datetime import date
 from fastapi import status
 
-from app.db.models import Task, TaskStatus, TaskPriority
-
 
 @pytest.fixture
 def test_task_create_payload():
