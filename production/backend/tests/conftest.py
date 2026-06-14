@@ -111,6 +111,61 @@ def guest_payload_factory() -> Callable[..., dict[str, object]]:
 
 
 @pytest.fixture()
+def coordinator_session(
+    client: TestClient,
+    db_session: Session,
+) -> TestClient:
+    """Return a test client authenticated as a coordinator."""
+    from uuid import uuid4
+    code = f"PYTEST-COORD-{uuid4().hex[:8].upper()}"
+    invite = Invite(
+        code=code,
+        wedding_id=TEST_WEDDING_ID,
+        household_name="Pytest Coordinator",
+        role="coordinator",
+    )
+    db_session.add(invite)
+    db_session.commit()
+
+    response = client.post("/api/auth/login", json={"invite_code": code})
+    assert response.status_code == 200
+    return client
+
+
+@pytest.fixture()
+def guest_session(
+    client: TestClient,
+    db_session: Session,
+) -> TestClient:
+    """Return a test client authenticated as a guest."""
+    from uuid import uuid4
+    guest = Guest(
+        wedding_id=TEST_WEDDING_ID,
+        name="Pytest Guest",
+        email=f"pytest-guest-{uuid4().hex[:8]}@example.com",
+        relationship="friend",
+    )
+    db_session.add(guest)
+    db_session.commit()
+    db_session.refresh(guest)
+
+    code = f"PYTEST-GUEST-{uuid4().hex[:8].upper()}"
+    invite = Invite(
+        code=code,
+        wedding_id=TEST_WEDDING_ID,
+        guest_id=guest.id,
+        household_name="Pytest Guest Household",
+        role="guest",
+    )
+    db_session.add(invite)
+    db_session.commit()
+
+    response = client.post("/api/auth/login", json={"invite_code": code})
+    assert response.status_code == 200
+    return client
+
+
+@pytest.fixture()
 def sample_guest(
     db_session: Session,
     clean_test_guests: None,

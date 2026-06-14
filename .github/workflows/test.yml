@@ -65,6 +65,8 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/003_add_constraints.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/004_create_audit_triggers.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/005_create_invites_table.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/006_add_rsvp_fields.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/007_create_tasks_table.sql
 
       - name: Run backend tests with coverage
         working-directory: production/backend
