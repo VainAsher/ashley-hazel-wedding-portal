@@ -89,6 +89,7 @@ class Wedding(Base):
     guests: Mapped[list["Guest"]] = orm_relationship(back_populates="wedding")
     invites: Mapped[list["Invite"]] = orm_relationship(back_populates="wedding")
     tasks: Mapped[list["Task"]] = orm_relationship(back_populates="wedding")
+    wedding_party: Mapped[list["WeddingParty"]] = orm_relationship(back_populates="wedding")
 
 
 class Guest(Base):
@@ -162,6 +163,28 @@ class Guest(Base):
 
     wedding: Mapped[Wedding] = orm_relationship(back_populates="guests")
     invites: Mapped[list["Invite"]] = orm_relationship(back_populates="guest")
+
+
+class WeddingParty(Base):
+    __tablename__ = "wedding_party"
+    __table_args__ = (
+        UniqueConstraint("wedding_id", "name", "role", name="uq_wedding_party_name_role"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(String(50), nullable=False)
+    email: Mapped[str | None] = mapped_column(String(255))
+    phone: Mapped[str | None] = mapped_column(String(20))
+    attire_notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    wedding: Mapped[Wedding] = orm_relationship(back_populates="wedding_party")
 
 
 class Invite(Base):
@@ -271,3 +294,4 @@ class Task(Base):
     )
 
     wedding: Mapped[Wedding] = orm_relationship(back_populates="tasks")
+    assigned_party: Mapped["WeddingParty | None"] = orm_relationship()
