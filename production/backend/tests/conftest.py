@@ -82,7 +82,11 @@ def authorized_client(
         yield client
     finally:
         client.post("/api/auth/logout")
-        delete_test_auth_invites(db_session)
+        cleanup_session = SessionLocal()
+        try:
+            delete_test_auth_invites(cleanup_session)
+        finally:
+            cleanup_session.close()
 
 
 @pytest.fixture()
