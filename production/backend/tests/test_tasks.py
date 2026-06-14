@@ -17,7 +17,6 @@ def test_task_create_payload():
     }
 
 
-@pytest.mark.usefixtures("authorized_client")
 class TestTasksAPI:
     """Tests for tasks CRUD endpoints."""
 
