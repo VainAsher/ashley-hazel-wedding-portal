@@ -54,6 +54,12 @@ class Settings(BaseSettings):
     sentry_environment: str = "development"
     sentry_release: str | None = None
     sentry_sample_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    metrics_enabled: bool = True
+    slow_request_threshold_ms: float = Field(default=500.0, ge=0.0)
+    slow_query_threshold_ms: float = Field(default=500.0, ge=0.0)
+    session_secret_key: str = "dev-session-secret-change-in-production"
+    session_cookie_secure: bool = False
+    session_max_age_seconds: int = Field(default=2_592_000, ge=60)
 
     @field_validator("log_level")
     @classmethod
@@ -121,11 +127,16 @@ class Settings(BaseSettings):
             for name, value in {
                 "JWT_SECRET": self.jwt_secret,
                 "API_KEY_SECRET": self.api_key_secret,
+                "SESSION_SECRET_KEY": self.session_secret_key,
             }.items():
                 if len(value) < 16:
                     errors.append(f"{name} must be at least 16 characters")
                 lowered = value.lower()
-                if "replace-with" in lowered or "dev-" in lowered:
+                if (
+                    "replace-with" in lowered
+                    or "dev-" in lowered
+                    or "change-in-production" in lowered
+                ):
                     errors.append(f"{name} must be replaced for {self.environment.value}")
 
         if self.sentry_dsn:

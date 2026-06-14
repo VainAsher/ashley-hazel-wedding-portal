@@ -87,3 +87,11 @@ When Sentry reports a new backend error:
 3. Review the sanitized exception, request path, and breadcrumbs.
 4. Reproduce locally or in staging using the same release.
 5. Fix through the normal branch, PR, CI, merge, VM pull, and restart workflow.
+
+## Performance Monitoring
+
+TASK-015 adds Prometheus-compatible HTTP and database performance metrics at
+`GET /metrics`, plus structured slow request and slow query logs.
+
+See `docs/ci/PERFORMANCE_MONITORING.md` for metrics names, configuration,
+scrape examples, and alert examples.

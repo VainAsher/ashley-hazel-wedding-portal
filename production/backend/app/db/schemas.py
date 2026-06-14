@@ -7,6 +7,7 @@ from app.db.models import RsvpStatus
 
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+MEAL_CHOICES = {"chicken", "fish", "vegetarian"}
 
 
 class GuestBase(BaseModel):
@@ -16,6 +17,8 @@ class GuestBase(BaseModel):
     phone: str | None = Field(default=None, max_length=20)
     relationship: str | None = Field(default=None, max_length=100)
     rsvp_status: RsvpStatus = RsvpStatus.pending
+    meal_choice: str | None = Field(default=None, max_length=100)
+    dietary_notes: str | None = Field(default=None, max_length=500)
     dietary_restrictions: str | None = None
     plus_one_name: str | None = Field(default=None, max_length=255)
     plus_one_rsvp: RsvpStatus | None = None
@@ -54,6 +57,8 @@ class GuestUpdate(BaseModel):
     phone: str | None = Field(default=None, max_length=20)
     relationship: str | None = Field(default=None, max_length=100)
     rsvp_status: RsvpStatus | None = None
+    meal_choice: str | None = Field(default=None, max_length=100)
+    dietary_notes: str | None = Field(default=None, max_length=500)
     dietary_restrictions: str | None = None
     plus_one_name: str | None = Field(default=None, max_length=255)
     plus_one_rsvp: RsvpStatus | None = None
@@ -81,6 +86,32 @@ class GuestUpdate(BaseModel):
         if not EMAIL_PATTERN.fullmatch(email):
             raise ValueError("Email must be a valid address")
         return email
+
+
+class GuestRSVPUpdate(BaseModel):
+    rsvp_status: RsvpStatus | None = None
+    meal_choice: str | None = Field(default=None, max_length=100)
+    dietary_notes: str | None = Field(default=None, max_length=500)
+    plus_one_name: str | None = Field(default=None, max_length=255)
+
+    @field_validator("meal_choice")
+    @classmethod
+    def meal_choice_must_be_supported(cls, value: str | None) -> str | None:
+        if value is None or value == "":
+            return None
+        meal_choice = value.strip().lower()
+        if meal_choice not in MEAL_CHOICES:
+            allowed = ", ".join(sorted(MEAL_CHOICES))
+            raise ValueError(f"Meal choice must be one of: {allowed}")
+        return meal_choice
+
+    @field_validator("dietary_notes", "plus_one_name")
+    @classmethod
+    def blank_optional_text_to_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
 
 
 class GuestResponse(GuestBase):

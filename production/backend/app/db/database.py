@@ -4,8 +4,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import get_settings
+from app.metrics import install_database_metrics
 
 settings = get_settings()
+install_database_metrics()
 
 engine = create_engine(
     settings.database_url,

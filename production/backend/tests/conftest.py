@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable, Iterator
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -10,7 +11,7 @@ from sqlalchemy.orm import Session
 os.environ.setdefault("DATABASE_URL", "postgresql://localhost/wedding")
 
 from app.db.database import SessionLocal  # noqa: E402
-from app.db.models import Guest, RsvpStatus  # noqa: E402
+from app.db.models import Guest, Invite, RsvpStatus  # noqa: E402
 from app.main import app  # noqa: E402
 from tests.fixtures.guests import (  # noqa: E402
     TEST_EMAIL_PREFIX,
@@ -50,6 +51,38 @@ def delete_test_guests(db_session: Session) -> None:
         synchronize_session=False
     )
     db_session.commit()
+
+
+def delete_test_auth_invites(db_session: Session) -> None:
+    db_session.query(Invite).filter(Invite.code.like("PYTEST-FIXTURE-%")).delete(
+        synchronize_session=False
+    )
+    db_session.commit()
+
+
+@pytest.fixture()
+def authorized_client(
+    client: TestClient,
+    db_session: Session,
+) -> Iterator[TestClient]:
+    code = f"PYTEST-FIXTURE-COORD-{uuid4().hex[:8].upper()}"
+    invite = Invite(
+        code=code,
+        wedding_id=TEST_WEDDING_ID,
+        household_name="Pytest Coordinator",
+        role="coordinator",
+    )
+    db_session.add(invite)
+    db_session.commit()
+
+    response = client.post("/api/auth/login", json={"invite_code": code})
+    assert response.status_code == 200
+
+    try:
+        yield client
+    finally:
+        client.post("/api/auth/logout")
+        delete_test_auth_invites(db_session)
 
 
 @pytest.fixture()
@@ -110,12 +143,15 @@ def multiple_guests(db_session: Session, clean_test_guests: None) -> list[Guest]
 
 @pytest.fixture()
 def create_guest_via_api(
-    client: TestClient,
+    authorized_client: TestClient,
     clean_test_guests: None,
     guest_payload_factory: Callable[..., dict[str, object]],
 ) -> Callable[..., dict[str, object]]:
     def create_guest(**overrides: object) -> dict[str, object]:
-        response = client.post("/api/guests", json=guest_payload_factory(**overrides))
+        response = authorized_client.post(
+            "/api/guests",
+            json=guest_payload_factory(**overrides),
+        )
         assert response.status_code == 201
         return response.json()
 

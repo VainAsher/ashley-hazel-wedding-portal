@@ -101,3 +101,55 @@
 - Notes: Added `WEEK_1_VALIDATION_REPORT.md` as the final review package because Tasks 1-9 were already merged through separate implementation and documentation PRs.
 - Verification: Re-ran validation from merged `main`: backend pytest (`8 passed`), `npm run build`, `npm run test:browser` (`8 passed`, `2 skipped` live tests by default), and live full-stack Playwright (`2 passed` across desktop Chromium and Pixel 5 mobile). Confirmed `0` leftover `live-e2e-*` guests.
 - Follow-up: Week 1 foundation is ready for human review and Week 2 planning.
+
+## Week 3: Auth + RSVP
+
+### TASK-016: Auth Invite-Code Session Middleware
+- Status: COMPLETE
+- Date: 2026-06-12
+- Time: 90 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/42
+- Commit: 1f70a84
+- Notes: Added invite-code authentication with an `invites` table, deterministic optional `guest_id` ownership mapping, Starlette session middleware, `/api/auth/login`, `/api/auth/me`, `/api/auth/logout`, session config, CI migration wiring, and demo invite seed data.
+- Verification: Ran TDD red check (`Invite` missing), local-safe auth/config subset (`14 passed`), config validation, import smoke, disposable PostgreSQL schema plus migrations `002`-`005`, focused auth/config tests (`21 passed`), full backend pytest (`100 passed`), curl login/me/logout/invalid-invite verification, `git diff --check`, and GitHub Backend/Frontend CI.
+- Follow-up: TASK-017 should add role-based FastAPI dependencies and apply coordinator/couple protection to guest-management routes while preserving authenticated guest access for future RSVP endpoints.
+
+### TASK-017: Auth Role-Based Route Protection
+- Status: COMPLETE
+- Date: 2026-06-12
+- Time: 90 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/44
+- Commit: 2f34b4e
+- Notes: Added reusable role gates (`require_couple()`, `require_coordinator()`, `require_guest()`), protected guest CRUD routes with coordinator/couple access, and updated guest-management, integration, and logging tests to use authenticated coordinator sessions.
+- Verification: Ran `python -m pytest tests/test_auth.py -v` (`16 passed`), full backend pytest (`107 passed`), `git diff --check`, and GitHub Backend/Frontend CI on PR #44.
+- Follow-up: TASK-018 should add the frontend invite-code form and route unauthenticated guests through `/invite`.
+
+### TASK-018: Auth Invite-Code Form
+- Status: COMPLETE
+- Date: 2026-06-13
+- Time: 75 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/45
+- Commit: 8621c1f
+- Notes: Added a typed frontend auth API helper, `/invite` page, invite-code validation, invalid-code and network-error states, success redirect to `/rsvp`, and invite-first routing for `/` and fallback routes.
+- Verification: Captured TDD red check for missing `/invite` redirect, ran `npm run build`, focused invite Playwright (`5 passed`), full browser matrix (`38 passed`, `2 skipped`), GitHub Backend/Frontend CI, deployed revision `935a0a1` to homelab staging, seeded demo invite codes, and validated `DEMO-001` login through the staging tunnel.
+- Follow-up: TASK-019 should add missing RSVP schema fields (`meal_choice`, `dietary_notes`) while preserving existing `rsvp_status`, plus-one, and timestamp fields.
+
+### TASK-019: RSVP Guest Schema Fields
+- Status: COMPLETE
+- Date: 2026-06-13
+- Time: 75 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/46
+- Commit: 125e50d
+- Notes: Added `meal_choice` and `dietary_notes` to the guests table, SQLAlchemy model, API schemas, base schema, migration set, fixtures, and RSVP persistence tests while preserving existing RSVP status, plus-one, and timestamp fields.
+- Verification: Captured TDD red check for missing RSVP detail fields, applied disposable PostgreSQL schema plus migrations `002`-`006`, verified column types, ran focused schema tests (`4 passed`), focused DB-backed RSVP persistence (`1 passed`), guest-focused backend suite (`35 passed`), full backend pytest (`112 passed`), `git diff --check`, and GitHub Backend/Frontend CI on PR #46.
+- Follow-up: TASK-020 should add an authenticated RSVP-specific PATCH endpoint so guests can update only their own RSVP and coordinators/couple can update any guest RSVP.
+
+### TASK-020: RSVP Authenticated Guest API
+- Status: COMPLETE
+- Date: 2026-06-13
+- Time: 75 min
+- PR: https://github.com/VainAsher/ashley-hazel-wedding-portal/pull/47
+- Commit: f8e9f46
+- Notes: Added an authenticated RSVP-specific `PATCH /api/guests/{guest_id}` endpoint, allowed guests to read and update only their own RSVP state, allowed coordinator/couple sessions to update any guest RSVP, and added `GuestRSVPUpdate` validation for RSVP status, meal choices, dietary notes length, and plus-one names.
+- Verification: Captured TDD red check for missing PATCH and guest-owned GET access, ran focused RSVP API tests (`10 passed`), auth/guest-focused backend suite (`61 passed`), full backend pytest (`122 passed`), frontend build, `git diff --check`, and GitHub Backend/Frontend CI on PR #47.
+- Follow-up: TASK-021 should add the guest-facing RSVP form that reads the authenticated guest state and submits accepted/declined/tentative, meal choice, dietary notes, and plus-one name.
