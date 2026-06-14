@@ -170,6 +170,24 @@ stop_backend() {
   )
 }
 
+stop_frontend() {
+  log "Stopping frontend service"
+
+  while read -r process_pid; do
+    [ -n "$process_pid" ] || continue
+    log "Stopping frontend pid $process_pid"
+    run kill -9 "$process_pid" 2>/dev/null || true
+  done < <(
+    {
+      pgrep -f "$FRONTEND_DIR.*npm run dev" || true
+      pgrep -f "npm run dev" || true
+      pgrep -f "vite" || true
+    } | sort -u
+  )
+
+  sleep 1
+}
+
 start_backend() {
   log "Starting backend"
   cd "$BACKEND_DIR"
@@ -217,6 +235,14 @@ build_frontend() {
   fi
 }
 
+start_frontend() {
+  log "Starting frontend development server"
+  cd "$FRONTEND_DIR"
+  run nohup npm run dev > /tmp/wedding-dashboard-frontend.log 2>&1 < /dev/null &
+  sleep 2
+  log "Frontend started"
+}
+
 health_check() {
   log "Checking backend health: $BACKEND_HEALTH_URL"
   run curl --fail --silent --show-error "$BACKEND_HEALTH_URL" >/dev/null
@@ -232,14 +258,22 @@ deploy() {
   previous_revision="$(git -C "$APP_DIR" rev-parse HEAD)"
 
   log "Deploying $DEPLOY_ENVIRONMENT revision $DEPLOY_REVISION"
+
+  # Stop existing services before deploying
+  stop_frontend
+  stop_backend
+
+  # Deploy new code
   checkout_revision "$DEPLOY_REVISION"
   local deployed_revision
   deployed_revision="$(git -C "$APP_DIR" rev-parse HEAD)"
 
   install_backend_dependencies
   apply_database_migrations
-  stop_backend
+
+  # Start new services
   start_backend
+  start_frontend
   build_frontend
   health_check
   record_revision_state "$previous_revision" "$deployed_revision"
