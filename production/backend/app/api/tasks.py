@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.auth import require_coordinator
-from app.api.schemas_auth import AuthUser
+from app.api.schemas_auth import UserResponse
 from app.db.database import get_db
 from app.db.models import Task
 from app.db.schemas import TaskCreate, TaskResponse, TaskUpdate
@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/tasks", tags=["tasks"])
 @router.get("", response_model=list[TaskResponse])
 async def list_tasks(
     db: Session = Depends(get_db),
-    current_user: AuthUser = Depends(require_coordinator),
+    current_user: UserResponse = Depends(require_coordinator),
 ) -> list[Task]:
     """List all tasks for the current user's wedding."""
     return db.query(Task).filter(Task.wedding_id == current_user.wedding_id).all()
@@ -23,7 +23,7 @@ async def list_tasks(
 async def create_task(
     task: TaskCreate,
     db: Session = Depends(get_db),
-    current_user: AuthUser = Depends(require_coordinator),
+    current_user: UserResponse = Depends(require_coordinator),
 ) -> Task:
     """Create a new task for the current wedding."""
     if task.wedding_id != current_user.wedding_id:
@@ -52,7 +52,7 @@ async def create_task(
 async def get_task(
     task_id: int,
     db: Session = Depends(get_db),
-    current_user: AuthUser = Depends(require_coordinator),
+    current_user: UserResponse = Depends(require_coordinator),
 ) -> Task:
     """Get a specific task."""
     task = db.query(Task).filter(Task.id == task_id).first()
@@ -76,7 +76,7 @@ async def update_task(
     task_id: int,
     task_update: TaskUpdate,
     db: Session = Depends(get_db),
-    current_user: AuthUser = Depends(require_coordinator),
+    current_user: UserResponse = Depends(require_coordinator),
 ) -> Task:
     """Update a task."""
     task = db.query(Task).filter(Task.id == task_id).first()
@@ -106,7 +106,7 @@ async def update_task(
 async def delete_task(
     task_id: int,
     db: Session = Depends(get_db),
-    current_user: AuthUser = Depends(require_coordinator),
+    current_user: UserResponse = Depends(require_coordinator),
 ) -> None:
     """Delete a task."""
     task = db.query(Task).filter(Task.id == task_id).first()
