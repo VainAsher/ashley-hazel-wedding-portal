@@ -7,7 +7,7 @@
 -- ============================================================================
 
 CREATE TYPE rsvp_status AS ENUM ('pending', 'accepted', 'declined', 'tentative');
-CREATE TYPE task_status AS ENUM ('not_started', 'in_progress', 'completed', 'blocked');
+CREATE TYPE task_status AS ENUM ('not_started', 'in_progress', 'done', 'blocked');
 CREATE TYPE gift_status AS ENUM ('registered', 'purchased', 'received', 'thank_you_sent');
 CREATE TYPE user_role AS ENUM ('couple', 'wedding_party', 'coordinator', 'guest');
 
@@ -70,7 +70,9 @@ CREATE TABLE guests (
   seat_number INTEGER,
   notes TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(wedding_id, email),
+  CHECK(seat_number IS NULL OR seat_number > 0)
 );
 
 CREATE TABLE invites (
@@ -162,15 +164,13 @@ CREATE TABLE events (
 CREATE TABLE tasks (
   id SERIAL PRIMARY KEY,
   wedding_id INTEGER NOT NULL REFERENCES weddings(id) ON DELETE CASCADE,
-  task_name VARCHAR(255) NOT NULL,
+  title VARCHAR(255) NOT NULL,
   description TEXT,
-  assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL,
   status task_status DEFAULT 'not_started',
+  priority VARCHAR(10) DEFAULT 'medium',
   due_date DATE,
-  priority VARCHAR(20) DEFAULT 'medium', -- 'low', 'medium', 'high', 'critical'
-  category VARCHAR(100), -- 'budget', 'guests', 'vendors', 'coordination', 'other'
-  completed_date DATE,
-  notes TEXT,
+  assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  category VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
