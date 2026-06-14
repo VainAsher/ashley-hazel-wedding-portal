@@ -1,5 +1,7 @@
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 
+import { HomeRedirect, RequireAdmin, RequireGuest } from './components/AuthRoutes'
+import { Admin } from './pages/Admin'
 import { Guests } from './pages/Guests'
 import { Invite } from './pages/Invite'
 import { RSVP } from './pages/RSVP'
@@ -23,6 +25,24 @@ function App() {
               ...navLinkStyle,
               ...(isActive ? activeNavLinkStyle : null),
             })}
+            to="/rsvp"
+          >
+            RSVP
+          </NavLink>
+          <NavLink
+            style={({ isActive }) => ({
+              ...navLinkStyle,
+              ...(isActive ? activeNavLinkStyle : null),
+            })}
+            to="/admin"
+          >
+            Admin
+          </NavLink>
+          <NavLink
+            style={({ isActive }) => ({
+              ...navLinkStyle,
+              ...(isActive ? activeNavLinkStyle : null),
+            })}
             to="/guests"
           >
             Guests
@@ -30,9 +50,24 @@ function App() {
         </nav>
 
         <Routes>
-          <Route element={<Navigate replace to="/invite" />} path="/" />
+          <Route element={<HomeRedirect />} path="/" />
           <Route element={<Invite />} path="/invite" />
-          <Route element={<RSVP />} path="/rsvp" />
+          <Route
+            element={
+              <RequireGuest>
+                <RSVP />
+              </RequireGuest>
+            }
+            path="/rsvp"
+          />
+          <Route
+            element={
+              <RequireAdmin>
+                <Admin />
+              </RequireAdmin>
+            }
+            path="/admin"
+          />
           <Route element={<Guests />} path="/guests" />
           <Route element={<Navigate replace to="/invite" />} path="*" />
         </Routes>
