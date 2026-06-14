@@ -162,3 +162,58 @@ async def require_guest(
 @router.get("/me", response_model=UserResponse)
 async def me(current_user: UserResponse = Depends(get_current_user)) -> UserResponse:
     return current_user
+
+
+@router.post("/_debug/seed-test-data")
+async def seed_test_data(db: Session = Depends(get_db)) -> dict[str, str]:
+    """TEMPORARY DEBUG ENDPOINT: Seed test data for development."""
+    from app.db.models import Wedding, Guest
+
+    # Check if demo wedding exists
+    wedding = db.query(Wedding).filter(Wedding.couple_first_name == "Demo").first()
+    if not wedding:
+        wedding = Wedding(
+            couple_first_name="Demo",
+            couple_last_name="Wedding",
+            wedding_date="2025-06-15",
+            venue_name="Demo Venue"
+        )
+        db.add(wedding)
+        db.commit()
+        db.refresh(wedding)
+
+    # Check if demo guest exists
+    guest = db.query(Guest).filter(
+        Guest.name == "Demo Guest",
+        Guest.wedding_id == wedding.id
+    ).first()
+    if not guest:
+        guest = Guest(
+            wedding_id=wedding.id,
+            name="Demo Guest",
+            email="demo@example.com",
+            relationship="friend"
+        )
+        db.add(guest)
+        db.commit()
+        db.refresh(guest)
+
+    # Check if DEMO_001 invite exists
+    invite = db.query(Invite).filter(Invite.code == "DEMO_001").first()
+    if not invite:
+        invite = Invite(
+            code="DEMO_001",
+            wedding_id=wedding.id,
+            guest_id=guest.id,
+            household_name="Demo Household",
+            role="guest"
+        )
+        db.add(invite)
+        db.commit()
+
+    return {
+        "message": "Test data seeded successfully",
+        "wedding_id": str(wedding.id),
+        "guest_id": str(guest.id),
+        "invite_code": "DEMO_001"
+    }
