@@ -11,7 +11,7 @@ from app.db.schemas import (
 )
 from app.api.auth import require_couple
 
-router = APIRouter(prefix="/invites", tags=["invites"])
+router = APIRouter(prefix="/api/invites", tags=["invites"])
 
 
 def generate_invite_code(length: int = 10) -> str:
