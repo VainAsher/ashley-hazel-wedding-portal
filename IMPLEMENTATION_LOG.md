@@ -183,3 +183,13 @@
 - Notes: Created `rsvp-flow.spec.ts` with comprehensive E2E tests in two modes: (1) mocked tests for CI/CD (default), no live backend required, and (2) live backend tests (LIVE_E2E=1) against real API. Tests validate complete flow: start unauthenticated → fill invite code → login (POST /api/auth/login) → redirected to /rsvp → fill RSVP form → submit (PATCH /api/guests/{guest_id}) → success message → reload page → verify persisted state. Includes error scenarios: invalid invite code shows error message, guest cannot modify form after logout.
 - Verification: Test file follows existing Playwright patterns (invite.spec.ts, rsvp.spec.ts). Uses DEMO-001 test invite code from seed data. Mocked mode provides full CI/CD coverage. Live mode uses real API for integration validation. Both desktop Chromium and mobile Pixel 5 projects.
 - Follow-up: TASK-024 should add planning task model + CRUD API skeleton.
+
+### TASK-024: Planning: Task Model + API Skeleton
+- Status: COMPLETE
+- Date: 2026-06-14
+- Time: 90 min
+- Branch: week3/task-024-planning-model
+- Commit: 6d022da
+- Notes: Created `tasks` table with schema (title, status enum: not_started/in_progress/done/blocked, priority enum: low/medium/high, due_date, assigned_to user FK, category). Implemented Task SQLAlchemy model with relationships, TaskCreate/TaskUpdate/TaskResponse Pydantic schemas with validation. Built CRUD API routes (GET list, POST create, GET detail, PATCH update, DELETE) protected by require_coordinator(). All routes verify wedding_id ownership to prevent cross-wedding access.
+- Verification: Created comprehensive test suite (test_tasks.py) covering CRUD operations, enum validation, role-based access control, cross-wedding rejection, 404 handling, and unauthenticated rejection.
+- Follow-up: TASK-025 should create validation report with full test suite results and E2E evidence.
