@@ -57,3 +57,35 @@ export async function loginWithInviteCode(
 
   return response.json() as Promise<LoginResponse>
 }
+
+export async function fetchCurrentUser(
+  apiBaseUrl = API_BASE_URL,
+): Promise<AuthUser> {
+  const response = await fetch(`${apiBaseUrl}/api/auth/me`, {
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    throw new AuthApiError(
+      await readErrorMessage(response, 'Unable to fetch current user.'),
+      response.status,
+    )
+  }
+
+  const data = await response.json() as AuthUser
+  return data
+}
+
+export async function logout(apiBaseUrl = API_BASE_URL): Promise<void> {
+  const response = await fetch(`${apiBaseUrl}/api/auth/logout`, {
+    credentials: 'include',
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new AuthApiError(
+      await readErrorMessage(response, 'Unable to logout.'),
+      response.status,
+    )
+  }
+}
