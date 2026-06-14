@@ -22,11 +22,11 @@ CREATE TABLE IF NOT EXISTS tasks (
   CONSTRAINT tasks_priority_valid CHECK (priority IN ('low', 'medium', 'high'))
 );
 
-CREATE INDEX idx_tasks_wedding_id ON tasks(wedding_id);
-CREATE INDEX idx_tasks_status ON tasks(status);
-CREATE INDEX idx_tasks_priority ON tasks(priority);
-CREATE INDEX idx_tasks_assigned_to ON tasks(assigned_to);
-CREATE INDEX idx_tasks_due_date ON tasks(due_date);
-CREATE INDEX idx_tasks_wedding_status ON tasks(wedding_id, status);
+CREATE INDEX IF NOT EXISTS idx_tasks_wedding_id ON tasks(wedding_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
+CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks(priority);
+CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON tasks(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
+CREATE INDEX IF NOT EXISTS idx_tasks_wedding_status ON tasks(wedding_id, status);
 
 COMMIT;
