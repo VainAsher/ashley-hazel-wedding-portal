@@ -3,7 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.db.models import RsvpStatus
+from app.db.models import RsvpStatus, TaskStatus, TaskPriority
 
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -118,5 +118,55 @@ class GuestResponse(GuestBase):
     id: int
     created_at: datetime | None = None
     updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class TaskBase(BaseModel):
+    wedding_id: int = Field(gt=0)
+    title: str = Field(min_length=1, max_length=255)
+    description: str | None = None
+    status: TaskStatus = TaskStatus.not_started
+    priority: TaskPriority = TaskPriority.medium
+    due_date: datetime | None = None
+    assigned_to: int | None = None
+    category: str | None = Field(default=None, max_length=100)
+
+    @field_validator("title")
+    @classmethod
+    def title_must_not_be_blank(cls, value: str) -> str:
+        title = value.strip()
+        if not title:
+            raise ValueError("Task title is required")
+        return title
+
+
+class TaskCreate(TaskBase):
+    pass
+
+
+class TaskUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = None
+    status: TaskStatus | None = None
+    priority: TaskPriority | None = None
+    due_date: datetime | None = None
+    assigned_to: int | None = None
+    category: str | None = Field(default=None, max_length=100)
+
+    @field_validator("title")
+    @classmethod
+    def title_must_not_be_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        title = value.strip()
+        if not title:
+            raise ValueError("Task title is required")
+        return title
+
+
+class TaskResponse(TaskBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

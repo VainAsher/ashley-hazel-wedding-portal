@@ -32,9 +32,38 @@ class RsvpStatus(str, enum.Enum):
     tentative = "tentative"
 
 
+class TaskStatus(str, enum.Enum):
+    not_started = "not_started"
+    in_progress = "in_progress"
+    done = "done"
+    blocked = "blocked"
+
+
+class TaskPriority(str, enum.Enum):
+    low = "low"
+    medium = "medium"
+    high = "high"
+
+
 rsvp_status_enum = Enum(
     RsvpStatus,
     name="rsvp_status",
+    native_enum=True,
+    create_type=False,
+    values_callable=lambda values: [item.value for item in values],
+)
+
+task_status_enum = Enum(
+    TaskStatus,
+    name="task_status",
+    native_enum=True,
+    create_type=False,
+    values_callable=lambda values: [item.value for item in values],
+)
+
+task_priority_enum = Enum(
+    TaskPriority,
+    name="task_priority",
     native_enum=True,
     create_type=False,
     values_callable=lambda values: [item.value for item in values],
@@ -59,6 +88,7 @@ class Wedding(Base):
 
     guests: Mapped[list["Guest"]] = orm_relationship(back_populates="wedding")
     invites: Mapped[list["Invite"]] = orm_relationship(back_populates="wedding")
+    tasks: Mapped[list["Task"]] = orm_relationship(back_populates="wedding")
 
 
 class Guest(Base):
@@ -195,3 +225,49 @@ class GuestAudit(Base):
     changed_by: Mapped[str | None] = mapped_column(
         String(255), server_default=text("CURRENT_USER")
     )
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('not_started', 'in_progress', 'done', 'blocked')",
+            name="tasks_status_valid",
+        ),
+        CheckConstraint(
+            "priority IN ('low', 'medium', 'high')",
+            name="tasks_priority_valid",
+        ),
+        Index("idx_tasks_wedding_id", "wedding_id"),
+        Index("idx_tasks_status", "status"),
+        Index("idx_tasks_priority", "priority"),
+        Index("idx_tasks_assigned_to", "assigned_to"),
+        Index("idx_tasks_due_date", "due_date"),
+        Index("idx_tasks_wedding_status", "wedding_id", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[TaskStatus] = mapped_column(
+        task_status_enum, nullable=False, server_default=text("'not_started'")
+    )
+    priority: Mapped[TaskPriority] = mapped_column(
+        task_priority_enum, nullable=False, server_default=text("'medium'")
+    )
+    due_date: Mapped[date | None] = mapped_column(Date)
+    assigned_to: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    category: Mapped[str | None] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    wedding: Mapped[Wedding] = orm_relationship(back_populates="tasks")
