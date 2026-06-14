@@ -107,7 +107,7 @@ class TestTasksAPI:
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_get_task_requires_coordinator(self, client, coordinator_session, db):
+    def test_get_task_requires_coordinator(self, client, coordinator_session, db_session):
         """Coordinators can get a specific task."""
         # Create a task first
         task = Task(
@@ -116,9 +116,9 @@ class TestTasksAPI:
             status=TaskStatus.not_started,
             priority=TaskPriority.medium,
         )
-        db.add(task)
-        db.commit()
-        db.refresh(task)
+        db_session.add(task)
+        db_session.commit()
+        db_session.refresh(task)
 
         response = client.get(
             f"/api/tasks/{task.id}",
@@ -137,7 +137,7 @@ class TestTasksAPI:
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_update_task_requires_coordinator(self, client, coordinator_session, db):
+    def test_update_task_requires_coordinator(self, client, coordinator_session, db_session):
         """Coordinators can update tasks."""
         task = Task(
             wedding_id=1,
@@ -145,9 +145,9 @@ class TestTasksAPI:
             status=TaskStatus.not_started,
             priority=TaskPriority.medium,
         )
-        db.add(task)
-        db.commit()
-        db.refresh(task)
+        db_session.add(task)
+        db_session.commit()
+        db_session.refresh(task)
 
         update_payload = {
             "title": "Updated title",
@@ -165,7 +165,7 @@ class TestTasksAPI:
         assert data["status"] == "in_progress"
         assert data["priority"] == "high"
 
-    def test_update_task_partial_update(self, client, coordinator_session, db):
+    def test_update_task_partial_update(self, client, coordinator_session, db_session):
         """Partial updates only modify specified fields."""
         task = Task(
             wedding_id=1,
@@ -174,9 +174,9 @@ class TestTasksAPI:
             priority=TaskPriority.medium,
             description="Original description",
         )
-        db.add(task)
-        db.commit()
-        db.refresh(task)
+        db_session.add(task)
+        db_session.commit()
+        db_session.refresh(task)
 
         # Only update title
         response = client.patch(
@@ -189,7 +189,7 @@ class TestTasksAPI:
         assert data["title"] == "New title"
         assert data["description"] == "Original description"  # Unchanged
 
-    def test_delete_task_requires_coordinator(self, client, coordinator_session, db):
+    def test_delete_task_requires_coordinator(self, client, coordinator_session, db_session):
         """Coordinators can delete tasks."""
         task = Task(
             wedding_id=1,
@@ -197,8 +197,8 @@ class TestTasksAPI:
             status=TaskStatus.not_started,
             priority=TaskPriority.medium,
         )
-        db.add(task)
-        db.commit()
+        db_session.add(task)
+        db_session.commit()
         task_id = task.id
 
         response = client.delete(
@@ -208,7 +208,7 @@ class TestTasksAPI:
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
         # Verify task is deleted
-        deleted_task = db.query(Task).filter(Task.id == task_id).first()
+        deleted_task = db_session.query(Task).filter(Task.id == task_id).first()
         assert deleted_task is None
 
     def test_delete_task_returns_404_when_not_found(self, client, coordinator_session):
