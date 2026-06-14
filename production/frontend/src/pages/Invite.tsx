@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { AuthApiError, loginWithInviteCode } from '../api/auth'
+import { AuthApiError, fetchCurrentUser, loginWithInviteCode } from '../api/auth'
 
 function inviteErrorMessage(error: unknown): string {
   if (error instanceof AuthApiError && error.status === 401) {
@@ -34,7 +34,8 @@ export function Invite() {
     setSubmitting(true)
     try {
       await loginWithInviteCode(trimmedCode)
-      navigate('/rsvp')
+      const user = await fetchCurrentUser()
+      navigate(user.role === 'guest' ? '/rsvp' : '/admin')
     } catch (err) {
       setError(inviteErrorMessage(err))
     } finally {
