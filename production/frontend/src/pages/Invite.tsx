@@ -70,7 +70,7 @@ export function Invite() {
           )}
 
           <button disabled={submitting} style={primaryButtonStyle} type="submit">
-            {submitting ? 'Checking...' : 'Continue'}
+            {submitting ? 'Checking...' : 'Enter'}
           </button>
         </form>
       </section>
