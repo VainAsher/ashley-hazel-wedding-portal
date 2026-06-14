@@ -29,8 +29,9 @@ app.add_middleware(
     SessionMiddleware,
     secret_key=settings.session_secret_key,
     max_age=settings.session_max_age_seconds,
-    same_site="lax",
-    https_only=settings.is_production or settings.session_cookie_secure,
+    same_site="lax" if settings.is_production else "none",
+    secure=settings.is_production,
+    https_only=settings.is_production,
 )
 
 app.add_middleware(
