@@ -18,6 +18,7 @@ logger = get_logger(__name__)
 
 CONSTRAINT_MESSAGES = {
     "uq_guests_wedding_email": "Guest email already exists for this wedding",
+    "guests_wedding_id_email_key": "Guest email already exists for this wedding",
     "ck_guests_email_format": "Guest email must be a valid address",
     "ck_guests_name_not_blank": "Guest name is required",
     "ck_guests_table_number_positive": "Table number must be positive",
