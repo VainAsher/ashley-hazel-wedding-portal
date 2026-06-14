@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 os.environ.setdefault("DATABASE_URL", "postgresql://localhost/wedding")
 
 from app.db.database import SessionLocal  # noqa: E402
-from app.db.models import Guest, Invite, RsvpStatus  # noqa: E402
+from app.db.models import Guest, Invite, RsvpStatus, Task  # noqa: E402
 from app.main import app  # noqa: E402
 from tests.fixtures.guests import (  # noqa: E402
     TEST_EMAIL_PREFIX,
