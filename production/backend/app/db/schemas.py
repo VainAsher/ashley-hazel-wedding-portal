@@ -1,5 +1,5 @@
 import re
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -127,7 +127,7 @@ class TaskBase(BaseModel):
     description: str | None = None
     status: TaskStatus = TaskStatus.not_started
     priority: TaskPriority = TaskPriority.medium
-    due_date: datetime | None = None
+    due_date: date | None = None
     assigned_to: int | None = None
     category: str | None = Field(default=None, max_length=100)
 

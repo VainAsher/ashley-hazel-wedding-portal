@@ -169,7 +169,7 @@ CREATE TABLE tasks (
   status task_status DEFAULT 'not_started',
   priority VARCHAR(10) DEFAULT 'medium',
   due_date DATE,
-  assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  assigned_to INTEGER REFERENCES wedding_party(id) ON DELETE SET NULL,
   category VARCHAR(100),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

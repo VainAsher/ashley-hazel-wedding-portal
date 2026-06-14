@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_tasks_wedding_id FOREIGN KEY (wedding_id) REFERENCES weddings(id) ON DELETE CASCADE,
-  CONSTRAINT fk_tasks_assigned_to FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_tasks_assigned_to FOREIGN KEY (assigned_to) REFERENCES wedding_party(id) ON DELETE SET NULL,
   CONSTRAINT tasks_status_valid CHECK (status IN ('not_started', 'in_progress', 'done', 'blocked')),
   CONSTRAINT tasks_priority_valid CHECK (priority IN ('low', 'medium', 'high'))
 );

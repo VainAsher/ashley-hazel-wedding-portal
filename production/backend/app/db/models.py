@@ -260,7 +260,7 @@ class Task(Base):
     )
     due_date: Mapped[date | None] = mapped_column(Date)
     assigned_to: Mapped[int | None] = mapped_column(
-        ForeignKey("users.id", ondelete="SET NULL")
+        ForeignKey("wedding_party.id", ondelete="SET NULL")
     )
     category: Mapped[str | None] = mapped_column(String(100))
     created_at: Mapped[datetime] = mapped_column(
