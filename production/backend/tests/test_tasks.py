@@ -23,23 +23,22 @@ def test_task_create_payload():
 class TestTasksAPI:
     """Tests for tasks CRUD endpoints."""
 
-    def test_list_tasks_requires_coordinator_role(self, client, coordinator_session):
+    def test_list_tasks_requires_coordinator_role(self, coordinator_session):
         """Only coordinators and above can list tasks."""
-        response = client.get("/api/tasks", cookies={"session": coordinator_session})
+        response = coordinator_session.get("/api/tasks")
         assert response.status_code == status.HTTP_200_OK
         assert isinstance(response.json(), list)
 
-    def test_list_tasks_guest_cannot_list(self, client, guest_session):
+    def test_list_tasks_guest_cannot_list(self, guest_session):
         """Guests cannot list tasks (requires coordinator role)."""
-        response = client.get("/api/tasks", cookies={"session": guest_session})
+        response = guest_session.get("/api/tasks")
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_create_task_requires_coordinator(self, client, coordinator_session, test_task_create_payload):
+    def test_create_task_requires_coordinator(self, coordinator_session, test_task_create_payload):
         """Coordinators can create tasks."""
-        response = client.post(
+        response = coordinator_session.post(
             "/api/tasks",
             json=test_task_create_payload,
-            cookies={"session": coordinator_session},
         )
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
@@ -47,7 +46,7 @@ class TestTasksAPI:
         assert data["status"] == "not_started"
         assert data["priority"] == "high"
 
-    def test_create_task_validates_title_required(self, client, coordinator_session):
+    def test_create_task_validates_title_required(self, coordinator_session):
         """Task title is required."""
         payload = {
             "wedding_id": 1,
@@ -55,14 +54,13 @@ class TestTasksAPI:
             "status": "not_started",
             "priority": "medium",
         }
-        response = client.post(
+        response = coordinator_session.post(
             "/api/tasks",
             json=payload,
-            cookies={"session": coordinator_session},
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    def test_create_task_validates_status_enum(self, client, coordinator_session):
+    def test_create_task_validates_status_enum(self, coordinator_session):
         """Task status must be valid enum value."""
         payload = {
             "wedding_id": 1,
@@ -70,14 +68,13 @@ class TestTasksAPI:
             "status": "invalid_status",
             "priority": "medium",
         }
-        response = client.post(
+        response = coordinator_session.post(
             "/api/tasks",
             json=payload,
-            cookies={"session": coordinator_session},
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    def test_create_task_validates_priority_enum(self, client, coordinator_session):
+    def test_create_task_validates_priority_enum(self, coordinator_session):
         """Task priority must be valid enum value."""
         payload = {
             "wedding_id": 1,
@@ -85,14 +82,13 @@ class TestTasksAPI:
             "status": "not_started",
             "priority": "invalid_priority",
         }
-        response = client.post(
+        response = coordinator_session.post(
             "/api/tasks",
             json=payload,
-            cookies={"session": coordinator_session},
         )
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    def test_create_task_rejects_other_wedding(self, client, coordinator_session):
+    def test_create_task_rejects_other_wedding(self, coordinator_session):
         """Coordinators cannot create tasks for other weddings."""
         payload = {
             "wedding_id": 999,  # Different wedding
@@ -100,14 +96,13 @@ class TestTasksAPI:
             "status": "not_started",
             "priority": "medium",
         }
-        response = client.post(
+        response = coordinator_session.post(
             "/api/tasks",
             json=payload,
-            cookies={"session": coordinator_session},
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_get_task_requires_coordinator(self, client, coordinator_session, db_session):
+    def test_get_task_requires_coordinator(self, coordinator_session, db_session):
         """Coordinators can get a specific task."""
         # Create a task first
         task = Task(
@@ -120,24 +115,22 @@ class TestTasksAPI:
         db_session.commit()
         db_session.refresh(task)
 
-        response = client.get(
+        response = coordinator_session.get(
             f"/api/tasks/{task.id}",
-            cookies={"session": coordinator_session},
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["id"] == task.id
         assert data["title"] == "Test task"
 
-    def test_get_task_returns_404_when_not_found(self, client, coordinator_session):
+    def test_get_task_returns_404_when_not_found(self, coordinator_session):
         """Getting non-existent task returns 404."""
-        response = client.get(
+        response = coordinator_session.get(
             "/api/tasks/99999",
-            cookies={"session": coordinator_session},
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_update_task_requires_coordinator(self, client, coordinator_session, db_session):
+    def test_update_task_requires_coordinator(self, coordinator_session, db_session):
         """Coordinators can update tasks."""
         task = Task(
             wedding_id=1,
@@ -154,10 +147,9 @@ class TestTasksAPI:
             "status": "in_progress",
             "priority": "high",
         }
-        response = client.patch(
+        response = coordinator_session.patch(
             f"/api/tasks/{task.id}",
             json=update_payload,
-            cookies={"session": coordinator_session},
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -165,7 +157,7 @@ class TestTasksAPI:
         assert data["status"] == "in_progress"
         assert data["priority"] == "high"
 
-    def test_update_task_partial_update(self, client, coordinator_session, db_session):
+    def test_update_task_partial_update(self, coordinator_session, db_session):
         """Partial updates only modify specified fields."""
         task = Task(
             wedding_id=1,
@@ -179,17 +171,16 @@ class TestTasksAPI:
         db_session.refresh(task)
 
         # Only update title
-        response = client.patch(
+        response = coordinator_session.patch(
             f"/api/tasks/{task.id}",
             json={"title": "New title"},
-            cookies={"session": coordinator_session},
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["title"] == "New title"
         assert data["description"] == "Original description"  # Unchanged
 
-    def test_delete_task_requires_coordinator(self, client, coordinator_session, db_session):
+    def test_delete_task_requires_coordinator(self, coordinator_session, db_session):
         """Coordinators can delete tasks."""
         task = Task(
             wedding_id=1,
@@ -201,9 +192,8 @@ class TestTasksAPI:
         db_session.commit()
         task_id = task.id
 
-        response = client.delete(
+        response = coordinator_session.delete(
             f"/api/tasks/{task_id}",
-            cookies={"session": coordinator_session},
         )
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
@@ -211,11 +201,10 @@ class TestTasksAPI:
         deleted_task = db_session.query(Task).filter(Task.id == task_id).first()
         assert deleted_task is None
 
-    def test_delete_task_returns_404_when_not_found(self, client, coordinator_session):
+    def test_delete_task_returns_404_when_not_found(self, coordinator_session):
         """Deleting non-existent task returns 404."""
-        response = client.delete(
+        response = coordinator_session.delete(
             "/api/tasks/99999",
-            cookies={"session": coordinator_session},
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
