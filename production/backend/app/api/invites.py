@@ -26,7 +26,14 @@ def create_invite(
     current_user=Depends(require_couple),
 ) -> Invite:
     """Create a new invite code for a wedding."""
-    # Verify wedding exists and user has access
+    # Verify user owns this wedding
+    if invite.wedding_id != current_user.wedding_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot create invites for other weddings"
+        )
+
+    # Verify wedding exists
     wedding = db.query(Wedding).filter(Wedding.id == invite.wedding_id).first()
     if not wedding:
         raise HTTPException(
@@ -60,6 +67,11 @@ def list_invites(
     current_user=Depends(require_couple),
 ) -> list[Invite]:
     """List all invites for a wedding."""
+    if wedding_id != current_user.wedding_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot access invites for other weddings"
+        )
     invites = (
         db.query(Invite)
         .filter(Invite.wedding_id == wedding_id)

@@ -68,7 +68,14 @@ function App() {
             }
             path="/admin"
           />
-          <Route element={<Guests />} path="/guests" />
+          <Route
+            element={
+              <RequireAdmin>
+                <Guests />
+              </RequireAdmin>
+            }
+            path="/guests"
+          />
           <Route element={<Navigate replace to="/invite" />} path="*" />
         </Routes>
       </div>

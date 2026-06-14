@@ -106,10 +106,10 @@ async def list_guests(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    _current_user: UserResponse = Depends(require_coordinator),
+    current_user: UserResponse = Depends(require_coordinator),
 ) -> list[Guest]:
-    logger.debug("guest_list_started", extra={"skip": skip, "limit": limit})
-    guests = db.query(Guest).order_by(Guest.id).offset(skip).limit(limit).all()
+    logger.debug("guest_list_started", extra={"skip": skip, "limit": limit, "wedding_id": current_user.wedding_id})
+    guests = db.query(Guest).filter(Guest.wedding_id == current_user.wedding_id).order_by(Guest.id).offset(skip).limit(limit).all()
     logger.debug("guest_list_completed", extra={"count": len(guests)})
     return guests
 
