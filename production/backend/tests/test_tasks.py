@@ -102,25 +102,25 @@ class TestTasksAPI:
         )
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_get_task_requires_coordinator(self, coordinator_session, db_session):
+    def test_get_task_requires_coordinator(self, coordinator_session):
         """Coordinators can get a specific task."""
-        # Create a task first
-        task = Task(
-            wedding_id=1,
-            title="Test task",
-            status=TaskStatus.not_started,
-            priority=TaskPriority.medium,
-        )
-        db_session.add(task)
-        db_session.commit()
-        db_session.refresh(task)
+        # Create a task via API
+        payload = {
+            "wedding_id": 1,
+            "title": "Test task",
+            "status": "not_started",
+            "priority": "medium",
+        }
+        create_response = coordinator_session.post("/api/tasks", json=payload)
+        assert create_response.status_code == status.HTTP_201_CREATED
+        task_id = create_response.json()["id"]
 
         response = coordinator_session.get(
-            f"/api/tasks/{task.id}",
+            f"/api/tasks/{task_id}",
         )
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["id"] == task.id
+        assert data["id"] == task_id
         assert data["title"] == "Test task"
 
     def test_get_task_returns_404_when_not_found(self, coordinator_session):
@@ -130,17 +130,18 @@ class TestTasksAPI:
         )
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_update_task_requires_coordinator(self, coordinator_session, db_session):
+    def test_update_task_requires_coordinator(self, coordinator_session):
         """Coordinators can update tasks."""
-        task = Task(
-            wedding_id=1,
-            title="Original title",
-            status=TaskStatus.not_started,
-            priority=TaskPriority.medium,
-        )
-        db_session.add(task)
-        db_session.commit()
-        db_session.refresh(task)
+        # Create a task via API first
+        create_payload = {
+            "wedding_id": 1,
+            "title": "Original title",
+            "status": "not_started",
+            "priority": "medium",
+        }
+        create_response = coordinator_session.post("/api/tasks", json=create_payload)
+        assert create_response.status_code == status.HTTP_201_CREATED
+        task_id = create_response.json()["id"]
 
         update_payload = {
             "title": "Updated title",
@@ -148,7 +149,7 @@ class TestTasksAPI:
             "priority": "high",
         }
         response = coordinator_session.patch(
-            f"/api/tasks/{task.id}",
+            f"/api/tasks/{task_id}",
             json=update_payload,
         )
         assert response.status_code == status.HTTP_200_OK
@@ -157,22 +158,23 @@ class TestTasksAPI:
         assert data["status"] == "in_progress"
         assert data["priority"] == "high"
 
-    def test_update_task_partial_update(self, coordinator_session, db_session):
+    def test_update_task_partial_update(self, coordinator_session):
         """Partial updates only modify specified fields."""
-        task = Task(
-            wedding_id=1,
-            title="Original",
-            status=TaskStatus.not_started,
-            priority=TaskPriority.medium,
-            description="Original description",
-        )
-        db_session.add(task)
-        db_session.commit()
-        db_session.refresh(task)
+        # Create a task via API first
+        create_payload = {
+            "wedding_id": 1,
+            "title": "Original",
+            "status": "not_started",
+            "priority": "medium",
+            "description": "Original description",
+        }
+        create_response = coordinator_session.post("/api/tasks", json=create_payload)
+        assert create_response.status_code == status.HTTP_201_CREATED
+        task_id = create_response.json()["id"]
 
         # Only update title
         response = coordinator_session.patch(
-            f"/api/tasks/{task.id}",
+            f"/api/tasks/{task_id}",
             json={"title": "New title"},
         )
         assert response.status_code == status.HTTP_200_OK
@@ -180,17 +182,18 @@ class TestTasksAPI:
         assert data["title"] == "New title"
         assert data["description"] == "Original description"  # Unchanged
 
-    def test_delete_task_requires_coordinator(self, coordinator_session, db_session):
+    def test_delete_task_requires_coordinator(self, coordinator_session):
         """Coordinators can delete tasks."""
-        task = Task(
-            wedding_id=1,
-            title="Task to delete",
-            status=TaskStatus.not_started,
-            priority=TaskPriority.medium,
-        )
-        db_session.add(task)
-        db_session.commit()
-        task_id = task.id
+        # Create a task via API first
+        create_payload = {
+            "wedding_id": 1,
+            "title": "Task to delete",
+            "status": "not_started",
+            "priority": "medium",
+        }
+        create_response = coordinator_session.post("/api/tasks", json=create_payload)
+        assert create_response.status_code == status.HTTP_201_CREATED
+        task_id = create_response.json()["id"]
 
         response = coordinator_session.delete(
             f"/api/tasks/{task_id}",
@@ -198,8 +201,8 @@ class TestTasksAPI:
         assert response.status_code == status.HTTP_204_NO_CONTENT
 
         # Verify task is deleted
-        deleted_task = db_session.query(Task).filter(Task.id == task_id).first()
-        assert deleted_task is None
+        get_response = coordinator_session.get(f"/api/tasks/{task_id}")
+        assert get_response.status_code == status.HTTP_404_NOT_FOUND
 
     def test_delete_task_returns_404_when_not_found(self, coordinator_session):
         """Deleting non-existent task returns 404."""
