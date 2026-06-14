@@ -170,3 +170,35 @@ class TaskResponse(TaskBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class InviteCreate(BaseModel):
+    wedding_id: int = Field(gt=0)
+    role: str = Field(min_length=1, max_length=20)
+    guest_id: int | None = None
+    household_name: str | None = Field(default=None, max_length=255)
+
+    @field_validator("role")
+    @classmethod
+    def role_must_be_valid(cls, value: str) -> str:
+        valid_roles = {"guest", "coordinator", "couple"}
+        if value.lower() not in valid_roles:
+            raise ValueError(f"Role must be one of {valid_roles}")
+        return value.lower()
+
+
+class InviteUpdate(BaseModel):
+    guest_id: int | None = None
+    household_name: str | None = None
+
+
+class InviteResponse(BaseModel):
+    id: int
+    code: str
+    wedding_id: int
+    role: str
+    guest_id: int | None
+    household_name: str | None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.api import auth, guests, tasks
+from app.api import auth, guests, invites, tasks
 from app.config import Environment, get_settings
 from app.error_tracking import init_error_tracking
 from app.logging import configure_logging
@@ -44,6 +44,7 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(guests.router)
+app.include_router(invites.router)
 app.include_router(tasks.router)
 
 
