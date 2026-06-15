@@ -45,14 +45,14 @@ FROM nginxinc/nginx-unprivileged:1.27-alpine AS serve
 
 # Full nginx config (adapted for the unprivileged user: pid under /tmp,
 # listen 8080, upstream backend, SPA fallback, /api proxy, /healthz).
-# Copy as root, then fix permissions immediately so unprivileged nginx can read it.
+# The nginx-unprivileged base runs as uid 101; we need to set permissions as root.
+USER root
 COPY nginx.conf /etc/nginx/nginx.conf
 RUN chmod 644 /etc/nginx/nginx.conf && chown nginx:nginx /etc/nginx/nginx.conf
 
 # Pre-create the /tmp temp-dir parent so nginx (non-root) can create its
 # leaf temp dirs there at startup. The unprivileged base already runs as the
 # `nginx` user; /tmp is world-writable, so this just guarantees the parent.
-USER root
 RUN mkdir -p /tmp/nginx \
     && chown -R nginx:nginx /tmp/nginx
 USER nginx
