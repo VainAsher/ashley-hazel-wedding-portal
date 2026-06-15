@@ -72,12 +72,12 @@ async def create_guest(
     current_user: UserResponse = Depends(require_coordinator),
 ) -> Guest:
     logger.info("guest_create_started", extra={"wedding_id": guest.wedding_id})
+    ensure_wedding_exists(db, guest.wedding_id, "create_guest")
     if guest.wedding_id != current_user.wedding_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot create guests for other weddings"
         )
-    ensure_wedding_exists(db, guest.wedding_id, "create_guest")
 
     db_guest = Guest(**guest.model_dump())
     db.add(db_guest)

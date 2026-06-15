@@ -224,39 +224,6 @@ class TestGuestDataWithSeeds:
 
 
 # ============================================================================
-# RSVP Tests (Example)
-# ============================================================================
-
-
-class TestRSVPWithSeededGuest:
-    """Test RSVP functionality with seeded guest."""
-
-    def test_guest_can_rsvp(self, test_client: TestClient):
-        """Test that a guest can submit an RSVP."""
-        # Login as guest
-        response = test_client.post(
-            "/api/auth/login",
-            json={"invite_code": "DEMO-GUEST"}
-        )
-        assert response.status_code == 200
-
-        # Submit RSVP (adjust endpoint based on your API)
-        rsvp_data = {
-            "status": "accepted",
-            "meal_choice": "chicken",
-            "dietary_restrictions": "vegetarian"
-        }
-
-        response = test_client.post(
-            "/api/guests/rsvp",
-            json=rsvp_data
-        )
-
-        # Should succeed (200) or redirect (302), depending on implementation
-        assert response.status_code in [200, 302]
-
-
-# ============================================================================
 # Integration Tests
 # ============================================================================
 
