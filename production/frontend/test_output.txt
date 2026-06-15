@@ -1,0 +1,93 @@
+
+> wedding-dashboard-frontend@0.1.0 test
+> playwright test
+
+
+[2mRunning [22m88[2m tests using [22m10[2m workers[22m
+
+  [32m-[39m  [2m1 [22m[36m[chromium-desktop] › guest-management-live.spec.ts:17:3 › live guest management browser flow › adds, views, edits, deletes, and verifies database persistence[39m
+  [32m-[39m  [2m2 [22m[36m[chromium-mobile] › guest-management-live.spec.ts:17:3 › live guest management browser flow › adds, views, edits, deletes, and verifies database persistence[39m
+  [32mok[39m [2m3 [22m[chromium-desktop] › auth-routing.spec.ts:99:1 › unauthenticated root traffic lands on invite form[2m (25.9s)[22m
+[2m[WebServer] [22m[2m11:39:11[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/invites?wedding_id=1[39m
+Error: connect ECONNREFUSED 127.0.0.1:3001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+[2m[WebServer] [22m[2m11:39:12[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/guests?wedding_id=1[39m
+Error: connect ECONNREFUSED 127.0.0.1:3001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+  [32mok[39m [2m4 [22m[chromium-desktop] › invite.spec.ts:40:1 › redirects unauthenticated root traffic to invite form[2m (27.1s)[22m
+[2m[WebServer] [22m[2m11:39:12[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/guests?wedding_id=1[39m
+Error: connect ECONNREFUSED 127.0.0.1:3001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+[2m[WebServer] [22m[2m11:39:12[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/invites?wedding_id=1[39m
+Error: connect ECONNREFUSED 127.0.0.1:3001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+  [32mok[39m [2m5 [22m[chromium-desktop] › rsvp.spec.ts:135:1 › renders current guest RSVP state[2m (36.0s)[22m
+[2m[WebServer] [22m[2m11:39:30[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/auth/login[39m
+Error: connect ECONNREFUSED 127.0.0.1:3001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+  [32mok[39m [2m6 [22m[chromium-desktop] › invite.spec.ts:52:1 › requires an invite code before submitting[2m (18.0s)[22m
+  [32mok[39m [2m7 [22m[chromium-desktop] › auth-routing.spec.ts:108:1 › unauthenticated RSVP traffic redirects to invite form[2m (20.0s)[22m
+  [31mx[39m  [2m8 [22m[31m[chromium-desktop] › navigation.spec.ts:51:1 › routes from invite entry to guests and renders guest data[39m[2m (31.9s)[22m
+  [31mx[39m  [2m9 [22m[31m[chromium-desktop] › invite-management.spec.ts:264:1 › renders Invite Management UI with all sections[39m[2m (42.2s)[22m
+  [32mok[39m [2m10 [22m[chromium-desktop] › auth-routing.spec.ts:117:1 › authenticated guest root traffic lands on RSVP form[2m (10.1s)[22m
+  [31mx[39m  [2m11 [22m[31m[chromium-mobile] › auth-routing.spec.ts:99:1 › unauthenticated root traffic lands on invite form[39m[2m (37.2s)[22m
+  [31mx[39m  [2m12 [22m[31m[chromium-mobile] › guest-management.spec.ts:160:1 › renders existing guest count and table columns[39m[2m (41.9s)[22m
+  [31mx[39m  [2m13 [22m[31m[chromium-desktop] › guest-management.spec.ts:160:1 › renders existing guest count and table columns[39m[2m (39.0s)[22m
+  [31mx[39m  [2m14 [22m[31m[chromium-desktop] › rsvp-flow.spec.ts:137:3 › full RSVP flow: invite login → form submission (MOCKED)[39m[2m (39.3s)[22m
+  [31mx[39m  [2m15 [22m[31m[chromium-mobile] › invite-management.spec.ts:264:1 › renders Invite Management UI with all sections[39m[2m (41.8s)[22m
+  [32mok[39m [2m16 [22m[chromium-desktop] › rsvp.spec.ts:148:1 › submits RSVP changes and locks the saved form[2m (35.8s)[22m
+  [32mok[39m [2m17 [22m[chromium-desktop] › auth-routing.spec.ts:128:1 › authenticated couple root traffic lands on admin stub[2m (16.5s)[22m
+  [32mok[39m [2m18 [22m[chromium-desktop] › navigation.spec.ts:114:1 › direct guests route and fallback route are browser-accessible[2m (23.6s)[22m
+  [32mok[39m [2m19 [22m[chromium-mobile] › auth-routing.spec.ts:108:1 › unauthenticated RSVP traffic redirects to invite form[2m (15.5s)[22m
+  [32mok[39m [2m20 [22m[chromium-desktop] › invite.spec.ts:60:1 › shows code not found for invalid invite response[2m (33.7s)[22m
+  [32mok[39m [2m21 [22m[chromium-desktop] › guest-management.spec.ts:170:1 › opens and cancels the add guest form[2m (19.4s)[22m
+  [31mx[39m  [2m22 [22m[31m[chromium-desktop] › invite-management.spec.ts:281:1 › displays existing invites in a table[39m[2m (11.3s)[22m
+  [32mok[39m [2m23 [22m[chromium-mobile] › guest-management.spec.ts:170:1 › opens and cancels the add guest form[2m (20.6s)[22m
+  [32mok[39m [2m24 [22m[chromium-desktop] › rsvp-flow.spec.ts:258:3 › invalid invite code shows error (MOCKED)[2m (19.0s)[22m
+  [32mok[39m [2m25 [22m[chromium-desktop] › invite.spec.ts:73:1 › shows network error when login request cannot complete[2m (9.3s)[22m
+  [32mok[39m [2m26 [22m[chromium-desktop] › guest-management.spec.ts:179:1 › validates required guest name before submit[2m (9.5s)[22m
+  [32mok[39m [2m27 [22m[chromium-mobile] › guest-management.spec.ts:179:1 › validates required guest name before submit[2m (9.3s)[22m
+  [32mok[39m [2m28 [22m[chromium-desktop] › rsvp-flow.spec.ts:278:3 › guest cannot modify form after logout[2m (18.4s)[22m
+  [31mx[39m  [2m29 [22m[31m[chromium-mobile] › invite-management.spec.ts:281:1 › displays existing invites in a table[39m[2m (24.0s)[22m
+  [32mok[39m [2m30 [22m[chromium-desktop] › invite-management.spec.ts:306:1 › provides copy-to-clipboard buttons for codes[2m (19.5s)[22m
+  [32mok[39m [2m31 [22m[chromium-desktop] › invite.spec.ts:86:1 › submits trimmed invite code and redirects to rsvp on success[2m (15.4s)[22m
+  [32mok[39m [2m32 [22m[chromium-desktop] › auth-routing.spec.ts:145:1 › guest admin traffic redirects to RSVP form[2m (31.5s)[22m
+  [32mok[39m [2m33 [22m[chromium-mobile] › auth-routing.spec.ts:117:1 › authenticated guest root traffic lands on RSVP form[2m (34.2s)[22m
+  [32mok[39m [2m34 [22m[chromium-mobile] › invite.spec.ts:40:1 › redirects unauthenticated root traffic to invite form[2m (9.5s)[22m
+  [31mx[39m  [2m35 [22m[31m[chromium-desktop] › rsvp.spec.ts:181:1 › shows API errors without leaving the form[39m[2m (34.1s)[22m
+  [32mok[39m [2m36 [22m[chromium-mobile] › invite.spec.ts:52:1 › requires an invite code before submitting[2m (8.4s)[22m
+  [32mok[39m [2m37 [22m[chromium-mobile] › invite-management.spec.ts:306:1 › provides copy-to-clipboard buttons for codes[2m (14.5s)[22m
+  [32mok[39m [2m38 [22m[chromium-desktop] › guest-management.spec.ts:187:1 › validates email format before submit[2m (32.5s)[22m
+[2m[WebServer] [22m[2m11:40:50[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/invites?wedding_id=1[39m
+Error: connect ECONNREFUSED 127.0.0.1:3001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+[2m11:40:51[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/guests?wedding_id=1[39m
+Error: connect ECONNREFUSED 127.0.0.1:3001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+[2m11:40:51[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/invites?wedding_id=1[39m
+Error: connect ECONNREFUSED 127.0.0.1:3001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+[2m11:40:51[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /api/guests?wedding_id=1[39m
+Error: connect ECONNREFUSED 127.0.0.1:3001
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1705:16)
+  [32mok[39m [2m39 [22m[chromium-mobile] › invite.spec.ts:60:1 › shows code not found for invalid invite response[2m (10.4s)[22m
+  [31mx[39m  [2m40 [22m[31m[chromium-desktop] › invite-management.spec.ts:320:1 › shows link guest modal when clicking link button[39m[2m (19.2s)[22m
+  [31mx[39m  [2m41 [22m[31m[chromium-mobile] › guest-management.spec.ts:187:1 › validates email format before submit[39m[2m (37.7s)[22m
+  [32mok[39m [2m42 [22m[chromium-desktop] › guest-management.spec.ts:196:1 › validates wedding id before submit[2m (15.5s)[22m
+  [32mok[39m [2m43 [22m[chromium-mobile] › auth-routing.spec.ts:128:1 › authenticated couple root traffic lands on admin stub[2m (30.0s)[22m
+  [32mok[39m [2m44 [22m[chromium-mobile] › rsvp.spec.ts:135:1 › renders current guest RSVP state[2m (10.5s)[22m
+  [32mok[39m [2m45 [22m[chromium-mobile] › rsvp-flow.spec.ts:137:3 › full RSVP flow: invite login → form submission (MOCKED)[2m (19.4s)[22m
+  [32mok[39m [2m46 [22m[chromium-mobile] › guest-management.spec.ts:196:1 › validates wedding id before submit[2m (9.9s)[22m
+  [32mok[39m [2m47 [22m[chromium-mobile] › invite.spec.ts:73:1 › shows network error when login request cannot complete[2m (25.1s)[22m
+  [31mx[39m  [2m48 [22m[31m[chromium-mobile] › navigation.spec.ts:51:1 › routes from invite entry to guests and renders guest data[39m[2m (15.5s)[22m
+  [32mok[39m [2m49 [22m[chromium-mobile] › auth-routing.spec.ts:145:1 › guest admin traffic redirects to RSVP form[2m (24.1s)[22m
+  [32mok[39m [2m50 [22m[chromium-mobile] › invite.spec.ts:86:1 › submits trimmed invite code and redirects to rsvp on success[2m (10.9s)[22m
+  [31mx[39m  [2m51 [22m[31m[chromium-mobile] › invite-management.spec.ts:320:1 › shows link guest modal when clicking link button[39m[2m (32.0s)[22m
+  [32mok[39m [2m52 [22m[chromium-mobile] › guest-management.spec.ts:206:1 › adds a guest with plus-one and dietary details[2m (18.7s)[22m
+  [32mok[39m [2m53 [22m[chromium-mobile] › navigation.spec.ts:114:1 › direct guests route and fallback route are browser-accessible[2m (10.1s)[22m
+  [32mok[39m [2m54 [22m[chromium-desktop] › guest-management.spec.ts:206:1 › adds a guest with plus-one and dietary details[2m (32.3s)[22m
+  [32mok[39m [2m55 [22m[chromium-mobile] › rsvp.spec.ts:148:1 › submits RSVP changes and locks the saved form[2m (28.4s)[22m
+  [32mok[39m [2m56 [22m[chromium-mobile] › rsvp-flow.spec.ts:258:3 › invalid invite code shows error (MOCKED)[2m (27.9s)[22m
+  [32mok[39m [2m57 [22m[chromium-mobile] › rsvp-flow.spec.ts:278:3 › guest cannot modify form after logout[2m (6.9s)[22m
+  [31mx[39m  [2m58 [22m[31m[chromium-desktop] › invite-management.spec.ts:342:1 › generates a new invite code[39m[2m (34.0s)[22m
+  [32mok[39m [2m59 [22m[chromium-desktop] › guest-management.spec.ts:226:1 › cancels edit without changing selected guest details[2m (18.2s)[22m

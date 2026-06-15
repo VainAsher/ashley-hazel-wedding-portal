@@ -11,8 +11,8 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: `npm run dev -- --host 127.0.0.1 --port ${port} --strictPort`,
-    reuseExistingServer: false,
+    command: `PLAYWRIGHT_PORT=${port} npm run dev -- --host 127.0.0.1 --port ${port} --strictPort`,
+    reuseExistingServer: true,
     timeout: 30_000,
     url: baseURL,
   },

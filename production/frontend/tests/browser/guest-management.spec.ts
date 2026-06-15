@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
+import { cleanupPageState, initializeErrorTracking, filterIgnorableErrors, getBrowserErrors } from './fixtures/page-cleanup'
 
 type RsvpStatus = 'pending' | 'accepted' | 'declined' | 'tentative'
 
@@ -49,6 +50,7 @@ function json(route: Route, body: unknown, status = 200) {
 }
 
 async function installGuestApi(page: Page) {
+  // Reset to initial state for each test - create a fresh copy
   let nextId = 3000
   let guests = [{ ...initialGuest }]
 
@@ -110,14 +112,9 @@ async function installGuestApi(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
-  const browserErrors: string[] = []
-  page.on('console', (message) => {
-    if (message.type() === 'error') {
-      browserErrors.push(message.text())
-    }
-  })
-  page.on('pageerror', (error) => browserErrors.push(error.message))
-  Reflect.set(page, 'browserErrors', browserErrors)
+  // Clean up any previous test state
+  await cleanupPageState(page)
+  await initializeErrorTracking(page)
 
   // Mock authentication to return a couple role user
   await page.route('**/api/auth/me', async (route) => {
@@ -139,10 +136,8 @@ test.beforeEach(async ({ page }) => {
 })
 
 test.afterEach(async ({ page }) => {
-  const browserErrors = Reflect.get(page, 'browserErrors') as string[] | undefined
-  const unexpectedErrors = (browserErrors ?? []).filter(
-    (message) => !message.includes('the server responded with a status of 400'),
-  )
+  const browserErrors = getBrowserErrors(page)
+  const unexpectedErrors = filterIgnorableErrors(browserErrors, ['the server responded with a status of 400'])
   expect(unexpectedErrors).toEqual([])
 })
 

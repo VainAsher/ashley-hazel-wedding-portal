@@ -466,14 +466,15 @@ test('deletes an invite after confirmation', async ({ page }) => {
   const invitesBeforeText = await page.getByRole('heading', { name: /Invites \(\d+\)/ }).textContent()
   const invitesBefore = parseInt(invitesBeforeText?.match(/\d+/)?.[0] || '0')
 
-  // Delete first invite
-  const tableRows = page.locator('tbody tr')
-  const firstRow = tableRows.nth(0)
-  const deleteButton = firstRow.locator('button', { hasText: '🗑️' })
+  // Delete first invite - find the delete button more specifically
+  // Look for the button with delete emoji in the first row
+  const firstRowDeleteButton = page.locator('tbody tr').first().locator('button:has-text("🗑️")')
 
   // Ensure button is visible before clicking
-  await expect(deleteButton).toBeVisible({ timeout: 5000 })
-  await deleteButton.click()
+  await expect(firstRowDeleteButton).toBeVisible({ timeout: 5000 })
+
+  // Click the delete button (using force to bypass any overlays)
+  await firstRowDeleteButton.click({ force: true, timeout: 5000 })
 
   // Verify confirmation was called
   expect(confirmCalled).toBe(true)

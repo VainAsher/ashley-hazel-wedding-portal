@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
+import { cleanupPageState, initializeErrorTracking, filterIgnorableErrors, getBrowserErrors } from './fixtures/page-cleanup'
 
 type RsvpStatus = 'pending' | 'accepted' | 'declined' | 'tentative'
 
@@ -121,14 +122,16 @@ async function installRsvpApi(
 }
 
 test.beforeEach(async ({ page }) => {
-  await trackBrowserErrors(page)
+  // Clean up any previous test state
+  await cleanupPageState(page)
+  await initializeErrorTracking(page)
 })
 
 test.afterEach(async ({ page }) => {
-  const browserErrors = Reflect.get(page, 'browserErrors') as string[] | undefined
-  const unexpectedErrors = (browserErrors ?? []).filter(
-    (message) => !message.includes('the server responded with a status of 400'),
-  )
+  const browserErrors = getBrowserErrors(page)
+  const unexpectedErrors = filterIgnorableErrors(browserErrors, [
+    'the server responded with a status of 400',
+  ])
   expect(unexpectedErrors).toEqual([])
 })
 

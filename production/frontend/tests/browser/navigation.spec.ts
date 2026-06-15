@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { cleanupPageState, initializeErrorTracking, filterIgnorableErrors, getBrowserErrors } from './fixtures/page-cleanup'
 
 const guests = [
   {
@@ -22,14 +23,9 @@ const guests = [
 ]
 
 test.beforeEach(async ({ page }) => {
-  const browserErrors: string[] = []
-  page.on('console', (message) => {
-    if (message.type() === 'error') {
-      browserErrors.push(message.text())
-    }
-  })
-  page.on('pageerror', (error) => browserErrors.push(error.message))
-  Reflect.set(page, 'browserErrors', browserErrors)
+  // Clean up any previous test state
+  await cleanupPageState(page)
+  await initializeErrorTracking(page)
 
   await page.route('**/api/guests', async (route) => {
     await route.fulfill({
@@ -41,15 +37,16 @@ test.beforeEach(async ({ page }) => {
 })
 
 test.afterEach(async ({ page }) => {
-  const browserErrors = Reflect.get(page, 'browserErrors') as string[] | undefined
-  const unexpectedErrors = (browserErrors ?? []).filter(
-    (message) => !message.includes('the server responded with a status of 401'),
-  )
+  const browserErrors = getBrowserErrors(page)
+  const unexpectedErrors = filterIgnorableErrors(browserErrors, [
+    'the server responded with a status of 401',
+  ])
   expect(unexpectedErrors).toEqual([])
 })
 
 test('routes from invite entry to guests and renders guest data', async ({ page }) => {
-  let authMeCalls = 0
+  // Use a local counter variable per test to track auth/me calls independently
+  const authCallTracker = { count: 0 }
 
   await page.route('**/api/auth/login', async (route) => {
     await route.fulfill({
@@ -70,8 +67,8 @@ test('routes from invite entry to guests and renders guest data', async ({ page 
 
   await page.route('**/api/auth/me', async (route) => {
     // First call (before login) returns 401, subsequent calls return authenticated
-    authMeCalls++
-    if (authMeCalls === 1) {
+    authCallTracker.count++
+    if (authCallTracker.count === 1) {
       await route.fulfill({
         contentType: 'application/json',
         status: 401,

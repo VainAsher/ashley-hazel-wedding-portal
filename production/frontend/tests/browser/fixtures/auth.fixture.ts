@@ -1,4 +1,5 @@
 import { expect, test as base, type Page, type Route } from '@playwright/test'
+import { cleanupPageState, initializeErrorTracking } from './page-cleanup'
 
 /**
  * Authentication test fixtures for Playwright
@@ -190,25 +191,33 @@ export const testUsers = {
  */
 export const authenticatedTest = base.extend<AuthFixtures>({
   authenticatedPage: async ({ page }, use) => {
-    await setupErrorTracking(page)
+    // Clean up any previous test state
+    await cleanupPageState(page)
+    await initializeErrorTracking(page)
     await preAuthenticateUser(page, testUsers.guest)
     await use(page)
   },
 
   authenticatedCouplePage: async ({ page }, use) => {
-    await setupErrorTracking(page)
+    // Clean up any previous test state
+    await cleanupPageState(page)
+    await initializeErrorTracking(page)
     await preAuthenticateUser(page, testUsers.couple)
     await use(page)
   },
 
   authenticatedGuestPage: async ({ page }, use) => {
-    await setupErrorTracking(page)
+    // Clean up any previous test state
+    await cleanupPageState(page)
+    await initializeErrorTracking(page)
     await preAuthenticateUser(page, testUsers.guest)
     await use(page)
   },
 
   authenticatedCoordinatorPage: async ({ page }, use) => {
-    await setupErrorTracking(page)
+    // Clean up any previous test state
+    await cleanupPageState(page)
+    await initializeErrorTracking(page)
     await preAuthenticateUser(page, testUsers.coordinator)
     await use(page)
   },
@@ -220,7 +229,9 @@ export const authenticatedTest = base.extend<AuthFixtures>({
  */
 export const testWithAuth = base.extend({
   page: async ({ page }, use) => {
-    await setupErrorTracking(page)
+    // Clean up any previous test state
+    await cleanupPageState(page)
+    await initializeErrorTracking(page)
     await use(page)
   },
 })
