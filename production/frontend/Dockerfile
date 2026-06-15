@@ -50,9 +50,10 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Pre-create the /tmp temp-dir parent so nginx (non-root) can create its
 # leaf temp dirs there at startup. The unprivileged base already runs as the
 # `nginx` user; /tmp is world-writable, so this just guarantees the parent.
+# Also fix ownership of nginx.conf so unprivileged nginx user can read it.
 USER root
 RUN mkdir -p /tmp/nginx \
-    && chown -R nginx:nginx /tmp/nginx
+    && chown -R nginx:nginx /tmp/nginx /etc/nginx/nginx.conf
 USER nginx
 
 # Copy ONLY the compiled static assets from the build stage.
