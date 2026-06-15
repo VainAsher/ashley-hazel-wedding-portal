@@ -69,6 +69,21 @@ test('routes from invite entry to guests and renders guest data', async ({ page 
 })
 
 test('direct guests route and fallback route are browser-accessible', async ({ page }) => {
+  await page.route('**/api/auth/me', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      status: 200,
+      body: JSON.stringify({
+        id: 1,
+        name: 'Test Couple',
+        role: 'couple',
+        wedding_id: 1,
+        invite_id: 1,
+        guest_id: null,
+      }),
+    })
+  })
+
   await page.goto('/guests')
   await expect(page.getByRole('heading', { name: 'Guest Management' })).toBeVisible()
 

@@ -119,6 +119,22 @@ test.beforeEach(async ({ page }) => {
   page.on('pageerror', (error) => browserErrors.push(error.message))
   Reflect.set(page, 'browserErrors', browserErrors)
 
+  // Mock authentication to return a couple role user
+  await page.route('**/api/auth/me', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      status: 200,
+      body: JSON.stringify({
+        id: 1,
+        name: 'Test Couple',
+        role: 'couple',
+        wedding_id: 1,
+        invite_id: 1,
+        guest_id: null,
+      }),
+    })
+  })
+
   await installGuestApi(page)
 })
 
