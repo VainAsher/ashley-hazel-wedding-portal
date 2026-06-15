@@ -90,6 +90,11 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
       setInvites([newInvite, ...invites])
       setSuccess(`Invite code generated: ${newInvite.code}`)
       setRole('guest')
+
+      // Auto-clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccess(null)
+      }, 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error generating invite')
     } finally {
@@ -101,6 +106,7 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
     if (!linkingInviteId || !linkingGuestId) return
 
     try {
+      console.log(`Linking guest ${linkingGuestId} to invite ${linkingInviteId}`)
       const res = await fetch(`/api/invites/${linkingInviteId}`, {
         method: 'PATCH',
         credentials: 'include',
@@ -111,11 +117,18 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
       if (!res.ok) throw new Error('Failed to link guest')
 
       const updated = await res.json()
+      console.log(`Link response:`, updated)
       setInvites(invites.map((i) => (i.id === linkingInviteId ? updated : i)))
       setSuccess('Guest linked to invite')
       setLinkingInviteId(null)
       setLinkingGuestId(null)
+
+      // Auto-clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccess(null)
+      }, 3000)
     } catch (err) {
+      console.error('Error linking guest:', err)
       setError(err instanceof Error ? err.message : 'Error linking guest')
     }
   }
@@ -132,7 +145,13 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
       if (!res.ok) throw new Error('Failed to delete invite')
 
       setInvites(invites.filter((i) => i.id !== inviteId))
+      setError(null)
       setSuccess('Invite deleted')
+
+      // Auto-clear success message after 3 seconds
+      setTimeout(() => {
+        setSuccess(null)
+      }, 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error deleting invite')
     }

@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
+import { cleanupPageState, initializeErrorTracking, filterIgnorableErrors, getBrowserErrors } from './fixtures/page-cleanup'
 
 type AuthRole = 'couple' | 'coordinator' | 'guest'
 
@@ -93,28 +94,31 @@ async function trackBrowserErrors(page: Page) {
 
 async function mockAuthenticatedCouple(page: Page) {
   // Mock the login endpoint to accept DEMO-COUPLE and return couple user
-  await page.route('**/api/auth/login', async (route) => {
+  await page.route(/\/api\/auth\/login(\?.*)?$/, async (route) => {
     const body = route.request().postDataJSON() as { invite_code: string }
     if (body.invite_code === 'DEMO-COUPLE') {
-      await json(route, { user: coupleUser }, 200)
+      return await json(route, { user: coupleUser }, 200)
     } else {
-      await json(route, { detail: 'Invalid invite code' }, 401)
+      return await json(route, { detail: 'Invalid invite code' }, 401)
     }
   })
 
   // Mock the /api/auth/me endpoint to return authenticated couple user
-  await page.route('**/api/auth/me', async (route) => {
-    await json(route, coupleUser)
+  await page.route(/\/api\/auth\/me(\?.*)?$/, async (route) => {
+    return await json(route, coupleUser)
   })
 }
 
 async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
-  await page.route('**/api/invites*', async (route) => {
+  // Make a copy of invites array to avoid mutation issues across tests
+  const invitesCopy = [...invites]
+
+  await page.route(/\/api\/invites(?:\/\d+)?(\?.*)?$/, async (route) => {
     const url = new URL(route.request().url())
 
     // Handle GET /api/invites?wedding_id=1
     if (route.request().method() === 'GET' && url.search.includes('wedding_id')) {
-      await json(route, invites)
+      await json(route, invitesCopy)
       return
     }
 
@@ -122,7 +126,7 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
     const match = url.pathname.match(/\/api\/invites\/(\d+)$/)
     if (route.request().method() === 'GET' && match) {
       const id = parseInt(match[1])
-      const invite = invites.find(i => i.id === id)
+      const invite = invitesCopy.find(i => i.id === id)
       if (invite) {
         await json(route, invite)
       } else {
@@ -133,9 +137,23 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
 
     // Handle POST /api/invites - generate new invite
     if (route.request().method() === 'POST') {
-      const body = route.request().postDataJSON() as { wedding_id: number; role: string }
+      let body: { wedding_id?: number; role?: string } = {}
+      try {
+        body = route.request().postDataJSON() as { wedding_id: number; role: string }
+      } catch (e) {
+        const postData = route.request().postData()
+        if (postData) {
+          body = JSON.parse(postData)
+        }
+      }
+
+      if (!body.wedding_id || !body.role) {
+        await json(route, { detail: 'Missing wedding_id or role' }, 400)
+        return
+      }
+
       const newInvite: Invite = {
-        id: Math.max(...invites.map(i => i.id)) + 1,
+        id: Math.max(...invitesCopy.map(i => i.id), 0) + 1,
         code: `NEW-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
         wedding_id: body.wedding_id,
         role: body.role,
@@ -143,7 +161,7 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
         household_name: null,
         created_at: new Date().toISOString(),
       }
-      invites.unshift(newInvite)
+      invitesCopy.unshift(newInvite)
       await json(route, newInvite, 201)
       return
     }
@@ -152,8 +170,42 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
     const patchMatch = url.pathname.match(/\/api\/invites\/(\d+)$/)
     if (route.request().method() === 'PATCH' && patchMatch) {
       const id = parseInt(patchMatch[1])
-      const body = route.request().postDataJSON() as { guest_id?: number }
-      const invite = invites.find(i => i.id === id)
+      let body: { guest_id?: number } = {}
+      try {
+        body = route.request().postDataJSON() as { guest_id?: number }
+      } catch (e) {
+        // If body parsing fails, try to extract from postData
+        const postData = route.request().postData()
+        if (postData) {
+          body = JSON.parse(postData)
+        }
+      }
+      const invite = invitesCopy.find(i => i.id === id)
+      if (invite) {
+        if (body.guest_id !== undefined) {
+          invite.guest_id = body.guest_id
+        }
+        await json(route, invite)
+      } else {
+        await json(route, { detail: 'Invite not found' }, 404)
+      }
+      return
+    }
+
+    // Handle PUT /api/invites/:id - link guest to invite (alternative to PATCH)
+    const putMatch = url.pathname.match(/\/api\/invites\/(\d+)$/)
+    if (route.request().method() === 'PUT' && putMatch) {
+      const id = parseInt(putMatch[1])
+      let body: { guest_id?: number } = {}
+      try {
+        body = route.request().postDataJSON() as { guest_id?: number }
+      } catch (e) {
+        const postData = route.request().postData()
+        if (postData) {
+          body = JSON.parse(postData)
+        }
+      }
+      const invite = invitesCopy.find(i => i.id === id)
       if (invite) {
         if (body.guest_id !== undefined) {
           invite.guest_id = body.guest_id
@@ -169,9 +221,9 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
     const deleteMatch = url.pathname.match(/\/api\/invites\/(\d+)$/)
     if (route.request().method() === 'DELETE' && deleteMatch) {
       const id = parseInt(deleteMatch[1])
-      const index = invites.findIndex(i => i.id === id)
+      const index = invitesCopy.findIndex(i => i.id === id)
       if (index !== -1) {
-        invites.splice(index, 1)
+        invitesCopy.splice(index, 1)
         await json(route, null, 204)
       } else {
         await json(route, { detail: 'Invite not found' }, 404)
@@ -181,14 +233,19 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
   })
 }
 
-async function mockGuests(page: Page, guests: Guest[] = existingGuests) {
-  await page.route('**/api/guests*', async (route) => {
+async function mockGuests(page: Page, initialGuests: Guest[] = existingGuests) {
+  // Create a fresh copy of guests for each test to prevent state bleed
+  const guests = initialGuests.map(g => ({ ...g }))
+
+  await page.route(/\/api\/guests(?:\/\d+)?(\?.*)?$/, async (route) => {
     await json(route, guests)
   })
 }
 
 test.beforeEach(async ({ page }) => {
-  await trackBrowserErrors(page)
+  // Clean up any previous test state
+  await cleanupPageState(page)
+  await initializeErrorTracking(page)
 
   // Set up all mocks BEFORE any navigation
   await mockAuthenticatedCouple(page)
@@ -203,13 +260,12 @@ test.beforeEach(async ({ page }) => {
 })
 
 test.afterEach(async ({ page }) => {
-  const browserErrors = Reflect.get(page, 'browserErrors') as string[] | undefined
-  const unexpectedErrors = (browserErrors ?? []).filter(
-    (message) =>
-      !message.includes('the server responded with a status of 401') &&
-      !message.includes('net::ERR_FAILED') &&
-      !message.includes('Write permission denied'), // Clipboard API not available in headless Playwright
-  )
+  const browserErrors = getBrowserErrors(page)
+  const unexpectedErrors = filterIgnorableErrors(browserErrors, [
+    'the server responded with a status of 401',
+    'the server responded with a status of 500',
+    'net::ERR_FAILED',
+  ])
   expect(unexpectedErrors).toEqual([])
 })
 
@@ -261,7 +317,7 @@ test('provides copy-to-clipboard buttons for codes', async ({ page }) => {
   const firstRow = tableRows.nth(0)
 
   // The copy button (📋) should be near the code
-  const copyButton = firstRow.locator('button', { has: page.locator('text=📋') })
+  const copyButton = firstRow.locator('button', { hasText: '📋' })
   await expect(copyButton).toBeVisible()
 
   // Click copy button and check for success message
@@ -280,7 +336,7 @@ test('shows link guest modal when clicking link button', async ({ page }) => {
   }).nth(0)
 
   // Click the link button (🔗)
-  const linkButton = unlinkedRow.locator('button', { has: page.locator('text=🔗') })
+  const linkButton = unlinkedRow.locator('button', { hasText: '🔗' })
   await expect(linkButton).toBeVisible()
   await linkButton.click()
 
@@ -315,7 +371,7 @@ test('links a guest to an invite through modal', async ({ page }) => {
   }).nth(0)
 
   // Click link button
-  const linkButton = unlinkedRow.locator('button', { has: page.locator('text=🔗') })
+  const linkButton = unlinkedRow.locator('button', { hasText: '🔗' })
   await linkButton.click()
 
   // Wait for modal
@@ -347,7 +403,7 @@ test('closes modal when clicking cancel button', async ({ page }) => {
   const unlinkedRow = tableRows.filter({
     hasText: 'DEMO-COUPLE'
   }).nth(0)
-  const linkButton = unlinkedRow.locator('button', { has: page.locator('text=🔗') })
+  const linkButton = unlinkedRow.locator('button', { hasText: '🔗' })
   await linkButton.click()
 
   // Wait for modal
@@ -366,7 +422,7 @@ test('closes modal when clicking outside (overlay click)', async ({ page }) => {
   const unlinkedRow = tableRows.filter({
     hasText: 'DEMO-COUPLE'
   }).nth(0)
-  const linkButton = unlinkedRow.locator('button', { has: page.locator('text=🔗') })
+  const linkButton = unlinkedRow.locator('button', { hasText: '🔗' })
   await linkButton.click()
 
   // Wait for modal
@@ -394,7 +450,7 @@ test('shows delete button for invites', async ({ page }) => {
   const firstRow = tableRows.nth(0)
 
   // Look for delete button (🗑️)
-  const deleteButton = firstRow.locator('button', { has: page.locator('text=🗑️') })
+  const deleteButton = firstRow.locator('button', { hasText: '🗑️' })
   await expect(deleteButton).toBeVisible()
 })
 
@@ -413,14 +469,20 @@ test('deletes an invite after confirmation', async ({ page }) => {
   // Delete first invite
   const tableRows = page.locator('tbody tr')
   const firstRow = tableRows.nth(0)
-  const deleteButton = firstRow.locator('button', { has: page.locator('text=🗑️') })
+  const deleteButton = firstRow.locator('button', { hasText: '🗑️' })
+
+  // Ensure button is visible before clicking
+  await expect(deleteButton).toBeVisible({ timeout: 5000 })
   await deleteButton.click()
 
   // Verify confirmation was called
   expect(confirmCalled).toBe(true)
 
-  // Check success message
-  await expect(page.getByText('Invite deleted')).toBeVisible()
+  // Check success message (with timeout for visibility)
+  await expect(page.getByText('Invite deleted')).toBeVisible({ timeout: 5000 })
+
+  // Wait a moment for the table to update
+  await page.waitForTimeout(200)
 
   // Count should decrease
   const invitesAfterText = await page.getByRole('heading', { name: /Invites \(\d+\)/ }).textContent()
@@ -430,7 +492,7 @@ test('deletes an invite after confirmation', async ({ page }) => {
 
 test('displays error alert on API failure', async ({ page }) => {
   // Override invites mock to return error
-  await page.route('**/api/invites*', async (route) => {
+  await page.route(/\/api\/invites(?:\/\d+)?(\?.*)?$/, async (route) => {
     if (route.request().method() === 'POST') {
       await json(route, { detail: 'Failed to generate invite' }, 500)
     } else {
@@ -450,7 +512,7 @@ test('displays success alert when invite is copied', async ({ page }) => {
   // Find copy button and click it (page is already at /admin)
   const tableRows = page.locator('tbody tr')
   const firstRow = tableRows.nth(0)
-  const copyButton = firstRow.locator('button', { has: page.locator('text=📋') })
+  const copyButton = firstRow.locator('button', { hasText: '📋' })
   await copyButton.click()
 
   // Success message should appear
@@ -460,7 +522,7 @@ test('displays success alert when invite is copied', async ({ page }) => {
 
 test('link guest button is disabled when no guests available', async ({ page }) => {
   // Mock no unlinked guests
-  await page.route('**/api/guests*', async (route) => {
+  await page.route(/\/api\/guests(?:\/\d+)?(\?.*)?$/, async (route) => {
     // All guests are linked
     await json(route, [
       { id: 10, name: 'Demo Guest 1', email: 'guest1@example.com' },
@@ -473,7 +535,7 @@ test('link guest button is disabled when no guests available', async ({ page }) 
   const firstRow = tableRows.nth(0)
 
   // If no unlinked guests, link button shouldn't appear
-  const linkButton = firstRow.locator('button', { has: page.locator('text=🔗') })
+  const linkButton = firstRow.locator('button', { hasText: '🔗' })
   // Note: The button may or may not appear depending on implementation
   // This test documents the behavior
 })
