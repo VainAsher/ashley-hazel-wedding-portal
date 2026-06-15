@@ -285,15 +285,18 @@ test('renders Invite Management UI with all sections', async ({ page }) => {
 
 test('displays existing invites in a table', async ({ page }) => {
   // Check table header (page is already at /admin after beforeEach auth setup)
-  await expect(page.getByRole('columnheader', { name: 'Code' })).toBeVisible()
-  await expect(page.getByRole('columnheader', { name: 'Role' })).toBeVisible()
-  await expect(page.getByRole('columnheader', { name: 'Guest' })).toBeVisible()
-  await expect(page.getByRole('columnheader', { name: 'Created' })).toBeVisible()
-  await expect(page.getByRole('columnheader', { name: 'Actions' })).toBeVisible()
+  // <th> elements should be visible
+  await expect(page.locator('th:has-text("Code")')).toBeVisible()
+  await expect(page.locator('th:has-text("Role")')).toBeVisible()
+  await expect(page.locator('th:has-text("Guest")')).toBeVisible()
+  await expect(page.locator('th:has-text("Created")')).toBeVisible()
+  await expect(page.locator('th:has-text("Actions")')).toBeVisible()
 
   // Check DEMO-001 invite
   await expect(page.getByText('DEMO-001')).toBeVisible()
-  await expect(page.getByRole('cell', { name: 'guest' })).toBeVisible()
+  // Find the row with DEMO-001 and verify it has 'guest' role in it
+  const demoRow = page.locator('tbody tr', { has: page.locator('text=DEMO-001') })
+  await expect(demoRow.locator('td:nth-child(2)')).toContainText('guest')
   await expect(page.getByText('Demo Guest 1')).toBeVisible()
 
   // Check DEMO-COUPLE invite
