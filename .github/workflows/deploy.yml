@@ -81,7 +81,7 @@ jobs:
           github.event.workflow_run.conclusion == 'success'
         )
       }}
-    runs-on: ubuntu-22.04
+    runs-on: self-hosted
     # Binds the job to a GitHub Environment so environment-scoped secrets,
     # protection rules, and (for production) required reviewers apply.
     environment: ${{ github.event.inputs.environment || 'staging' }}
