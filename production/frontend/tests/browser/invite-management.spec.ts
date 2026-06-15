@@ -188,7 +188,8 @@ test.afterEach(async ({ page }) => {
   const unexpectedErrors = (browserErrors ?? []).filter(
     (message) =>
       !message.includes('the server responded with a status of 401') &&
-      !message.includes('net::ERR_FAILED'),
+      !message.includes('net::ERR_FAILED') &&
+      !message.includes('Write permission denied'), // Clipboard API not available in headless Playwright
   )
   expect(unexpectedErrors).toEqual([])
 })
