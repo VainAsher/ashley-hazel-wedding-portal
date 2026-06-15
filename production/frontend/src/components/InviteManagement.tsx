@@ -178,8 +178,9 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
         <h2 style={titleStyle}>Generate New Invite</h2>
         <form onSubmit={generateInvite} style={formStyle}>
           <div style={formGroupStyle}>
-            <label style={labelStyle}>Role</label>
+            <label htmlFor="role-select" style={labelStyle}>Role</label>
             <select
+              id="role-select"
               value={role}
               onChange={(e) => setRole(e.target.value)}
               style={inputStyle}
@@ -284,8 +285,9 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
             <h3 style={modalTitleStyle}>Link Guest to Invite</h3>
 
             <div style={formGroupStyle}>
-              <label style={labelStyle}>Select Guest</label>
+              <label htmlFor="guest-select" style={labelStyle}>Select Guest</label>
               <select
+                id="guest-select"
                 value={linkingGuestId || ''}
                 onChange={(e) => setLinkingGuestId(parseInt(e.target.value))}
                 style={inputStyle}

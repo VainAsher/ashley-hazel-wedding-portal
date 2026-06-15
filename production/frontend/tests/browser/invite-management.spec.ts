@@ -94,7 +94,7 @@ async function trackBrowserErrors(page: Page) {
 
 async function mockAuthenticatedCouple(page: Page) {
   // Mock the login endpoint to accept DEMO-COUPLE and return couple user
-  await page.route(/\/api\/auth\/login(\?.*)?$/, async (route) => {
+  await page.route(/\/api\/auth\/login(?:\?.*)?$/, async (route) => {
     const body = route.request().postDataJSON() as { invite_code: string }
     if (body.invite_code === 'DEMO-COUPLE') {
       return await json(route, { user: coupleUser }, 200)
@@ -104,7 +104,7 @@ async function mockAuthenticatedCouple(page: Page) {
   })
 
   // Mock the /api/auth/me endpoint to return authenticated couple user
-  await page.route(/\/api\/auth\/me(\?.*)?$/, async (route) => {
+  await page.route(/\/api\/auth\/me(?:\?.*)?$/, async (route) => {
     return await json(route, coupleUser)
   })
 }
@@ -113,13 +113,12 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
   // Make a copy of invites array to avoid mutation issues across tests
   const invitesCopy = [...invites]
 
-  await page.route(/\/api\/invites(?:\/\d+)?(\?.*)?$/, async (route) => {
+  await page.route(/\/api\/invites(?:\/\d+)?(?:\?.*)?$/, async (route) => {
     const url = new URL(route.request().url())
 
     // Handle GET /api/invites?wedding_id=1
     if (route.request().method() === 'GET' && url.search.includes('wedding_id')) {
-      await json(route, invitesCopy)
-      return
+      return await json(route, invitesCopy)
     }
 
     // Handle GET /api/invites/:id
@@ -128,11 +127,10 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
       const id = parseInt(match[1])
       const invite = invitesCopy.find(i => i.id === id)
       if (invite) {
-        await json(route, invite)
+        return await json(route, invite)
       } else {
-        await json(route, { detail: 'Invite not found' }, 404)
+        return await json(route, { detail: 'Invite not found' }, 404)
       }
-      return
     }
 
     // Handle POST /api/invites - generate new invite
@@ -148,8 +146,7 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
       }
 
       if (!body.wedding_id || !body.role) {
-        await json(route, { detail: 'Missing wedding_id or role' }, 400)
-        return
+        return await json(route, { detail: 'Missing wedding_id or role' }, 400)
       }
 
       const newInvite: Invite = {
@@ -162,8 +159,7 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
         created_at: new Date().toISOString(),
       }
       invitesCopy.unshift(newInvite)
-      await json(route, newInvite, 201)
-      return
+      return await json(route, newInvite, 201)
     }
 
     // Handle PATCH /api/invites/:id - link guest to invite
@@ -185,11 +181,10 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
         if (body.guest_id !== undefined) {
           invite.guest_id = body.guest_id
         }
-        await json(route, invite)
+        return await json(route, invite)
       } else {
-        await json(route, { detail: 'Invite not found' }, 404)
+        return await json(route, { detail: 'Invite not found' }, 404)
       }
-      return
     }
 
     // Handle PUT /api/invites/:id - link guest to invite (alternative to PATCH)
@@ -210,11 +205,10 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
         if (body.guest_id !== undefined) {
           invite.guest_id = body.guest_id
         }
-        await json(route, invite)
+        return await json(route, invite)
       } else {
-        await json(route, { detail: 'Invite not found' }, 404)
+        return await json(route, { detail: 'Invite not found' }, 404)
       }
-      return
     }
 
     // Handle DELETE /api/invites/:id
@@ -224,11 +218,10 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
       const index = invitesCopy.findIndex(i => i.id === id)
       if (index !== -1) {
         invitesCopy.splice(index, 1)
-        await json(route, null, 204)
+        return await json(route, null, 204)
       } else {
-        await json(route, { detail: 'Invite not found' }, 404)
+        return await json(route, { detail: 'Invite not found' }, 404)
       }
-      return
     }
   })
 }
@@ -237,8 +230,8 @@ async function mockGuests(page: Page, initialGuests: Guest[] = existingGuests) {
   // Create a fresh copy of guests for each test to prevent state bleed
   const guests = initialGuests.map(g => ({ ...g }))
 
-  await page.route(/\/api\/guests(?:\/\d+)?(\?.*)?$/, async (route) => {
-    await json(route, guests)
+  await page.route(/\/api\/guests(?:\/\d+)?(?:\?.*)?$/, async (route) => {
+    return await json(route, guests)
   })
 }
 
@@ -280,10 +273,14 @@ test('renders Invite Management UI with all sections', async ({ page }) => {
 
   // Check role selector has expected options
   const roleSelect = page.getByLabel('Role')
-  await roleSelect.click()
-  await expect(page.getByRole('option', { name: 'Guest' })).toBeVisible()
-  await expect(page.getByRole('option', { name: 'Coordinator' })).toBeVisible()
-  await expect(page.getByRole('option', { name: 'Couple' })).toBeVisible()
+  // Verify that the select exists
+  await expect(roleSelect).toBeVisible()
+  // Options in a native <select> element are always hidden in the DOM
+  // Just verify they exist by checking the page HTML contains them
+  const pageContent = await page.content()
+  expect(pageContent).toContain('<option value="guest">Guest</option>')
+  expect(pageContent).toContain('<option value="coordinator">Coordinator</option>')
+  expect(pageContent).toContain('<option value="couple">Couple</option>')
 })
 
 test('displays existing invites in a table', async ({ page }) => {
@@ -493,7 +490,7 @@ test('deletes an invite after confirmation', async ({ page }) => {
 
 test('displays error alert on API failure', async ({ page }) => {
   // Override invites mock to return error
-  await page.route(/\/api\/invites(?:\/\d+)?(\?.*)?$/, async (route) => {
+  await page.route(/\/api\/invites(?:\/\d+)?(?:\?.*)?$/, async (route) => {
     if (route.request().method() === 'POST') {
       await json(route, { detail: 'Failed to generate invite' }, 500)
     } else {
@@ -523,7 +520,7 @@ test('displays success alert when invite is copied', async ({ page }) => {
 
 test('link guest button is disabled when no guests available', async ({ page }) => {
   // Mock no unlinked guests
-  await page.route(/\/api\/guests(?:\/\d+)?(\?.*)?$/, async (route) => {
+  await page.route(/\/api\/guests(?:\/\d+)?(?:\?.*)?$/, async (route) => {
     // All guests are linked
     await json(route, [
       { id: 10, name: 'Demo Guest 1', email: 'guest1@example.com' },

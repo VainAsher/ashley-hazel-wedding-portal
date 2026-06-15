@@ -27,7 +27,8 @@ test.beforeEach(async ({ page }) => {
   await cleanupPageState(page)
   await initializeErrorTracking(page)
 
-  await page.route('**/api/guests', async (route) => {
+  // Route for guest list (with or without query params)
+  await page.route('**/api/guests*', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
       status: 200,
@@ -45,9 +46,44 @@ test.afterEach(async ({ page }) => {
 })
 
 test('routes from invite entry to guests and renders guest data', async ({ page }) => {
-  // Use a local counter variable per test to track auth/me calls independently
-  const authCallTracker = { count: 0 }
+  // First, mock auth as unauthenticated for initial load
+  let authMeCalls = 0
+  await page.route('**/api/auth/me', async (route) => {
+    authMeCalls++
+    // Keep returning 401 until login happens
+    await route.fulfill({
+      contentType: 'application/json',
+      status: 401,
+      body: JSON.stringify({ detail: 'Not authenticated' }),
+    })
+  })
 
+  // Start unauthenticated at root
+  await page.goto('/')
+  await expect(page).toHaveURL(/\/invite$/)
+  await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toBeVisible()
+
+  // Now unroute the 401 handler and replace with authenticated handler
+  await page.unroute('**/api/auth/me')
+
+  let authMePostLoginCalls = 0
+  await page.route('**/api/auth/me', async (route) => {
+    authMePostLoginCalls++
+    await route.fulfill({
+      contentType: 'application/json',
+      status: 200,
+      body: JSON.stringify({
+        id: 2001,
+        name: 'Test Admin',
+        role: 'coordinator',
+        wedding_id: 1,
+        invite_id: 2,
+        guest_id: null,
+      }),
+    })
+  })
+
+  // Mock the login endpoint
   await page.route('**/api/auth/login', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -64,36 +100,6 @@ test('routes from invite entry to guests and renders guest data', async ({ page 
       }),
     })
   })
-
-  await page.route('**/api/auth/me', async (route) => {
-    // First call (before login) returns 401, subsequent calls return authenticated
-    authCallTracker.count++
-    if (authCallTracker.count === 1) {
-      await route.fulfill({
-        contentType: 'application/json',
-        status: 401,
-        body: JSON.stringify({ detail: 'Not authenticated' }),
-      })
-    } else {
-      await route.fulfill({
-        contentType: 'application/json',
-        status: 200,
-        body: JSON.stringify({
-          id: 2001,
-          name: 'Test Admin',
-          role: 'coordinator',
-          wedding_id: 1,
-          invite_id: 2,
-          guest_id: null,
-        }),
-      })
-    }
-  })
-
-  // Start unauthenticated at root
-  await page.goto('/')
-  await expect(page).toHaveURL(/\/invite$/)
-  await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toBeVisible()
 
   // Enter an invite code to authenticate
   const inviteInput = page.getByRole('textbox', { name: /invite code/i })

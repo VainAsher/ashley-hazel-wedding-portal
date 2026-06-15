@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 const port = process.env.PLAYWRIGHT_PORT ?? '3100'
 const baseURL = `http://127.0.0.1:${port}`
+const isWindows = process.platform === 'win32'
 
 export default defineConfig({
   testDir: './tests/browser',
@@ -11,8 +12,10 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   webServer: {
-    command: `PLAYWRIGHT_PORT=${port} npm run dev -- --host 127.0.0.1 --port ${port} --strictPort`,
-    reuseExistingServer: true,
+    command: isWindows
+      ? `set PLAYWRIGHT_PORT=${port} && npm run dev -- --host 127.0.0.1 --port ${port} --strictPort`
+      : `PLAYWRIGHT_PORT=${port} npm run dev -- --host 127.0.0.1 --port ${port} --strictPort`,
+    reuseExistingServer: false,
     timeout: 30_000,
     url: baseURL,
   },
