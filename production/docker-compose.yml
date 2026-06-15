@@ -89,8 +89,8 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_FILE_PATH: ${LOG_FILE_PATH:-logs/app.log}
       # --- URLs / CORS ---
-      API_URL: ${API_URL:-}
-      FRONTEND_URL: ${FRONTEND_URL:-}
+      API_URL: ${API_URL:-http://localhost:3001}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       CORS_ORIGINS_RAW: ${CORS_ORIGINS_RAW:-}
       # --- Secrets (injected; never baked into the image) ---
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set (see .env.docker)}
