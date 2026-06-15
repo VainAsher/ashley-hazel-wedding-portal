@@ -110,8 +110,8 @@ async function mockAuthenticatedCouple(page: Page) {
 }
 
 async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
-  // Make a copy of invites array to avoid mutation issues across tests
-  const invitesCopy = [...invites]
+  // Make a deep copy of invites array to avoid mutation issues across tests
+  const invitesCopy = invites.map((i) => ({ ...i }))
 
   await page.route(/\/api\/invites(?:\/\d+)?(?:\?.*)?$/, async (route) => {
     const url = new URL(route.request().url())
@@ -231,7 +231,12 @@ async function mockGuests(page: Page, initialGuests: Guest[] = existingGuests) {
   const guests = initialGuests.map(g => ({ ...g }))
 
   await page.route(/\/api\/guests(?:\/\d+)?(?:\?.*)?$/, async (route) => {
-    return await json(route, guests)
+    // Only mock GET requests; other methods continue to next handler
+    if (route.request().method() === 'GET') {
+      return await json(route, guests)
+    }
+    // Let other request methods pass through
+    await route.continue()
   })
 }
 
@@ -241,15 +246,25 @@ test.beforeEach(async ({ page }) => {
   await initializeErrorTracking(page)
 
   // Set up all mocks BEFORE any navigation
-  await mockAuthenticatedCouple(page)
-  await mockInvites(page)
-  await mockGuests(page)
+  // Use Promise.all to ensure all routes are registered before proceeding
+  await Promise.all([
+    mockAuthenticatedCouple(page),
+    mockInvites(page),
+    mockGuests(page),
+  ])
 
   // Navigate to admin directly (mocked auth will handle the session)
-  await page.goto('/admin')
+  await page.goto('/admin', { waitUntil: 'domcontentloaded' })
 
   // Wait for admin dashboard to load
   await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({ timeout: 10000 })
+
+  // Wait for invites table to load - this ensures the data has been fetched and rendered
+  await expect(page.locator('table')).toBeVisible({ timeout: 10000 })
+  await expect(page.locator('tbody tr').first()).toBeVisible({ timeout: 10000 })
+
+  // Scroll to top to ensure clean state
+  await page.evaluate(() => window.scrollTo(0, 0))
 })
 
 test.afterEach(async ({ page }) => {
@@ -313,12 +328,16 @@ test('displays existing invites in a table', async ({ page }) => {
 
 test('provides copy-to-clipboard buttons for codes', async ({ page }) => {
   // Find the first invite row and look for copy button (page is already at /admin)
+  // First ensure table is loaded
+  await expect(page.locator('table tbody')).toBeVisible({ timeout: 5000 })
+  await expect(page.getByText('DEMO-001')).toBeVisible({ timeout: 5000 })
+
   const tableRows = page.locator('tbody tr')
   const firstRow = tableRows.nth(0)
 
   // The copy button (📋) should be near the code
   const copyButton = firstRow.locator('button', { hasText: '📋' })
-  await expect(copyButton).toBeVisible()
+  await expect(copyButton).toBeVisible({ timeout: 5000 })
 
   // Click copy button and check for success message
   await copyButton.click()
@@ -328,17 +347,22 @@ test('provides copy-to-clipboard buttons for codes', async ({ page }) => {
 test('shows link guest modal when clicking link button', async ({ page }) => {
   // Find an unlinked invite (one with 'Unlinked' text) (page is already at /admin)
   // DEMO-001 is linked, DEMO-COUPLE is unlinked, DEMO-COORD is linked
+
+  // First ensure table is loaded
+  await expect(page.locator('table tbody')).toBeVisible({ timeout: 5000 })
+  await expect(page.getByText('DEMO-COUPLE')).toBeVisible({ timeout: 5000 })
+
   const tableRows = page.locator('tbody tr')
 
   // Find the row with unlinked invite
   const unlinkedRow = tableRows.filter({
-    hasText: 'DEMO-COUPLE'
+    has: page.locator('text=DEMO-COUPLE')
   }).nth(0)
 
   // Click the link button (🔗)
   const linkButton = unlinkedRow.locator('button', { hasText: '🔗' })
-  await expect(linkButton).toBeVisible()
-  await linkButton.click()
+  await expect(linkButton).toBeVisible({ timeout: 5000 })
+  await linkButton.click({ force: true })
 
   // Check modal appears
   await expect(page.getByRole('heading', { name: 'Link Guest to Invite' })).toBeVisible()
@@ -365,6 +389,10 @@ test('generates a new invite code', async ({ page }) => {
 
 test('links a guest to an invite through modal', async ({ page }) => {
   // Find unlinked invite DEMO-COUPLE (page is already at /admin)
+  // First ensure table is loaded
+  await expect(page.locator('table tbody')).toBeVisible({ timeout: 5000 })
+  await expect(page.getByText('DEMO-COUPLE')).toBeVisible({ timeout: 5000 })
+
   const tableRows = page.locator('tbody tr')
   const unlinkedRow = tableRows.filter({
     hasText: 'DEMO-COUPLE'
@@ -372,7 +400,8 @@ test('links a guest to an invite through modal', async ({ page }) => {
 
   // Click link button
   const linkButton = unlinkedRow.locator('button', { hasText: '🔗' })
-  await linkButton.click()
+  await expect(linkButton).toBeVisible({ timeout: 5000 })
+  await linkButton.click({ force: true })
 
   // Wait for modal
   await expect(page.getByRole('heading', { name: 'Link Guest to Invite' })).toBeVisible()
@@ -392,25 +421,30 @@ test('links a guest to an invite through modal', async ({ page }) => {
 
   // Verify guest is now linked in the table
   const updatedRow = tableRows.filter({
-    hasText: 'DEMO-COUPLE'
+    has: page.locator('text=DEMO-COUPLE')
   }).nth(0)
   await expect(updatedRow.locator('text=Unlinked Guest')).toBeVisible()
 })
 
 test('closes modal when clicking cancel button', async ({ page }) => {
   // Open modal (page is already at /admin)
+  // First ensure table is loaded
+  await expect(page.locator('table tbody')).toBeVisible({ timeout: 5000 })
+  await expect(page.getByText('DEMO-COUPLE')).toBeVisible({ timeout: 5000 })
+
   const tableRows = page.locator('tbody tr')
   const unlinkedRow = tableRows.filter({
-    hasText: 'DEMO-COUPLE'
+    has: page.locator('text=DEMO-COUPLE')
   }).nth(0)
   const linkButton = unlinkedRow.locator('button', { hasText: '🔗' })
-  await linkButton.click()
+  await expect(linkButton).toBeVisible({ timeout: 5000 })
+  await linkButton.click({ force: true })
 
   // Wait for modal
   await expect(page.getByRole('heading', { name: 'Link Guest to Invite' })).toBeVisible()
 
   // Click cancel
-  await page.getByRole('button', { name: 'Cancel' }).click()
+  await page.getByRole('button', { name: 'Cancel' }).click({ force: true })
 
   // Modal should close
   await expect(page.getByRole('heading', { name: 'Link Guest to Invite' })).not.toBeVisible()
@@ -418,12 +452,17 @@ test('closes modal when clicking cancel button', async ({ page }) => {
 
 test('closes modal when clicking outside (overlay click)', async ({ page }) => {
   // Open modal (page is already at /admin)
+  // First ensure table is loaded
+  await expect(page.locator('table tbody')).toBeVisible({ timeout: 5000 })
+  await expect(page.getByText('DEMO-COUPLE')).toBeVisible({ timeout: 5000 })
+
   const tableRows = page.locator('tbody tr')
   const unlinkedRow = tableRows.filter({
-    hasText: 'DEMO-COUPLE'
+    has: page.locator('text=DEMO-COUPLE')
   }).nth(0)
   const linkButton = unlinkedRow.locator('button', { hasText: '🔗' })
-  await linkButton.click()
+  await expect(linkButton).toBeVisible({ timeout: 5000 })
+  await linkButton.click({ force: true })
 
   // Wait for modal
   const modal = page.getByRole('heading', { name: 'Link Guest to Invite' })
@@ -511,9 +550,14 @@ test('displays error alert on API failure', async ({ page }) => {
 
 test('displays success alert when invite is copied', async ({ page }) => {
   // Find copy button and click it (page is already at /admin)
+  // First ensure table is loaded
+  await expect(page.locator('table tbody')).toBeVisible({ timeout: 5000 })
+  await expect(page.getByText('DEMO-001')).toBeVisible({ timeout: 5000 })
+
   const tableRows = page.locator('tbody tr')
   const firstRow = tableRows.nth(0)
   const copyButton = firstRow.locator('button', { hasText: '📋' })
+  await expect(copyButton).toBeVisible({ timeout: 5000 })
   await copyButton.click()
 
   // Success message should appear
@@ -531,12 +575,20 @@ test('link guest button is disabled when no guests available', async ({ page }) 
     ])
   })
 
+  // Reload the page to apply the new guest list
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({ timeout: 10000 })
+
   // Look for link buttons - should not be visible when no unlinked guests (page is already at /admin)
+  // First ensure table is loaded
+  await expect(page.locator('table tbody')).toBeVisible({ timeout: 5000 })
+  await expect(page.getByText('DEMO-001')).toBeVisible({ timeout: 5000 })
+
   const tableRows = page.locator('tbody tr')
   const firstRow = tableRows.nth(0)
 
   // If no unlinked guests, link button shouldn't appear
   const linkButton = firstRow.locator('button', { hasText: '🔗' })
-  // Note: The button may or may not appear depending on implementation
-  // This test documents the behavior
+  // Link button should NOT be visible when all guests are linked
+  await expect(linkButton).not.toBeVisible()
 })

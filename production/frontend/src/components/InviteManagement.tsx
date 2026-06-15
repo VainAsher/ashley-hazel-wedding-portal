@@ -19,7 +19,7 @@ interface Guest {
 export function InviteManagement({ weddingId }: { weddingId: number }) {
   const [invites, setInvites] = useState<Invite[]>([])
   const [guests, setGuests] = useState<Guest[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
@@ -31,12 +31,17 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
 
   // Load invites and guests on mount
   useEffect(() => {
-    loadInvites()
-    loadGuests()
+    const load = async () => {
+      try {
+        await Promise.all([loadInvites(), loadGuests()])
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
   }, [weddingId])
 
   const loadInvites = async () => {
-    setLoading(true)
     try {
       const res = await fetch(`/api/invites?wedding_id=${weddingId}`, {
         credentials: 'include',
@@ -44,10 +49,10 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
       if (!res.ok) throw new Error('Failed to load invites')
       const data = await res.json()
       setInvites(data)
+      return data
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error loading invites')
-    } finally {
-      setLoading(false)
+      return []
     }
   }
 
@@ -59,8 +64,10 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
       if (!res.ok) throw new Error('Failed to load guests')
       const data = await res.json()
       setGuests(data)
+      return data
     } catch (err) {
       console.error('Error loading guests:', err)
+      return []
     }
   }
 
@@ -255,7 +262,10 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
                     <td style={tableCellActionsStyle}>
                       {!linkedGuest && getUnlinkedGuests().length > 0 && (
                         <button
-                          onClick={() => setLinkingInviteId(invite.id)}
+                          onClick={() => {
+                            setLinkingInviteId(invite.id)
+                            setLinkingGuestId(null)
+                          }}
                           style={buttonSmallStyle}
                           title="Link to guest"
                         >
@@ -280,7 +290,12 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
 
       {/* Link Guest Modal */}
       {linkingInviteId && (
-        <div style={modalOverlayStyle} onClick={() => setLinkingInviteId(null)}>
+        <div style={modalOverlayStyle} onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setLinkingInviteId(null)
+            setLinkingGuestId(null)
+          }
+        }}>
           <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
             <h3 style={modalTitleStyle}>Link Guest to Invite</h3>
 
@@ -310,7 +325,10 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
                 Link Guest
               </button>
               <button
-                onClick={() => setLinkingInviteId(null)}
+                onClick={() => {
+                  setLinkingInviteId(null)
+                  setLinkingGuestId(null)
+                }}
                 style={buttonSecondaryStyle}
               >
                 Cancel
@@ -476,7 +494,8 @@ const modalOverlayStyle = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  zIndex: 1000,
+  zIndex: 10000,
+  pointerEvents: 'auto' as const,
 }
 
 const modalStyle = {
@@ -486,6 +505,7 @@ const modalStyle = {
   padding: '24px',
   maxWidth: '400px',
   width: '90%',
+  pointerEvents: 'auto' as const,
 }
 
 const modalTitleStyle = {
