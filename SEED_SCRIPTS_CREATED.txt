@@ -1,0 +1,239 @@
+================================================================================
+TEST DATABASE SEEDING SCRIPTS - FILES CREATED
+================================================================================
+
+This document lists all files created to enable test database seeding with
+valid invites and guests for authentication testing.
+
+================================================================================
+PRIMARY SCRIPTS
+================================================================================
+
+1. production/backend/scripts/seed_test_data.py
+   - Main Python seeding script using SQLAlchemy ORM
+   - Creates test wedding, invites (DEMO-COUPLE, DEMO-COORDINATOR, DEMO-GUEST)
+   - Creates associated guest records
+   - Fully idempotent (safe to run multiple times)
+   - Includes error handling and logging
+
+   Usage:
+     cd production/backend
+     python -m scripts.seed_test_data
+
+   Creates:
+     - Wedding: "Ashley & Hazel" (ID: 1, Date: 2026-06-20)
+     - Invites: DEMO-COUPLE, DEMO-COORDINATOR, DEMO-GUEST
+     - Guests: Demo Guest + 4 additional test guests
+
+
+2. production/database/seed_test_data.sql
+   - Pure SQL seeding script
+   - Uses PostgreSQL INSERT ... ON CONFLICT for idempotency
+   - Can be run directly via psql
+   - Useful for documentation and direct DB operations
+
+   Usage:
+     psql -U postgres -d wedding < production/database/seed_test_data.sql
+
+
+3. production/backend/scripts/validate_test_seeds.py
+   - Verification script to ensure seeds were created correctly
+   - Checks wedding existence, invite codes, guests, relationships
+   - Provides clear pass/fail output
+   - Useful for CI/CD validation
+
+   Usage:
+     cd production/backend
+     python -m scripts.validate_test_seeds
+
+================================================================================
+DOCUMENTATION FILES
+================================================================================
+
+4. production/backend/scripts/SEED_DATA_README.md
+   - Comprehensive documentation for seeding scripts
+   - Explains what each script creates
+   - Shows usage examples and sample output
+   - Includes troubleshooting guide
+   - Documents database relationships
+   - Provides testing examples
+
+
+5. production/backend/scripts/INTEGRATION_GUIDE.md
+   - Step-by-step integration guide
+   - Four integration options:
+     A. Manual seeding (simplest for development)
+     B. Automatic via pytest plugin (recommended for CI/CD)
+     C. Pre-test hook in CI/CD workflows
+     D. Via Docker Compose
+   - Complete code examples for each option
+   - Test examples using seeded data
+   - Troubleshooting section
+
+================================================================================
+TEST DATA CREATED
+================================================================================
+
+Wedding Record:
+- ID: 1
+- Couple Names: Ashley & Hazel
+- Wedding Date: 2026-06-20
+
+Invite Codes (all pointing to Wedding ID 1):
+- DEMO-COUPLE (role: couple, no guest association)
+- DEMO-COORDINATOR (role: coordinator, no guest association)
+- DEMO-GUEST (role: guest, linked to Demo Guest)
+
+Guest Records (all in Wedding ID 1):
+1. Demo Guest (demo-guest@example.com) - linked to DEMO-GUEST invite
+2. Alice Anderson (demo-guest-1@example.com)
+3. Bob Butler (demo-guest-2@example.com)
+4. Carol Chen (demo-guest-3@example.com)
+5. David Davis (demo-guest-4@example.com)
+
+================================================================================
+QUICK START
+================================================================================
+
+Step 1: Seed the database
+  cd production/backend
+  python -m scripts.seed_test_data
+
+Step 2: Verify seeds were created
+  python -m scripts.validate_test_seeds
+
+Step 3: Use in tests
+  In your test code:
+  response = client.post("/api/auth/login", json={"invite_code": "DEMO-COUPLE"})
+  assert response.status_code == 200
+
+Step 4: Run tests
+  pytest tests/ -v
+
+================================================================================
+INTEGRATION OPTIONS
+================================================================================
+
+For Development (Simplest):
+  1. Run seed script manually once: python -m scripts.seed_test_data
+  2. Run tests: pytest tests/
+  3. Repeat as needed
+
+For CI/CD (Automated):
+  Option 1: Add to conftest.py with autouse fixture
+  Option 2: Add to GitHub Actions workflow
+  Option 3: Use with Docker Compose
+
+See INTEGRATION_GUIDE.md for complete examples.
+
+================================================================================
+KEY FEATURES
+================================================================================
+
+✓ Idempotent - Safe to run multiple times without duplication
+✓ Error Handling - Clear error messages if something fails
+✓ Flexible - Works with any PostgreSQL database
+✓ Well Documented - Comprehensive guides and examples
+✓ Validation - Includes script to verify seeds are correct
+✓ Test Ready - Examples show how to use in tests
+✓ CI/CD Ready - Works in automated pipelines
+
+================================================================================
+DATABASE RELATIONSHIPS
+================================================================================
+
+The scripts respect these relationships:
+
+Wedding (ID: 1)
+├── Invites
+│   ├── DEMO-COUPLE (no guest_id)
+│   ├── DEMO-COORDINATOR (no guest_id)
+│   └── DEMO-GUEST (guest_id = Demo Guest)
+└── Guests
+    ├── Demo Guest (linked to DEMO-GUEST invite)
+    ├── Alice Anderson (not linked to any invite)
+    ├── Bob Butler (not linked to any invite)
+    ├── Carol Chen (not linked to any invite)
+    └── David Davis (not linked to any invite)
+
+This structure:
+- Allows testing couple/coordinator invites without guest records
+- Allows testing guest invite linked to actual guest
+- Provides additional guests for guest list testing
+- Enables RSVP testing
+
+================================================================================
+FILE LOCATIONS
+================================================================================
+
+Python Scripts:
+  production/backend/scripts/
+  ├── seed_test_data.py
+  ├── validate_test_seeds.py
+  ├── SEED_DATA_README.md
+  └── INTEGRATION_GUIDE.md
+
+SQL Scripts:
+  production/database/
+  └── seed_test_data.sql
+
+This document:
+  SEED_SCRIPTS_CREATED.txt
+
+================================================================================
+REQUIREMENTS
+================================================================================
+
+- Python 3.8+
+- SQLAlchemy
+- PostgreSQL
+- Valid DATABASE_URL environment variable
+  Default: postgresql://localhost/wedding
+
+Optional:
+- pytest (for running tests)
+- Docker + Docker Compose (only for Option D integration)
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Issue: "Invite code not found"
+Solution: Run python -m scripts.validate_test_seeds to check seeds exist
+
+Issue: "Cannot connect to database"
+Solution: Set DATABASE_URL environment variable correctly
+
+Issue: "Unique constraint violation"
+Solution: Seeds are idempotent; run again to skip existing data
+
+Issue: "ModuleNotFoundError: No module named 'app'"
+Solution: Run from production/backend directory or set PYTHONPATH
+
+See SEED_DATA_README.md for more troubleshooting tips.
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+1. Read production/backend/scripts/SEED_DATA_README.md for overview
+2. Read production/backend/scripts/INTEGRATION_GUIDE.md for integration
+3. Run: python -m scripts.seed_test_data
+4. Verify: python -m scripts.validate_test_seeds
+5. Update your test suite to use the seeded data
+6. Update CI/CD pipelines if using automated seeding
+
+================================================================================
+DOCUMENTATION
+================================================================================
+
+See the comprehensive documentation in:
+- SEED_DATA_README.md - Complete reference
+- INTEGRATION_GUIDE.md - How to integrate into your workflow
+
+For direct questions about test data structure, check:
+- production/backend/app/db/models.py (SQLAlchemy models)
+- production/database/schema.sql (Database schema)
+- production/backend/tests/conftest.py (Test fixture patterns)
+
+================================================================================

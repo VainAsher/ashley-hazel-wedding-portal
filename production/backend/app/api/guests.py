@@ -69,9 +69,14 @@ def ensure_guest_rsvp_access(current_user: UserResponse, guest_id: int) -> None:
 async def create_guest(
     guest: GuestCreate,
     db: Session = Depends(get_db),
-    _current_user: UserResponse = Depends(require_coordinator),
+    current_user: UserResponse = Depends(require_coordinator),
 ) -> Guest:
     logger.info("guest_create_started", extra={"wedding_id": guest.wedding_id})
+    if guest.wedding_id != current_user.wedding_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot create guests for other weddings"
+        )
     ensure_wedding_exists(db, guest.wedding_id, "create_guest")
 
     db_guest = Guest(**guest.model_dump())
@@ -178,10 +183,15 @@ async def update_guest(
     guest_id: int,
     guest: GuestUpdate,
     db: Session = Depends(get_db),
-    _current_user: UserResponse = Depends(require_coordinator),
+    current_user: UserResponse = Depends(require_coordinator),
 ) -> Guest:
     logger.info("guest_update_started", extra={"guest_id": guest_id})
     db_guest = get_guest_or_404(db, guest_id, "update_guest")
+    if db_guest.wedding_id != current_user.wedding_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot update guests from other weddings"
+        )
     update_data = guest.model_dump(exclude_unset=True)
 
     if "wedding_id" in update_data:
@@ -222,10 +232,15 @@ async def update_guest(
 async def delete_guest(
     guest_id: int,
     db: Session = Depends(get_db),
-    _current_user: UserResponse = Depends(require_coordinator),
+    current_user: UserResponse = Depends(require_coordinator),
 ) -> dict[str, int | str]:
     logger.info("guest_delete_started", extra={"guest_id": guest_id})
     db_guest = get_guest_or_404(db, guest_id, "delete_guest")
+    if db_guest.wedding_id != current_user.wedding_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot delete guests from other weddings"
+        )
     wedding_id = db_guest.wedding_id
     db.delete(db_guest)
     db.commit()

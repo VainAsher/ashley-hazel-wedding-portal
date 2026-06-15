@@ -26,20 +26,20 @@ app = FastAPI(title="Wedding Dashboard API", version="0.1.0")
 app.middleware("http")(metrics_middleware(settings))
 
 app.add_middleware(
-    SessionMiddleware,
-    secret_key=settings.session_secret_key,
-    max_age=settings.session_max_age_seconds,
-    same_site="strict" if settings.is_production else "lax",
-    https_only=settings.is_production,
-)
-
-app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.get_cors_origins(),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
     max_age=3600,
+)
+
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.session_secret_key,
+    max_age=settings.session_max_age_seconds,
+    same_site="strict" if settings.is_production else "lax",
+    https_only=settings.is_production,
 )
 
 app.include_router(auth.router)

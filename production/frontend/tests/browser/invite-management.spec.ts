@@ -92,6 +92,17 @@ async function trackBrowserErrors(page: Page) {
 }
 
 async function mockAuthenticatedCouple(page: Page) {
+  // Mock the login endpoint to accept DEMO-COUPLE and return couple user
+  await page.route('**/api/auth/login', async (route) => {
+    const body = route.request().postDataJSON() as { invite_code: string }
+    if (body.invite_code === 'DEMO-COUPLE') {
+      await json(route, { user: coupleUser }, 200)
+    } else {
+      await json(route, { detail: 'Invalid invite code' }, 401)
+    }
+  })
+
+  // Mock the /api/auth/me endpoint to return authenticated couple user
   await page.route('**/api/auth/me', async (route) => {
     await json(route, coupleUser)
   })
@@ -181,6 +192,16 @@ test.beforeEach(async ({ page }) => {
   await mockAuthenticatedCouple(page)
   await mockInvites(page)
   await mockGuests(page)
+
+  // Navigate to /admin which will require authentication
+  // The Admin component will call fetchCurrentUser (GET /api/auth/me)
+  // which will be mocked to return the coupleUser
+  await page.goto('/admin')
+
+  // Wait for the admin dashboard to fully load
+  // The Admin component shows "Loading..." while fetching the user,
+  // then renders the InviteManagement component once authenticated
+  await page.waitForSelector('h1:has-text("Admin Dashboard")', { timeout: 5000 })
 })
 
 test.afterEach(async ({ page }) => {
@@ -195,9 +216,7 @@ test.afterEach(async ({ page }) => {
 })
 
 test('renders Invite Management UI with all sections', async ({ page }) => {
-  await page.goto('/admin')
-
-  // Check header
+  // Check header (page is already at /admin after beforeEach auth setup)
   await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible()
 
   // Check Generate New Invite form section
@@ -214,9 +233,7 @@ test('renders Invite Management UI with all sections', async ({ page }) => {
 })
 
 test('displays existing invites in a table', async ({ page }) => {
-  await page.goto('/admin')
-
-  // Check table header
+  // Check table header (page is already at /admin after beforeEach auth setup)
   await expect(page.getByRole('columnheader', { name: 'Code' })).toBeVisible()
   await expect(page.getByRole('columnheader', { name: 'Role' })).toBeVisible()
   await expect(page.getByRole('columnheader', { name: 'Guest' })).toBeVisible()
@@ -241,9 +258,7 @@ test('displays existing invites in a table', async ({ page }) => {
 })
 
 test('provides copy-to-clipboard buttons for codes', async ({ page }) => {
-  await page.goto('/admin')
-
-  // Find the first invite row and look for copy button
+  // Find the first invite row and look for copy button (page is already at /admin)
   const tableRows = page.locator('tbody tr')
   const firstRow = tableRows.nth(0)
 
@@ -257,9 +272,7 @@ test('provides copy-to-clipboard buttons for codes', async ({ page }) => {
 })
 
 test('shows link guest modal when clicking link button', async ({ page }) => {
-  await page.goto('/admin')
-
-  // Find an unlinked invite (one with 'Unlinked' text)
+  // Find an unlinked invite (one with 'Unlinked' text) (page is already at /admin)
   // DEMO-001 is linked, DEMO-COUPLE is unlinked, DEMO-COORD is linked
   const tableRows = page.locator('tbody tr')
 
@@ -281,9 +294,7 @@ test('shows link guest modal when clicking link button', async ({ page }) => {
 })
 
 test('generates a new invite code', async ({ page }) => {
-  await page.goto('/admin')
-
-  // Select a role
+  // Select a role (page is already at /admin)
   const roleSelect = page.getByLabel('Role')
   await roleSelect.selectOption('coordinator')
 
@@ -299,9 +310,7 @@ test('generates a new invite code', async ({ page }) => {
 })
 
 test('links a guest to an invite through modal', async ({ page }) => {
-  await page.goto('/admin')
-
-  // Find unlinked invite DEMO-COUPLE
+  // Find unlinked invite DEMO-COUPLE (page is already at /admin)
   const tableRows = page.locator('tbody tr')
   const unlinkedRow = tableRows.filter({
     hasText: 'DEMO-COUPLE'
@@ -335,9 +344,7 @@ test('links a guest to an invite through modal', async ({ page }) => {
 })
 
 test('closes modal when clicking cancel button', async ({ page }) => {
-  await page.goto('/admin')
-
-  // Open modal
+  // Open modal (page is already at /admin)
   const tableRows = page.locator('tbody tr')
   const unlinkedRow = tableRows.filter({
     hasText: 'DEMO-COUPLE'
@@ -356,9 +363,7 @@ test('closes modal when clicking cancel button', async ({ page }) => {
 })
 
 test('closes modal when clicking outside (overlay click)', async ({ page }) => {
-  await page.goto('/admin')
-
-  // Open modal
+  // Open modal (page is already at /admin)
   const tableRows = page.locator('tbody tr')
   const unlinkedRow = tableRows.filter({
     hasText: 'DEMO-COUPLE'
@@ -387,8 +392,6 @@ test('closes modal when clicking outside (overlay click)', async ({ page }) => {
 })
 
 test('shows delete button for invites', async ({ page }) => {
-  await page.goto('/admin')
-
   const tableRows = page.locator('tbody tr')
   const firstRow = tableRows.nth(0)
 
@@ -405,9 +408,7 @@ test('deletes an invite after confirmation', async ({ page }) => {
     await dialog.accept()
   })
 
-  await page.goto('/admin')
-
-  // Count invites before
+  // Count invites before (page is already at /admin)
   const invitesBeforeText = await page.getByRole('heading', { name: /Invites \(\d+\)/ }).textContent()
   const invitesBefore = parseInt(invitesBeforeText?.match(/\d+/)?.[0] || '0')
 
@@ -439,9 +440,7 @@ test('displays error alert on API failure', async ({ page }) => {
     }
   })
 
-  await page.goto('/admin')
-
-  // Try to generate invite
+  // Try to generate invite (page is already at /admin)
   const generateButton = page.getByRole('button', { name: 'Generate Code' })
   await generateButton.click()
 
@@ -450,9 +449,7 @@ test('displays error alert on API failure', async ({ page }) => {
 })
 
 test('displays success alert when invite is copied', async ({ page }) => {
-  await page.goto('/admin')
-
-  // Find copy button and click it
+  // Find copy button and click it (page is already at /admin)
   const tableRows = page.locator('tbody tr')
   const firstRow = tableRows.nth(0)
   const copyButton = firstRow.locator('button', { has: page.locator('text=📋') })
@@ -473,9 +470,7 @@ test('link guest button is disabled when no guests available', async ({ page }) 
     ])
   })
 
-  await page.goto('/admin')
-
-  // Look for link buttons - should not be visible when no unlinked guests
+  // Look for link buttons - should not be visible when no unlinked guests (page is already at /admin)
   const tableRows = page.locator('tbody tr')
   const firstRow = tableRows.nth(0)
 

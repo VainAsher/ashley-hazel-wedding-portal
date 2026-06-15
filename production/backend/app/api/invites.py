@@ -93,6 +93,10 @@ def get_invite(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found"
         )
+    if invite.wedding_id != current_user.wedding_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
+        )
     return invite
 
 
@@ -108,6 +112,10 @@ def update_invite(
     if not invite:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found"
+        )
+    if invite.wedding_id != current_user.wedding_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
         )
 
     # Update fields if provided
@@ -132,6 +140,10 @@ def delete_invite(
     if not invite:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Invite not found"
+        )
+    if invite.wedding_id != current_user.wedding_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
         )
     db.delete(invite)
     db.commit()

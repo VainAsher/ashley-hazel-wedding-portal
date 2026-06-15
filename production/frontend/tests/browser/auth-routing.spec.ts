@@ -128,6 +128,14 @@ test('authenticated guest root traffic lands on RSVP form', async ({ page }) => 
 test('authenticated couple root traffic lands on admin stub', async ({ page }) => {
   await mockCurrentUser(page, coupleUser)
 
+  // Mock the Admin page's InviteManagement API calls
+  await page.route('**/api/invites?wedding_id=1', async (route) => {
+    await json(route, [])
+  })
+  await page.route('**/api/guests?wedding_id=1', async (route) => {
+    await json(route, [])
+  })
+
   await page.goto('/')
 
   await expect(page).toHaveURL(/\/admin$/)

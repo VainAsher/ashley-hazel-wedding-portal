@@ -68,6 +68,10 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/006_add_rsvp_fields.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/007_create_tasks_table.sql
 
+      - name: Seed test data
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/008_seed_test_data.sql
+
       - name: Run backend tests with coverage
         working-directory: production/backend
         run: |
@@ -154,6 +158,10 @@ jobs:
           psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/005_create_invites_table.sql
           psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/006_add_rsvp_fields.sql
           psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/007_create_tasks_table.sql
+
+      - name: Seed test data
+        run: |
+          psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/008_seed_test_data.sql
 
       - name: Set up Node
         uses: actions/setup-node@v4
