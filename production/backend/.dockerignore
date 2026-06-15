@@ -1,0 +1,12 @@
+.pytest_cache
+__pycache__
+*.pyc
+.env
+.env.staging
+.env.production
+.git
+.gitignore
+logs
+*.log
+.venv
+venv

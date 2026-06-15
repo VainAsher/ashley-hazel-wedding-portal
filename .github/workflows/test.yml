@@ -86,9 +86,74 @@ jobs:
     name: Frontend Tests
     runs-on: ubuntu-22.04
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: wedding_test
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_USER: test_user
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://test_user:test_password@postgres:5432/wedding_test
+      ENVIRONMENT: test
+      CI: "true"
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build backend Docker image
+        run: |
+          docker build -t wedding-backend:test production/backend
+
+      - name: Start backend service
+        run: |
+          docker run -d \
+            --name wedding-backend \
+            --network host \
+            -e DATABASE_URL="${{ env.DATABASE_URL }}" \
+            -e ENVIRONMENT="${{ env.ENVIRONMENT }}" \
+            -e CORS_ORIGINS_RAW="http://127.0.0.1:3100,http://localhost:3100" \
+            -e SESSION_COOKIE_SECURE="false" \
+            wedding-backend:test
+
+      - name: Wait for backend to be healthy
+        run: |
+          for i in {1..30}; do
+            if curl -s http://127.0.0.1:3001/health; then
+              echo "Backend is healthy"
+              exit 0
+            fi
+            echo "Attempt $i: Backend not ready yet..."
+            sleep 2
+          done
+          echo "Backend failed to start"
+          docker logs wedding-backend
+          exit 1
+
+      - name: Initialize test database
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/schema.sql
+          psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/002_add_indexes.sql
+          psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/003_add_constraints.sql
+          psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/004_create_audit_triggers.sql
+          psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/005_create_invites_table.sql
+          psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/006_add_rsvp_fields.sql
+          psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/007_create_tasks_table.sql
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -109,8 +174,10 @@ jobs:
         working-directory: production/frontend
         run: npx playwright install --with-deps chromium
 
-      - name: Run frontend browser tests
+      - name: Run frontend browser tests with real backend
         working-directory: production/frontend
+        env:
+          VITE_API_BASE_URL: http://127.0.0.1:3001
         run: npm run test:e2e -- --reporter=line,html
 
       - name: Upload Playwright report
@@ -122,3 +189,7 @@ jobs:
             production/frontend/playwright-report
             production/frontend/test-results
           if-no-files-found: ignore
+
+      - name: Show backend logs on failure
+        if: failure()
+        run: docker logs wedding-backend
