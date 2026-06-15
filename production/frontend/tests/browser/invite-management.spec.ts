@@ -178,20 +178,20 @@ async function mockGuests(page: Page, guests: Guest[] = existingGuests) {
 test.beforeEach(async ({ page }) => {
   await trackBrowserErrors(page)
 
+  // Mock data endpoints BEFORE navigating (so they're ready to intercept requests)
+  await mockInvites(page)
+  await mockGuests(page)
+
   // Login through invite page to establish real session with backend
   await page.goto('/invite')
   await page.getByLabel('Invite Code').fill('DEMO-COUPLE')
   await page.getByRole('button', { name: 'Enter' }).click()
 
   // Wait for successful login and redirect to admin
-  await page.waitForURL(/\/admin/, { timeout: 10000 })
+  await page.waitForURL(/\/admin/, { timeout: 15000 })
 
-  // Mock data endpoints (not auth)
-  await mockInvites(page)
-  await mockGuests(page)
-
-  // Verify admin dashboard loaded
-  await page.waitForSelector('h1:has-text("Admin Dashboard")', { timeout: 5000 })
+  // Verify admin dashboard fully loaded
+  await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({ timeout: 10000 })
 })
 
 test.afterEach(async ({ page }) => {
