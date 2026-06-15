@@ -178,27 +178,26 @@ jobs:
           set -euo pipefail
           ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
             -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 \
-            "$DEPLOY_USER@$DEPLOY_HOST" \
-            "bash -seu <<'REMOTE_PREFLIGHT'
+            "$DEPLOY_USER@$DEPLOY_HOST" bash -seu << REMOTE_PREFLIGHT
+          DEPLOY_PATH='$DEPLOY_PATH'
           if ! command -v docker >/dev/null 2>&1; then
-            echo \"::error::docker is not installed on the deploy host.\" >&2
+            echo "::error::docker is not installed on the deploy host." >&2
             exit 1
           fi
           if ! docker info >/dev/null 2>&1; then
-            echo \"::error::Docker daemon not reachable on the deploy host (permission or not running).\" >&2
+            echo "::error::Docker daemon not reachable on the deploy host (permission or not running)." >&2
             exit 1
           fi
-          if [ ! -d \"$DEPLOY_PATH\" ]; then
-            echo \"::error::Deploy path $DEPLOY_PATH does not exist on the host.\" >&2
+          if [ ! -d "\$DEPLOY_PATH" ]; then
+            echo "::error::Deploy path \$DEPLOY_PATH does not exist on the host." >&2
             exit 1
           fi
-          if [ ! -f \"$DEPLOY_PATH/production/scripts/deploy.sh\" ]; then
-            echo \"::error::deploy.sh not found under $DEPLOY_PATH/production/scripts.\" >&2
+          if [ ! -f "\$DEPLOY_PATH/production/scripts/deploy.sh" ]; then
+            echo "::error::deploy.sh not found under \$DEPLOY_PATH/production/scripts." >&2
             exit 1
           fi
-          echo \"Preflight OK: docker reachable, repo present at $DEPLOY_PATH.\"
+          echo "Preflight OK: docker reachable, repo present at \$DEPLOY_PATH."
           REMOTE_PREFLIGHT
-          "
 
       # --------------------------------------------------------------------
       # 5. Deploy (or rollback) via SSH.
