@@ -92,20 +92,8 @@ async function trackBrowserErrors(page: Page) {
 }
 
 async function mockAuthenticatedCouple(page: Page) {
-  // Mock the login endpoint to accept DEMO-COUPLE and return couple user
-  await page.route('**/api/auth/login', async (route) => {
-    const body = route.request().postDataJSON() as { invite_code: string }
-    if (body.invite_code === 'DEMO-COUPLE') {
-      await json(route, { user: coupleUser }, 200)
-    } else {
-      await json(route, { detail: 'Invalid invite code' }, 401)
-    }
-  })
-
-  // Mock the /api/auth/me endpoint to return authenticated couple user
-  await page.route('**/api/auth/me', async (route) => {
-    await json(route, coupleUser)
-  })
+  // Don't mock auth endpoints - let real backend handle authentication
+  // The backend will set session cookies automatically
 }
 
 async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
@@ -189,18 +177,20 @@ async function mockGuests(page: Page, guests: Guest[] = existingGuests) {
 
 test.beforeEach(async ({ page }) => {
   await trackBrowserErrors(page)
-  await mockAuthenticatedCouple(page)
+
+  // Login through invite page to establish real session with backend
+  await page.goto('/invite')
+  await page.getByLabel('Invite Code').fill('DEMO-COUPLE')
+  await page.getByRole('button', { name: 'Enter' }).click()
+
+  // Wait for successful login and redirect to admin
+  await page.waitForURL(/\/admin/, { timeout: 10000 })
+
+  // Mock data endpoints (not auth)
   await mockInvites(page)
   await mockGuests(page)
 
-  // Navigate to /admin which will require authentication
-  // The Admin component will call fetchCurrentUser (GET /api/auth/me)
-  // which will be mocked to return the coupleUser
-  await page.goto('/admin')
-
-  // Wait for the admin dashboard to fully load
-  // The Admin component shows "Loading..." while fetching the user,
-  // then renders the InviteManagement component once authenticated
+  // Verify admin dashboard loaded
   await page.waitForSelector('h1:has-text("Admin Dashboard")', { timeout: 5000 })
 })
 
