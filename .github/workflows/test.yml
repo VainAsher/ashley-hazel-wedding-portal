@@ -103,7 +103,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://test_user:test_password@postgres:5432/wedding_test
-      ENVIRONMENT: test
+      ENVIRONMENT: development
       CI: "true"
 
     steps:
@@ -125,9 +125,9 @@ jobs:
             --name wedding-backend \
             --network host \
             -e DATABASE_URL="${{ env.DATABASE_URL }}" \
-            -e ENVIRONMENT="${{ env.ENVIRONMENT }}" \
+            -e ENVIRONMENT=development \
             -e CORS_ORIGINS_RAW="http://127.0.0.1:3100,http://localhost:3100" \
-            -e SESSION_COOKIE_SECURE="false" \
+            -e SESSION_COOKIE_SECURE=false \
             wedding-backend:test
 
       - name: Wait for backend to be healthy
