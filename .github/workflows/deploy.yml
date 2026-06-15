@@ -176,14 +176,10 @@ jobs:
       - name: Preflight remote host
         run: |
           set -euo pipefail
-          echo "DEBUG: DEPLOY_PATH value is: $DEPLOY_PATH"
-          echo "DEBUG: DEPLOY_HOST is: $DEPLOY_HOST"
-          echo "DEBUG: DEPLOY_USER is: $DEPLOY_USER"
           ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
             -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 \
             "$DEPLOY_USER@$DEPLOY_HOST" bash -seu << REMOTE_PREFLIGHT
           DEPLOY_PATH='$DEPLOY_PATH'
-          echo "DEBUG REMOTE: DEPLOY_PATH is: \$DEPLOY_PATH"
           if ! command -v docker >/dev/null 2>&1; then
             echo "::error::docker is not installed on the deploy host." >&2
             exit 1
