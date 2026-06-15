@@ -10,3 +10,10 @@ logs
 *.log
 .venv
 venv
+.env.example
+docs/
+tests/
+*.md
+scripts/
+.dockerignore
+Dockerfile

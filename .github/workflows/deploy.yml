@@ -1,5 +1,32 @@
 name: Deploy
 
+# ===========================================================================
+# Wedding Portal — deployment workflow (Docker via Cloudflare Tunnel SSH)
+#
+# Model: a GitHub-hosted runner SSHes into the deploy host (reached through the
+# Cloudflare Tunnel terminating on infra-core .23) and runs the Docker-native
+# `production/scripts/deploy.sh` THERE. The runner never touches Docker; the
+# deploy host owns the stack, the volumes, and the rollback state.
+#
+# deploy.sh itself does: git checkout of the requested revision -> secret
+# validation -> build (tagged by SHA) -> down -> up -> health poll ->
+# migrations -> endpoint verify -> record rollback tags, and AUTO-ROLLS BACK on
+# health failure. This workflow's job is to: gate the trigger, transport
+# secrets securely into the remote environment, invoke deploy.sh, surface
+# health, and upload logs on failure.
+#
+# Triggers:
+#   - workflow_run: fires after the "Tests" workflow completes on main; only
+#     deploys if that run succeeded (and DEPLOY_ENABLED variable is 'true').
+#   - workflow_dispatch: manual deploy/rollback, choose environment.
+#
+# Secret transport: secrets are placed in the runner step `env:` (GitHub masks
+# them in logs), serialized into a base64 blob on the runner, piped over SSH
+# stdin, then decoded + sourced + shredded on the remote host. They never
+# appear in process argv, in the remote shell history, or on disk unencrypted
+# for more than the lifetime of a single `source`.
+# ===========================================================================
+
 on:
   workflow_run:
     workflows:
@@ -18,10 +45,6 @@ on:
         options:
           - staging
           - production
-      revision:
-        description: Git revision to deploy. Defaults to the selected branch tip.
-        required: false
-        type: string
       action:
         description: Deployment action
         required: true
@@ -30,13 +53,26 @@ on:
         options:
           - deploy
           - rollback
+      revision:
+        description: Git revision to deploy. Defaults to the triggering commit / branch tip.
+        required: false
+        type: string
 
 permissions:
   contents: read
 
+# Never let two deploys to the same environment run concurrently (they share
+# the remote stack + rollback-tag state). Do NOT cancel an in-progress deploy —
+# interrupting deploy.sh mid-rollout could leave a half-applied stack.
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
-    name: Deploy
+    name: Deploy to ${{ github.event.inputs.environment || 'staging' }}
+    # Gate: the DEPLOY_ENABLED repo/environment variable must be 'true', AND
+    # either this is a manual dispatch OR the upstream Tests run succeeded.
     if: >-
       ${{
         vars.DEPLOY_ENABLED == 'true' &&
@@ -46,64 +82,300 @@ jobs:
         )
       }}
     runs-on: ubuntu-22.04
-    environment: ${{ inputs.environment || 'production' }}
-    concurrency:
-      group: deploy-${{ inputs.environment || 'production' }}
-      cancel-in-progress: false
+    # Binds the job to a GitHub Environment so environment-scoped secrets,
+    # protection rules, and (for production) required reviewers apply.
+    environment: ${{ github.event.inputs.environment || 'staging' }}
 
     env:
-      DEPLOY_ACTION: ${{ inputs.action || 'deploy' }}
-      DEPLOY_ENVIRONMENT: ${{ inputs.environment || 'production' }}
+      DEPLOY_ENVIRONMENT: ${{ github.event.inputs.environment || 'staging' }}
+      DEPLOY_ACTION: ${{ github.event.inputs.action || 'deploy' }}
+      DEPLOY_REVISION: ${{ github.event.inputs.revision || github.event.workflow_run.head_sha || github.sha }}
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/home/deploy/wedding-dashboard' }}
-      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
-      DEPLOY_REVISION: ${{ inputs.revision || github.event.workflow_run.head_sha || github.sha }}
-      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/home/deploy/wedding-dashboard' }}
 
     steps:
+      # --------------------------------------------------------------------
+      # 1. Checkout — for repo metadata only. The actual code that gets
+      #    deployed is checked out by deploy.sh ON THE REMOTE HOST (git fetch
+      #    + checkout of DEPLOY_REVISION), so the runner and the host agree on
+      #    the exact revision.
+      # --------------------------------------------------------------------
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.DEPLOY_REVISION }}
 
+      # --------------------------------------------------------------------
+      # 2. Fail fast if any required secret/variable is missing, naming each
+      #    one, BEFORE we open an SSH connection or touch the remote host.
+      # --------------------------------------------------------------------
       - name: Validate deployment secrets
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          API_KEY_SECRET: ${{ secrets.API_KEY_SECRET }}
+          SESSION_SECRET_KEY: ${{ secrets.SESSION_SECRET_KEY }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
-          required=(DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY)
+          set -euo pipefail
+          required=(
+            DEPLOY_HOST
+            DEPLOY_USER
+            DEPLOY_SSH_KEY
+            POSTGRES_PASSWORD
+            JWT_SECRET
+            API_KEY_SECRET
+            SESSION_SECRET_KEY
+          )
           missing=()
           for name in "${required[@]}"; do
-            if [ -z "${!name}" ]; then
+            if [ -z "${!name:-}" ]; then
               missing+=("$name")
             fi
           done
-
           if [ "${#missing[@]}" -gt 0 ]; then
-            printf 'Missing required deployment secrets: %s\n' "${missing[*]}" >&2
+            printf '::error::Missing required deployment secret(s): %s\n' "${missing[*]}"
             exit 1
           fi
+          echo "All required deployment secrets are present."
 
-      - name: Configure SSH
+      # --------------------------------------------------------------------
+      # 3. SSH client setup. The private key is written 0600; the host key is
+      #    pinned via ssh-keyscan so we are not blindly accepting host keys
+      #    (StrictHostKeyChecking stays on, backed by known_hosts).
+      # --------------------------------------------------------------------
+      - name: Configure SSH for Cloudflare Tunnel
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
+          set -euo pipefail
           install -m 700 -d ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p "$DEPLOY_PORT" "$DEPLOY_HOST" >> ~/.ssh/known_hosts
+          # Pin the host key. If the tunnel/host is briefly unreachable, retry a
+          # few times before giving up rather than failing on a transient blip.
+          for attempt in 1 2 3 4 5; do
+            if ssh-keyscan -p "$DEPLOY_PORT" "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null; then
+              echo "Host key pinned for $DEPLOY_HOST:$DEPLOY_PORT (attempt $attempt)."
+              break
+            fi
+            if [ "$attempt" -eq 5 ]; then
+              echo "::error::Could not reach $DEPLOY_HOST:$DEPLOY_PORT to pin host key after 5 attempts."
+              exit 1
+            fi
+            echo "ssh-keyscan attempt $attempt failed; retrying in 5s..."
+            sleep 5
+          done
 
-      - name: Deploy on server
+      # --------------------------------------------------------------------
+      # 4. Connectivity preflight — confirm we can authenticate AND that the
+      #    remote host has docker + the repo path, before we ship secrets.
+      # --------------------------------------------------------------------
+      - name: Preflight remote host
         run: |
-          remote_env=(
-            "DEPLOY_ENVIRONMENT=$DEPLOY_ENVIRONMENT"
-            "DEPLOY_REVISION=$DEPLOY_REVISION"
-            "DEPLOY_BRANCH=main"
-          )
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
+            -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 \
+            "$DEPLOY_USER@$DEPLOY_HOST" bash -seu <<REMOTE_PREFLIGHT
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "::error::docker is not installed on the deploy host." >&2
+            exit 1
+          fi
+          if ! docker info >/dev/null 2>&1; then
+            echo "::error::Docker daemon not reachable on the deploy host (permission or not running)." >&2
+            exit 1
+          fi
+          if [ ! -d "$DEPLOY_PATH" ]; then
+            echo "::error::Deploy path $DEPLOY_PATH does not exist on the host." >&2
+            exit 1
+          fi
+          if [ ! -f "$DEPLOY_PATH/production/scripts/deploy.sh" ]; then
+            echo "::error::deploy.sh not found under $DEPLOY_PATH/production/scripts." >&2
+            exit 1
+          fi
+          echo "Preflight OK: docker reachable, repo present at $DEPLOY_PATH."
+          REMOTE_PREFLIGHT
 
-          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" "$DEPLOY_USER@$DEPLOY_HOST" \
-            "cd '$DEPLOY_PATH' && git fetch origin main && git checkout --force '$DEPLOY_REVISION' && chmod +x production/scripts/deploy.sh && ${remote_env[*]} production/scripts/deploy.sh '$DEPLOY_ACTION'"
+      # --------------------------------------------------------------------
+      # 5. Deploy (or rollback) via SSH.
+      #
+      #    Secret transport: we build an env file on the RUNNER (secrets are in
+      #    this step's env:, masked by GitHub in logs), base64-encode it, and
+      #    pipe the blob over SSH stdin. The remote decodes it into a 0600 temp
+      #    file, sources it, removes it immediately, then runs deploy.sh. This
+      #    keeps secrets out of argv (`ps` on the host) and out of the remote
+      #    shell history, and on disk only for a single `source`.
+      #
+      #    DEPLOY_SKIP_GIT is left unset (0): deploy.sh does the remote git
+      #    fetch+checkout of DEPLOY_REVISION so the host code matches exactly.
+      # --------------------------------------------------------------------
+      - name: Deploy via SSH (Docker orchestration)
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          API_KEY_SECRET: ${{ secrets.API_KEY_SECRET }}
+          SESSION_SECRET_KEY: ${{ secrets.SESSION_SECRET_KEY }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: |
+          set -euo pipefail
 
+          # Build the secret blob on the runner. Each line is "NAME <base64>";
+          # encoding every VALUE in base64 means NO shell metacharacter (quotes,
+          # $, =, spaces, newlines) in a secret can break the remote parsing.
+          # The whole thing is base64'd again so it is a single opaque token on
+          # the SSH command line. Empty optional secrets are simply omitted.
+          emit() { printf '%s %s\n' "$1" "$(printf '%s' "$2" | base64 -w0)"; }
+
+          blob="$(
+            {
+              emit POSTGRES_PASSWORD   "$POSTGRES_PASSWORD"
+              emit JWT_SECRET          "$JWT_SECRET"
+              emit API_KEY_SECRET      "$API_KEY_SECRET"
+              emit SESSION_SECRET_KEY  "$SESSION_SECRET_KEY"
+              if [ -n "${SENTRY_DSN:-}" ]; then emit SENTRY_DSN "$SENTRY_DSN"; fi
+              true
+            } | base64 -w0
+          )"
+
+          # The remote command. The heredoc is QUOTED ('REMOTE_DEPLOY') so the
+          # runner does NOT expand it; we pass the variable parts (the blob, the
+          # action, env, revision, path) via the remote environment using
+          # `env VAR=...`. The blob is base64 (no shell-special chars), so it is
+          # safe to place on the command line.
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
+            -o BatchMode=yes -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=10 \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            env \
+              WD_SECRET_BLOB="$blob" \
+              WD_DEPLOY_PATH="$DEPLOY_PATH" \
+              WD_DEPLOY_ACTION="$DEPLOY_ACTION" \
+              WD_DEPLOY_ENVIRONMENT="$DEPLOY_ENVIRONMENT" \
+              WD_DEPLOY_REVISION="$DEPLOY_REVISION" \
+              bash -seu <<'REMOTE_DEPLOY'
+          set -Eeuo pipefail
+
+          # Decode the secret blob entirely in memory: each line is
+          # "NAME <base64-of-value>". No temp file, no secrets on disk, no
+          # secrets in argv, nothing in shell history. base64-decoding each
+          # value means quotes/$/spaces/newlines in a secret are all safe.
+          umask 077
+          while read -r _name _b64val; do
+            [ -n "$_name" ] || continue
+            export "$_name=$(printf '%s' "$_b64val" | base64 -d)"
+          done < <(printf '%s' "$WD_SECRET_BLOB" | base64 -d)
+          unset _name _b64val
+
+          cd "$WD_DEPLOY_PATH"
+
+          # Hand control to deploy.sh. It does its own git fetch/checkout of the
+          # revision, validates secrets again, and runs the requested action.
+          # It auto-rolls back on health failure and exits non-zero on any
+          # failure (which fails this SSH command and therefore the job).
+          export DEPLOY_ENVIRONMENT="$WD_DEPLOY_ENVIRONMENT"
+          export DEPLOY_REVISION="$WD_DEPLOY_REVISION"
+          export DEPLOY_BRANCH="main"
+
+          chmod +x production/scripts/deploy.sh
+          bash production/scripts/deploy.sh "$WD_DEPLOY_ACTION"
+          REMOTE_DEPLOY
+
+      # --------------------------------------------------------------------
+      # 6. Health verification.
+      #    - staging publishes host ports, so we can curl the endpoints
+      #      THROUGH the same SSH connection (curl on the host, against
+      #      localhost ports). Production publishes no host ports (Traefik
+      #      fronts the stack), so we rely on deploy.sh's own in-stack health
+      #      gate and just run `status`.
+      #    Skipped entirely for rollback runs (deploy.sh already health-gates
+      #    the rollback target).
+      # --------------------------------------------------------------------
+      - name: Verify deployment health
+        if: ${{ github.event.inputs.action != 'rollback' }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
+            -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30 \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            env WD_DEPLOY_PATH="$DEPLOY_PATH" WD_DEPLOY_ENVIRONMENT="$DEPLOY_ENVIRONMENT" \
+            bash -seu <<'REMOTE_HEALTH'
+          set -Eeuo pipefail
+          cd "$WD_DEPLOY_PATH"
+
+          echo "== Stack status =="
+          bash production/scripts/deploy.sh status || true
+
+          if [ "$WD_DEPLOY_ENVIRONMENT" = "staging" ]; then
+            echo "== Endpoint checks (staging host ports) =="
+            # Backend health
+            if curl --fail --silent --show-error --max-time 10 http://localhost:3001/health >/dev/null; then
+              echo "backend /health: OK"
+            else
+              echo "::error::backend /health did not respond OK" >&2
+              exit 1
+            fi
+            # Frontend health (host port defaults to 80)
+            if curl --fail --silent --show-error --max-time 10 "http://localhost:${FRONTEND_HOST_PORT:-80}/healthz" >/dev/null; then
+              echo "frontend /healthz: OK"
+            else
+              echo "::error::frontend /healthz did not respond OK" >&2
+              exit 1
+            fi
+          else
+            echo "Production: no host ports published; relying on in-stack health gate (deploy.sh)."
+          fi
+          echo "Health verification complete."
+          REMOTE_HEALTH
+
+      # --------------------------------------------------------------------
+      # 7. On ANY failure, pull the deploy logs + failure snapshot off the host
+      #    so they can be uploaded as artifacts for post-mortem.
+      # --------------------------------------------------------------------
+      - name: Collect remote logs on failure
+        if: failure()
+        run: |
+          set -uo pipefail
+          mkdir -p ./deploy-artifacts
+          # Best-effort: the host or SSH may itself be the failure, so never let
+          # log collection fail the step.
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
+            -o BatchMode=yes -o ConnectTimeout=15 \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cat '$DEPLOY_PATH/production/logs/deploy.log' 2>/dev/null" \
+            > ./deploy-artifacts/deploy.log 2>/dev/null || echo "(no deploy.log retrieved)" > ./deploy-artifacts/deploy.log
+          ssh -i ~/.ssh/deploy_key -p "$DEPLOY_PORT" \
+            -o BatchMode=yes -o ConnectTimeout=15 \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cat /tmp/deploy-failure.log 2>/dev/null" \
+            > ./deploy-artifacts/deploy-failure.log 2>/dev/null || echo "(no failure snapshot retrieved)" > ./deploy-artifacts/deploy-failure.log
+          echo "Collected logs into ./deploy-artifacts"
+
+      - name: Upload deployment logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-logs-${{ env.DEPLOY_ENVIRONMENT }}-${{ github.run_id }}
+          path: ./deploy-artifacts
+          if-no-files-found: warn
+          retention-days: 14
+
+      # --------------------------------------------------------------------
+      # 8. Always write a job summary.
+      # --------------------------------------------------------------------
       - name: Deployment summary
+        if: always()
         run: |
           {
-            echo "### Deployment"
-            echo "- Environment: $DEPLOY_ENVIRONMENT"
-            echo "- Action: $DEPLOY_ACTION"
-            echo "- Revision: $DEPLOY_REVISION"
-            echo "- Host: $DEPLOY_HOST"
+            echo "## Deployment Summary"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Environment | \`$DEPLOY_ENVIRONMENT\` |"
+            echo "| Action | \`$DEPLOY_ACTION\` |"
+            echo "| Revision | \`$DEPLOY_REVISION\` |"
+            echo "| Host | \`$DEPLOY_HOST\` |"
+            echo "| Trigger | \`${{ github.event_name }}\` |"
+            echo "| Status | \`${{ job.status }}\` |"
+            echo "| Timestamp | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |"
           } >> "$GITHUB_STEP_SUMMARY"

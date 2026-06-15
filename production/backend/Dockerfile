@@ -1,43 +1,45 @@
-# Build stage
-FROM python:3.12-slim as builder
+# ---------- Stage 1: builder ----------
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    postgresql-client \
+# gcc kept defensively for any sdist fallback (psycopg2-binary/pydantic-core ship wheels).
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
+# Install deps into an isolated prefix so they copy cleanly into a non-root runtime.
 COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# Runtime stage
-FROM python:3.12-slim
+# ---------- Stage 2: runtime ----------
+FROM python:3.12-slim AS runtime
+
+# Unbuffered stdout/stderr (logs flush immediately); no .pyc clutter.
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Non-root runtime user.
+RUN useradd --create-home --uid 10001 appuser
+
+# Bring installed packages + console scripts (uvicorn) onto the default path.
+COPY --from=builder /install /usr/local
 
 WORKDIR /app
 
-# Install only runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+# App source only (see .dockerignore). Owned by the non-root user.
+COPY --chown=appuser:appuser . .
 
-# Copy Python packages from builder
-COPY --from=builder /root/.local /root/.local
+# Log dir is the mount point for the backend_logs volume; must be writable by appuser.
+RUN mkdir -p logs && chown -R appuser:appuser logs
 
-# Add local Python packages to PATH
-ENV PATH=/root/.local/bin:$PATH
+USER appuser
 
-# Copy application code
-COPY . .
+EXPOSE 3001
 
-# Create logs directory
-RUN mkdir -p logs
+# Working health check using stdlib only (no extra deps). Hits the DB-free /health.
+HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=3 \
+    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:3001/health').status==200 else 1)"
 
-# Health check
-HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:3001/health')" || exit 1
-
-# Run the application
-CMD ["python", "main.py"]
+# Explicit uvicorn entrypoint; host/port fixed to match EXPOSE and the health check.
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "3001"]

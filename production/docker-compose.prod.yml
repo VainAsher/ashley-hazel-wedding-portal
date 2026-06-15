@@ -1,0 +1,55 @@
+# ===========================================================================
+# Wedding Portal — docker-compose PRODUCTION override
+#
+# Layer on top of the base file:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Compose merges these keys into the base service definitions. This override:
+#   - Closes host-published ports (db + backend reachable only inside the
+#     `wedding` network; the frontend is fronted by Traefik, not a raw port).
+#   - Tightens runtime settings (ENVIRONMENT=production, WARNING logs, secure
+#     session cookies).
+#   - Hardens restart policy.
+#
+# NOTE on clearing ports: a plain `ports: []` override does NOT reliably drop
+# the base file's host mappings (Compose merges short-form port lists rather
+# than replacing them, so the host ports leak into production). We therefore
+# use the `!reset []` YAML tag (Compose v2.24+ / required here), which forces
+# the merged value to an empty list and removes every host mapping. Verified
+# with `docker compose ... config` (zero `published:` entries).
+# ===========================================================================
+
+services:
+  postgresql:
+    # Do not expose the database to the host in production. Inter-service
+    # access is via the `wedding` network (postgresql:5432) only.
+    ports: !reset []
+    restart: always
+
+  backend:
+    environment:
+      ENVIRONMENT: production
+      # Python logging level name — must be WARNING (config rejects "WARN").
+      LOG_LEVEL: ${LOG_LEVEL:-WARNING}
+      DEBUG: "false"
+      # Secure cookies require HTTPS termination (handled by Traefik) in prod.
+      SESSION_COOKIE_SECURE: "true"
+      SENTRY_ENVIRONMENT: production
+    # No host port: backend is reached only by the frontend over the network.
+    ports: !reset []
+    restart: always
+
+  frontend:
+    # Remove the direct host port mapping; Traefik (external) terminates TLS
+    # and routes to container :8080 over the shared/edge network.
+    #
+    # When wiring Traefik, attach this service to the Traefik network and add
+    # the routing labels, e.g.:
+    #   labels:
+    #     - "traefik.enable=true"
+    #     - "traefik.http.routers.wedding.rule=Host(`ashley-hazel-wedding.example`)"
+    #     - "traefik.http.routers.wedding.entrypoints=websecure"
+    #     - "traefik.http.routers.wedding.tls.certresolver=le"
+    #     - "traefik.http.services.wedding.loadbalancer.server.port=8080"
+    ports: !reset []
+    restart: always

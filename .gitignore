@@ -24,6 +24,9 @@ test-results/
 !production/backend/.env.production
 *.log
 
+# Deploy rollback state (current/previous image tags) — host-local, not source
+production/.deploy/
+
 # Wedding/private data - keep real guest data out of Git by default
 /data/private/
 /data/exports/

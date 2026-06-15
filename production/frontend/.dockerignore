@@ -1,0 +1,39 @@
+# --- Dependencies (reinstalled inside the build stage via `npm ci`) ---
+node_modules
+
+# --- Build output (rebuilt inside the image by `npm run build`) ---
+dist
+
+# --- Version control ---
+.git
+.gitignore
+.gitattributes
+
+# --- Tests / test artifacts (not needed for production build) ---
+tests
+test-results
+playwright-report
+playwright.config.ts
+test_output.txt
+test_full_output.txt
+test_results.txt
+test_third_test.txt
+
+# --- Docs ---
+*.md
+
+# --- Secrets / local env (never bake into image) ---
+.env
+.env.*
+*.local
+
+# --- Docker metadata ---
+Dockerfile
+.dockerignore
+
+# --- Editor / OS cruft ---
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+npm-debug.log*

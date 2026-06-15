@@ -1,0 +1,176 @@
+# ===========================================================================
+# Wedding Portal — docker-compose (staging / base)
+#
+# Orchestrates three services on a single `wedding` bridge network:
+#   postgresql  : PostgreSQL 16 (internal only) — durable data on `pgdata`
+#   backend     : FastAPI (uvicorn) on :3001    — depends on a HEALTHY db
+#   frontend    : Nginx (unprivileged) on :8080 — depends on a HEALTHY backend,
+#                 reverse-proxies /api/ -> backend:3001 (see nginx.conf)
+#
+# Startup is GATED by health checks (compose v3+ `condition: service_healthy`):
+#       postgresql (healthy) -> backend (healthy) -> frontend
+#
+# SECRETS are injected at runtime from the environment / an env_file
+# (see .env.docker). Nothing secret is baked into the images.
+#
+# This is the STAGING/base file. Production overrides live in
+# docker-compose.prod.yml and are layered with:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# ===========================================================================
+
+services:
+  # -------------------------------------------------------------------------
+  # PostgreSQL — durable data store. NOT published to the host in this base
+  # file by default reasoning below; we DO publish 5432 here for local dev /
+  # debugging convenience (psql from the host). Production override removes it.
+  #
+  # schema.sql is mounted read-only into /docker-entrypoint-initdb.d so the
+  # canonical schema is applied automatically on FIRST boot (only when the
+  # data directory is empty). schema.sql uses bare `CREATE TYPE` / `CREATE
+  # TABLE` (no IF NOT EXISTS), so it MUST run exactly once at init — which is
+  # precisely the contract of the initdb directory.
+  # -------------------------------------------------------------------------
+  postgresql:
+    image: postgres:16-alpine
+    container_name: wedding-postgresql
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wedding_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-wedding}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.docker)}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # First-boot schema initialization (idempotent only because initdb runs
+      # once on an empty data dir). Read-only mount.
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - "5432:5432"  # Local dev/debugging only; prod override sets this to [].
+    networks:
+      - wedding
+    healthcheck:
+      # pg_isready against the real DB user/db so "healthy" means "accepts
+      # connections as the app would", not merely "process is up".
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wedding} -d ${POSTGRES_DB:-wedding_dev}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------------
+  # Backend — FastAPI / uvicorn on :3001.
+  #
+  # DATABASE_URL points at the `postgresql` service by name (Docker DNS on the
+  # `wedding` network). The backend config (pydantic-settings, extra="ignore")
+  # safely accepts the full env set below; LOG_LEVEL must be a Python level
+  # name (DEBUG/INFO/WARNING/ERROR/CRITICAL) — NOT "WARN".
+  #
+  # The image's own Dockerfile HEALTHCHECK (stdlib urllib against /health) is
+  # authoritative; we restate an equivalent stdlib check here so `condition:
+  # service_healthy` works even if someone overrides the image. We do NOT use
+  # `curl` — the python:3.12-slim runtime image has no curl.
+  # -------------------------------------------------------------------------
+  backend:
+    image: wedding-backend:${IMAGE_TAG:-latest}
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: wedding-backend
+    environment:
+      # --- Database ---
+      DATABASE_URL: postgresql://${POSTGRES_USER:-wedding}:${POSTGRES_PASSWORD}@postgresql:5432/${POSTGRES_DB:-wedding_dev}
+      DATABASE_ECHO_SQL: ${DATABASE_ECHO_SQL:-false}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+      DB_MAX_OVERFLOW: ${DB_MAX_OVERFLOW:-20}
+      # --- App / runtime ---
+      ENVIRONMENT: ${ENVIRONMENT:-staging}
+      DEBUG: ${DEBUG:-false}
+      APP_HOST: 0.0.0.0
+      APP_PORT: 3001
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FILE_PATH: ${LOG_FILE_PATH:-logs/app.log}
+      # --- URLs / CORS ---
+      API_URL: ${API_URL:-}
+      FRONTEND_URL: ${FRONTEND_URL:-}
+      CORS_ORIGINS_RAW: ${CORS_ORIGINS_RAW:-}
+      # --- Secrets (injected; never baked into the image) ---
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set (see .env.docker)}
+      API_KEY_SECRET: ${API_KEY_SECRET:?API_KEY_SECRET must be set (see .env.docker)}
+      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:?SESSION_SECRET_KEY must be set (see .env.docker)}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      # --- Observability (optional) ---
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-staging}
+      METRICS_ENABLED: ${METRICS_ENABLED:-true}
+    volumes:
+      - backend_logs:/app/logs
+    ports:
+      - "3001:3001"  # Published for local dev/debugging; prod override sets [].
+    networks:
+      - wedding
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:3001/health').status==200 else 1)"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------------
+  # Frontend — Nginx (unprivileged, uid 101) serving the built SPA on :8080
+  # and reverse-proxying /api/ -> backend:3001.
+  #
+  # No environment variables: all config is baked into nginx.conf (same-origin
+  # relative /api). Health check uses `wget` (busybox wget ships in the
+  # nginx-alpine base) against the static /healthz — matching the Dockerfile.
+  #
+  # Host port 80 -> container 8080. Override to "3000:8080" locally if 80 is
+  # taken; production removes the direct mapping and fronts with Traefik.
+  # -------------------------------------------------------------------------
+  frontend:
+    image: wedding-frontend:${IMAGE_TAG:-latest}
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: wedding-frontend
+    ports:
+      - "${FRONTEND_HOST_PORT:-80}:8080"
+    networks:
+      - wedding
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+# ---------------------------------------------------------------------------
+# Single user-defined bridge network. Services reach each other by service
+# name (postgresql, backend, frontend) via Docker's embedded DNS — no host
+# port publishing is needed for inter-service traffic.
+# ---------------------------------------------------------------------------
+networks:
+  wedding:
+    name: wedding
+    driver: bridge
+
+# ---------------------------------------------------------------------------
+# Named volumes (Docker-managed, survive `up`/`down`; removed by `down -v`).
+#   pgdata        : PostgreSQL data directory — DURABLE database storage.
+#   backend_logs  : FastAPI rotating log files — for debugging/aggregation.
+# ---------------------------------------------------------------------------
+volumes:
+  pgdata:
+    name: wedding-pgdata
+  backend_logs:
+    name: wedding-backend-logs
