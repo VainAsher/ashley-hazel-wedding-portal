@@ -92,8 +92,20 @@ async function trackBrowserErrors(page: Page) {
 }
 
 async function mockAuthenticatedCouple(page: Page) {
-  // Don't mock auth endpoints - let real backend handle authentication
-  // The backend will set session cookies automatically
+  // Mock the login endpoint to accept DEMO-COUPLE and return couple user
+  await page.route('**/api/auth/login', async (route) => {
+    const body = route.request().postDataJSON() as { invite_code: string }
+    if (body.invite_code === 'DEMO-COUPLE') {
+      await json(route, { user: coupleUser }, 200)
+    } else {
+      await json(route, { detail: 'Invalid invite code' }, 401)
+    }
+  })
+
+  // Mock the /api/auth/me endpoint to return authenticated couple user
+  await page.route('**/api/auth/me', async (route) => {
+    await json(route, coupleUser)
+  })
 }
 
 async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
@@ -178,19 +190,15 @@ async function mockGuests(page: Page, guests: Guest[] = existingGuests) {
 test.beforeEach(async ({ page }) => {
   await trackBrowserErrors(page)
 
-  // Mock data endpoints BEFORE navigating (so they're ready to intercept requests)
+  // Set up all mocks BEFORE any navigation
+  await mockAuthenticatedCouple(page)
   await mockInvites(page)
   await mockGuests(page)
 
-  // Login through invite page to establish real session with backend
-  await page.goto('/invite')
-  await page.getByLabel('Invite Code').fill('DEMO-COUPLE')
-  await page.getByRole('button', { name: 'Enter' }).click()
+  // Navigate to admin directly (mocked auth will handle the session)
+  await page.goto('/admin')
 
-  // Wait for successful login and redirect to admin
-  await page.waitForURL(/\/admin/, { timeout: 15000 })
-
-  // Verify admin dashboard fully loaded
+  // Wait for admin dashboard to load
   await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({ timeout: 10000 })
 })
 
