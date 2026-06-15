@@ -93,7 +93,7 @@ jobs:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
       DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
-      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/home/deploy/wedding-dashboard' }}
+      DEPLOY_PATH: /home/deploy/wedding-dashboard
 
     steps:
       # --------------------------------------------------------------------
