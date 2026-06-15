@@ -127,8 +127,8 @@ jobs:
         run: |
           docker run -d \
             --name wedding-backend \
-            -p 3001:3001 \
-            -e DATABASE_URL="postgresql://test_user:test_password@postgres:5432/wedding_test" \
+            --network host \
+            -e DATABASE_URL="postgresql://test_user:test_password@127.0.0.1:5432/wedding_test" \
             -e ENVIRONMENT=development \
             -e CORS_ORIGINS_RAW="http://127.0.0.1:3100,http://localhost:3100" \
             -e SESSION_COOKIE_SECURE=false \
