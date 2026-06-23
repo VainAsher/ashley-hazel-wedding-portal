@@ -115,8 +115,9 @@ interface PlanningModule {
   href: string
 }
 
-// Most module routes are Phase 4 stubs that do not exist yet; until then they
-// fall through to the app catch-all route. Guests points to the real route.
+// These link to the admin module routes registered in App.tsx. The module
+// pages are functional skeletons; their data APIs are stubbed pending backend
+// wiring. Guests points to the real /guests route.
 const planningModules: PlanningModule[] = [
   { icon: DollarSign, label: 'Budget', description: 'Track spending and payments', href: '/admin/budget' },
   { icon: Users, label: 'Guests', description: 'Manage guest list and RSVPs', href: '/guests' },
