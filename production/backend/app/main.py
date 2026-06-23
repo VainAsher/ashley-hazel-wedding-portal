@@ -9,6 +9,8 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.api import auth, guests, invites, tasks
 from app.config import Environment, get_settings
+from app.db.database import SessionLocal
+from app.db.models import Invite
 from app.error_tracking import init_error_tracking
 from app.logging import configure_logging
 from app.metrics import metrics_middleware, metrics_response
@@ -78,7 +80,29 @@ async def metrics():
 
 @app.get("/health")
 async def health():
+    """Liveness probe: the process is up and serving. Does NOT touch the DB."""
     return {"status": "healthy", "message": "Wedding Dashboard API is running!"}
+
+
+@app.get("/health/ready")
+async def health_ready():
+    """Readiness probe: confirms the backend can actually serve real traffic by
+    running the same kind of query the auth flow depends on. Unlike /health, this
+    fails (503) when the database is unreachable or the core schema is missing or
+    drifted, so a DB-blind backend cannot pass as a healthy/green deployment.
+    """
+    db = SessionLocal()
+    try:
+        db.query(Invite).first()
+    except Exception as exc:  # noqa: BLE001 - report any DB failure as not-ready
+        logger.error("Readiness check failed: %s", SecretMasker.mask(exc))
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not_ready", "detail": "database not ready"},
+        )
+    finally:
+        db.close()
+    return {"status": "ready"}
 
 
 @app.get("/")
