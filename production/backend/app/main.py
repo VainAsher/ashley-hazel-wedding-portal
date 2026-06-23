@@ -95,11 +95,14 @@ async def health_ready():
     try:
         db.query(Invite).first()
     except Exception as exc:  # noqa: BLE001 - report any DB failure as not-ready
-        logger.error("Readiness check failed: %s", SecretMasker.mask(exc))
-        return JSONResponse(
-            status_code=503,
-            content={"status": "not_ready", "detail": "database not ready"},
-        )
+        masked = SecretMasker.mask(exc)
+        logger.error("Readiness check failed: %s", masked)
+        content: dict[str, str] = {"status": "not_ready", "detail": "database not ready"}
+        if not settings.is_production:
+            # Outside production, surface the underlying error (secrets masked)
+            # so the failure can be diagnosed without shell access to the host.
+            content["error"] = f"{type(exc).__name__}: {masked}"
+        return JSONResponse(status_code=503, content=content)
     finally:
         db.close()
     return {"status": "ready"}
