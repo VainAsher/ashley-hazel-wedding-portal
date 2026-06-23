@@ -1,0 +1,456 @@
+{
+  "metadata": {
+    "generated": "2026-06-23",
+    "sourceTemplate": "C:\\Users\\asher\\Downloads\\wedding-portal-platform-25d",
+    "currentProject": "C:\\dev\\ashley-hazel-wedding-portal-prototype",
+    "templateTokenSource": "client/global.css",
+    "currentColorsSource": "inline styles in src/",
+    "conversionNote": "All current hex colors mapped to new template's CSS variables (HSL format)"
+  },
+  "currentPrimaryColors": {
+    "primaryAction": {
+      "hex": "#1f6f5b",
+      "rgb": "rgb(31, 111, 91)",
+      "hsl": "hsl(156, 56%, 28%)",
+      "usage": "Primary buttons, form actions, links",
+      "mappedTo": "Not directly in new template (breaking change)"
+    }
+  },
+  "colorMappings": {
+    "backgrounds": {
+      "#ffffff": {
+        "name": "White",
+        "usage": "All card, panel, and modal backgrounds",
+        "newToken": "--background",
+        "newValue": "0 0% 100%",
+        "isDirectMatch": true,
+        "notes": "Perfect match - no change needed"
+      },
+      "#f9fafb": {
+        "name": "Light Gray (table header)",
+        "usage": "Table header backgrounds",
+        "newToken": "--muted (lighter variant)",
+        "newValue": "260 14% 89%",
+        "isDirectMatch": false,
+        "notes": "Slightly warmer in new template (greyish vs blueish)"
+      },
+      "#f4f6f8": {
+        "name": "Light Blue-Gray (table header alt)",
+        "usage": "GuestList table header",
+        "newToken": "--muted",
+        "newValue": "260 14% 89%",
+        "isDirectMatch": false,
+        "notes": "Use muted background; may appear slightly different"
+      },
+      "#f3f4f6": {
+        "name": "Very Light Gray (code background)",
+        "usage": "Inline code/monospace backgrounds",
+        "newToken": "bg-muted-foreground/10 (derived)",
+        "newValue": "use opacity on muted",
+        "isDirectMatch": false,
+        "notes": "Create utility class or use opacity variant"
+      },
+      "#f0fdf4": {
+        "name": "Success Light Green",
+        "usage": "Success alert backgrounds",
+        "newToken": "Not in template - create custom",
+        "newValue": "120 100% 97% (approximation)",
+        "isDirectMatch": false,
+        "notes": "Consider using accent-based success or create separate token"
+      },
+      "#f0f7f4": {
+        "name": "Success Light Teal (row highlight)",
+        "usage": "Selected guest row background",
+        "newToken": "bg-accent/10 (derived)",
+        "newValue": "use accent with opacity",
+        "isDirectMatch": false,
+        "notes": "Will appear as accent-based color in new template"
+      },
+      "#edf8f3": {
+        "name": "Success Medium Teal",
+        "usage": "Success message backgrounds",
+        "newToken": "bg-accent/20 (derived)",
+        "newValue": "use accent with opacity",
+        "isDirectMatch": false,
+        "notes": "New template uses accent (45 100% 50% = gold/yellow)"
+      },
+      "#ecfdf5": {
+        "name": "Success Pale Green",
+        "usage": "RSVP form success feedback",
+        "newToken": "bg-accent/15 (derived)",
+        "newValue": "use accent with opacity",
+        "isDirectMatch": false,
+        "notes": "Will be gold/yellow in new template - design trade-off"
+      },
+      "#fef2f2": {
+        "name": "Error Light Red",
+        "usage": "Error alert backgrounds",
+        "newToken": "--destructive (lighter variant)",
+        "newValue": "0 84.2% 60.2% (light palette needs work)",
+        "isDirectMatch": false,
+        "notes": "Use destructive with low opacity"
+      },
+      "#fff5f5": {
+        "name": "Error Very Light Red",
+        "usage": "Guest deletion/danger alerts",
+        "newToken": "bg-destructive/10",
+        "newValue": "use destructive color with opacity",
+        "isDirectMatch": false,
+        "notes": "New template destructive is red (0 84.2% 60.2%)"
+      }
+    },
+    "textColors": {
+      "#1f2933": {
+        "name": "Dark Gray (primary text)",
+        "usage": "All body text, headings",
+        "newToken": "--foreground",
+        "newValue": "260 15% 20%",
+        "isDirectMatch": true,
+        "notes": "Exact match with new template"
+      },
+      "#374151": {
+        "name": "Gray (labels, secondary text)",
+        "usage": "Form labels, legend text",
+        "newToken": "--foreground (or secondary-foreground)",
+        "newValue": "260 15% 20%",
+        "isDirectMatch": true,
+        "notes": "Can use foreground; new template also has secondary at 260 30% 25%"
+      },
+      "#47505f": {
+        "name": "Medium Gray (meta text)",
+        "usage": "Subtitle, meta information",
+        "newToken": "--muted-foreground",
+        "newValue": "260 8% 52%",
+        "isDirectMatch": false,
+        "notes": "Slightly different value; approximates current usage"
+      },
+      "#586272": {
+        "name": "Gray (table/form hints)",
+        "usage": "Table metadata, form hints",
+        "newToken": "--muted-foreground",
+        "newValue": "260 8% 52%",
+        "isDirectMatch": false,
+        "notes": "Close enough for secondary text"
+      },
+      "#6b7280": {
+        "name": "Light Gray (muted text)",
+        "usage": "Muted/inactive text",
+        "newToken": "--muted-foreground",
+        "newValue": "260 8% 52%",
+        "isDirectMatch": false,
+        "notes": "Use muted-foreground token"
+      },
+      "#333": {
+        "name": "Near Black (dark text fallback)",
+        "usage": "GuestList component text",
+        "newToken": "--foreground",
+        "newValue": "260 15% 20%",
+        "isDirectMatch": true,
+        "notes": "Replace with --foreground for consistency"
+      },
+      "#ffffff": {
+        "name": "White (button text)",
+        "usage": "Primary button text",
+        "newToken": "--primary-foreground",
+        "newValue": "0 0% 100%",
+        "isDirectMatch": true,
+        "notes": "Standard light text on dark backgrounds"
+      },
+      "#fff": {
+        "name": "White (CSS shorthand)",
+        "usage": "Secondary button text",
+        "newToken": "--secondary-foreground or --foreground",
+        "newValue": "varies",
+        "isDirectMatch": false,
+        "notes": "Context-dependent; use appropriate foreground token"
+      },
+      "#166534": {
+        "name": "Success Dark Green (text)",
+        "usage": "Success message text color",
+        "newToken": "accent-foreground or custom success-text",
+        "newValue": "New template accent-foreground: 260 15% 20%",
+        "isDirectMatch": false,
+        "notes": "Design trade-off: new template accent is gold/yellow"
+      },
+      "#1f6f5b": {
+        "name": "Teal (primary action text)",
+        "usage": "Primary button text, links",
+        "newToken": "Not in new template (BREAKING CHANGE)",
+        "newValue": "Must map to new primary or secondary",
+        "isDirectMatch": false,
+        "notes": "New template primary is purple (270 100% 50%)"
+      },
+      "#991b1b": {
+        "name": "Error Dark Red (text)",
+        "usage": "Error message text",
+        "newToken": "destructive-foreground or use destructive",
+        "newValue": "0 84.2% 60.2%",
+        "isDirectMatch": false,
+        "notes": "May need contrast adjustment in light mode"
+      },
+      "#9f1d1d": {
+        "name": "Error Burgundy (text)",
+        "usage": "Danger button text",
+        "newToken": "destructive or destructive-foreground",
+        "newValue": "same as above",
+        "isDirectMatch": false,
+        "notes": "Use destructive color system"
+      }
+    },
+    "borderColors": {
+      "#d6d9df": {
+        "name": "Primary Border (light gray)",
+        "usage": "Cards, panels, section borders (most common)",
+        "newToken": "--border",
+        "newValue": "260 20% 92%",
+        "isDirectMatch": true,
+        "notes": "Exact match with new template - PRIMARY BORDER TOKEN"
+      },
+      "#c8cdd5": {
+        "name": "Input Border (medium gray)",
+        "usage": "Form input/textarea borders",
+        "newToken": "--input",
+        "newValue": "260 20% 92%",
+        "isDirectMatch": true,
+        "notes": "New template uses same token for input as border"
+      },
+      "#e1e5ea": {
+        "name": "Table Row Border (light gray)",
+        "usage": "Table cell bottom borders",
+        "newToken": "--border",
+        "newValue": "260 20% 92%",
+        "isDirectMatch": false,
+        "notes": "Slightly lighter than primary border - use border token"
+      },
+      "#e5e7eb": {
+        "name": "Table Row Border Alt",
+        "usage": "Table divider lines",
+        "newToken": "--border (or lighter variant)",
+        "newValue": "260 20% 92%",
+        "isDirectMatch": false,
+        "notes": "Use border; may need opacity/lightness adjustment"
+      },
+      "#aeb6c2": {
+        "name": "Input Active Border (darker gray)",
+        "usage": "Form inputs (Invite, RSVP, GuestForm)",
+        "newToken": "--input or --ring",
+        "newValue": "260 20% 92%",
+        "isDirectMatch": false,
+        "notes": "Similar to input token; may need focus state with --ring"
+      },
+      "#a9b1bd": {
+        "name": "Button Border (gray)",
+        "usage": "Secondary button, action button borders",
+        "newToken": "--border",
+        "newValue": "260 20% 92%",
+        "isDirectMatch": false,
+        "notes": "Use border or ring token"
+      },
+      "#fecaca": {
+        "name": "Error Border (light red)",
+        "usage": "Error alert borders",
+        "newToken": "destructive with reduced saturation",
+        "newValue": "0 84.2% 60.2% (light palette)",
+        "isDirectMatch": false,
+        "notes": "Create error-border variant or derive from destructive"
+      },
+      "#bbf7d0": {
+        "name": "Success Border (light green)",
+        "usage": "Success alert borders",
+        "newToken": "Not in template (DESIGN CHANGE)",
+        "newValue": "120 100% 80% (approximation)",
+        "isDirectMatch": false,
+        "notes": "Will become accent-based (gold/yellow) in new template"
+      },
+      "#3c8f72": {
+        "name": "Success Dark Border (teal)",
+        "usage": "Success message borders",
+        "newToken": "accent or custom success border",
+        "newValue": "45 100% 50% (new template accent)",
+        "isDirectMatch": false,
+        "notes": "Major design change from teal to gold"
+      },
+      "#86efac": {
+        "name": "Success Light Border (pale green)",
+        "usage": "Success alert top border",
+        "newToken": "accent with opacity",
+        "newValue": "45 100% 50%",
+        "isDirectMatch": false,
+        "notes": "New template: use accent color"
+      },
+      "#d64545": {
+        "name": "Danger Border (red)",
+        "usage": "Danger/delete operation borders",
+        "newToken": "destructive",
+        "newValue": "0 84.2% 60.2%",
+        "isDirectMatch": false,
+        "notes": "Use destructive color system"
+      }
+    },
+    "shadowsAndEffects": {
+      "0 10px 15px -3px rgba(0, 0, 0, 0.1)": {
+        "name": "Modal Shadow",
+        "usage": "InviteManagement modal",
+        "newToken": "No direct token in template",
+        "suggestion": "Use Tailwind shadow-lg or create custom",
+        "notes": "Create shadow utility or use Tailwind's drop-shadow"
+      }
+    }
+  },
+  "tokenComparison": {
+    "newTemplateTokens": {
+      "light": {
+        "--background": "0 0% 100% (white)",
+        "--foreground": "260 15% 20% (dark gray)",
+        "--card": "0 0% 100% (white)",
+        "--card-foreground": "260 15% 20%",
+        "--primary": "270 100% 50% (purple) ***BREAKING CHANGE***",
+        "--primary-foreground": "0 0% 100% (white)",
+        "--secondary": "260 30% 25% (dark gray)",
+        "--secondary-foreground": "0 0% 100% (white)",
+        "--muted": "260 14% 89% (light gray)",
+        "--muted-foreground": "260 8% 52% (medium gray)",
+        "--accent": "45 100% 50% (gold/yellow) ***BREAKING CHANGE***",
+        "--accent-foreground": "260 15% 20%",
+        "--destructive": "0 84.2% 60.2% (red)",
+        "--destructive-foreground": "210 40% 98%",
+        "--border": "260 20% 92% (light gray) EXACT MATCH",
+        "--input": "260 20% 92% (light gray) EXACT MATCH",
+        "--ring": "270 100% 50% (purple)",
+        "--radius": "0.75rem (12px)"
+      }
+    },
+    "currentProjectPrimaryColors": {
+      "actionColor": "#1f6f5b (teal)",
+      "textColor": "#1f2933 (dark gray)",
+      "borderColor": "#d6d9df (light gray)",
+      "successColors": [
+        "#f0fdf4 (pale green)",
+        "#bbf7d0 (light green border)",
+        "#3c8f72 (dark teal border)",
+        "#166534 (dark green text)"
+      ],
+      "errorColors": [
+        "#fef2f2 (pale red)",
+        "#fecaca (light red border)",
+        "#991b1b (dark red text)"
+      ]
+    }
+  },
+  "breakingChanges": {
+    "primaryColor": {
+      "current": "#1f6f5b (HSL: 156 56% 28% - teal)",
+      "newTemplate": "270 100% 50% (purple)",
+      "impact": "CRITICAL - affects all primary buttons, links, action elements",
+      "decision": "Must decide: adopt new purple or override template primary",
+      "recommendation": "Discuss with stakeholders. Purple is modern but represents design philosophy shift."
+    },
+    "accentColor": {
+      "current": "Multiple greens (#f0fdf4, #bbf7d0, #3c8f72, #166534, #86efac)",
+      "newTemplate": "45 100% 50% (gold/yellow)",
+      "impact": "HIGH - affects success alerts, confirmations, highlights",
+      "decision": "Must adapt all success/confirmation UX to gold instead of green",
+      "recommendation": "Consider if gold is acceptable for wedding context. Test with users."
+    },
+    "neutralColors": {
+      "current": "Warm grays (#1f2933, #374151, #47505f, #586272, #6b7280)",
+      "newTemplate": "Cool grays (hue: 260, 217, 222, 240)",
+      "impact": "MEDIUM - subtle but pervasive",
+      "decision": "Current grays are warmer (more brownish); new are cooler (more blue)",
+      "recommendation": "Acceptable migration path. May need to adjust contrast slightly."
+    }
+  },
+  "colorPaletteComparison": {
+    "warm_vs_cool": {
+      "current": "Warm palette - teal actions, warm grays, green success feedback",
+      "new": "Cool palette - purple actions, cool grays, gold accent, red errors",
+      "aesthetic_shift": "From natural/organic to modern/sleek"
+    }
+  },
+  "migrationStrategy": {
+    "phase1_noBreakingChanges": [
+      "Map #d6d9df -> --border (exact match)",
+      "Map #c8cdd5 -> --input (close match)",
+      "Map #1f2933 -> --foreground (exact match)",
+      "Map #ffffff -> --background (exact match)",
+      "Keep all layout and structure intact"
+    ],
+    "phase2_designDecisions": [
+      "Decision required: Primary color purple (#1f6f5b -> 270 100% 50%)",
+      "Decision required: Accent gold (#1f6f5b success -> 45 100% 50%)",
+      "Review all success/error messaging with new colors",
+      "Update test snapshots if visual testing present"
+    ],
+    "phase3_implementation": [
+      "Create CSS custom properties file matching new template",
+      "Update tailwind.config.ts with new color mappings",
+      "Create Tailwind utility classes for existing patterns",
+      "Migrate each component's styles incrementally"
+    ]
+  },
+  "recommendations": {
+    "immediateActions": [
+      "Confirm acceptance of purple as primary action color",
+      "Confirm acceptance of gold for success/accent states",
+      "Decide: override template tokens or accept new design?"
+    ],
+    "safeToMigrate": [
+      "Border colors (#d6d9df) - exact match",
+      "Input colors - matching strategy",
+      "Text colors for neutrals - warm to cool is acceptable",
+      "Layout patterns - no color dependency"
+    ],
+    "requiresStakeholderReview": [
+      "Primary action color (teal vs purple)",
+      "Success/confirmation colors (green vs gold)",
+      "Visual test updates",
+      "Accessibility contrast ratios"
+    ]
+  },
+  "tokenConversionTable": {
+    "current": [
+      {
+        "hex": "#1f6f5b",
+        "usage": "primary action",
+        "newToken": "--primary",
+        "newValue": "270 100% 50%",
+        "status": "BREAKING CHANGE"
+      },
+      {
+        "hex": "#d6d9df",
+        "usage": "borders",
+        "newToken": "--border",
+        "newValue": "260 20% 92%",
+        "status": "EXACT MATCH"
+      },
+      {
+        "hex": "#1f2933",
+        "usage": "text",
+        "newToken": "--foreground",
+        "newValue": "260 15% 20%",
+        "status": "EXACT MATCH"
+      },
+      {
+        "hex": "#ffffff",
+        "usage": "background",
+        "newToken": "--background",
+        "newValue": "0 0% 100%",
+        "status": "EXACT MATCH"
+      },
+      {
+        "hex": "#fef2f2",
+        "usage": "error background",
+        "newToken": "destructive (light)",
+        "newValue": "0 84.2% 60.2%",
+        "status": "APPROXIMATE"
+      },
+      {
+        "hex": "#166534",
+        "usage": "success text",
+        "newToken": "accent or custom",
+        "newValue": "45 100% 50%",
+        "status": "BREAKING CHANGE"
+      }
+    ]
+  }
+}

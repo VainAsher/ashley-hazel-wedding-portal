@@ -1,0 +1,565 @@
+{
+  "metadata": {
+    "generated": "2026-06-23",
+    "currentProject": "production/frontend/package.json",
+    "templateProject": "C:\\Users\\asher\\Downloads\\wedding-portal-platform-25d\\package.json",
+    "analysisType": "Dependency comparison for TailwindCSS + Radix UI migration",
+    "migrationPhase": "Phase 1 - Frontend redesign"
+  },
+  "summary": {
+    "currentDependencies": 3,
+    "currentDevDependencies": 3,
+    "templateDependencies": 9,
+    "templateDevDependencies": 75,
+    "breakingChanges": 3,
+    "majorUpgrades": 5,
+    "minorUpgrades": 4,
+    "safeUpgrades": 3,
+    "newDependenciesToAdd": 72,
+    "riskLevel": "HIGH - Significant dependency expansion"
+  },
+  "currentDependencies": {
+    "react": {
+      "current": "^18.2.0",
+      "type": "production",
+      "usage": "Core React library",
+      "riskLevel": "MEDIUM"
+    },
+    "react-dom": {
+      "current": "^18.2.0",
+      "type": "production",
+      "usage": "React DOM rendering",
+      "riskLevel": "MEDIUM"
+    },
+    "react-router-dom": {
+      "current": "^6.30.1",
+      "type": "production",
+      "usage": "Client-side routing",
+      "riskLevel": "LOW"
+    }
+  },
+  "templateDependencies": {
+    "@neondatabase/serverless": {
+      "version": "^1.0.2",
+      "current": "not used",
+      "purpose": "Serverless Postgres client",
+      "required": false,
+      "notes": "Backend-focused; skip for frontend migration"
+    },
+    "dotenv": {
+      "version": "^17.2.1",
+      "current": "not used",
+      "purpose": "Environment variable loading",
+      "required": true,
+      "notes": "Good practice; current project uses import.meta.env"
+    },
+    "drizzle-orm": {
+      "version": "0.45.2",
+      "current": "not used",
+      "purpose": "ORM for database access",
+      "required": false,
+      "notes": "Backend-focused; skip for frontend migration"
+    },
+    "express": {
+      "version": "^5.1.0",
+      "current": "not used",
+      "purpose": "HTTP server framework",
+      "required": false,
+      "notes": "Backend-focused; backend uses separate setup"
+    },
+    "zod": {
+      "version": "^3.25.76",
+      "current": "not used",
+      "purpose": "Schema validation",
+      "required": "optional",
+      "notes": "Useful for runtime validation; consider adding for type safety"
+    }
+  },
+  "upgrades": {
+    "react": {
+      "current": "^18.2.0",
+      "template": "^18.3.1",
+      "currentVersion": "18.2.0",
+      "templateVersion": "18.3.1",
+      "type": "Minor Upgrade",
+      "riskLevel": "LOW",
+      "changeType": "patch bump within 18.x",
+      "breakingChanges": false,
+      "notes": "Safe minor version bump. No breaking changes between 18.2 and 18.3."
+    },
+    "react-dom": {
+      "current": "^18.2.0",
+      "template": "^18.3.1",
+      "currentVersion": "18.2.0",
+      "templateVersion": "18.3.1",
+      "type": "Minor Upgrade",
+      "riskLevel": "LOW",
+      "changeType": "patch bump within 18.x",
+      "breakingChanges": false,
+      "notes": "Sync with React version. Patch release, safe to upgrade."
+    },
+    "react-router-dom": {
+      "current": "^6.30.1",
+      "template": "^6.30.1",
+      "currentVersion": "6.30.1",
+      "templateVersion": "6.30.1",
+      "type": "No Change",
+      "riskLevel": "NONE",
+      "changeType": "identical",
+      "breakingChanges": false,
+      "notes": "Already aligned with template. Keep as-is."
+    }
+  },
+  "devDependencies": {
+    "current": {
+      "@playwright/test": {
+        "version": "^1.44.1",
+        "usage": "E2E testing framework",
+        "notes": "Browser automation testing"
+      },
+      "@vitejs/plugin-react": {
+        "version": "^4.2.1",
+        "usage": "Vite React plugin",
+        "notes": "JSX transformation and HMR"
+      },
+      "vite": {
+        "version": "^5.0.7",
+        "usage": "Frontend build tool",
+        "notes": "Fast build + dev server"
+      }
+    },
+    "template": {
+      "@radix-ui/react-*": {
+        "count": 20,
+        "purpose": "Headless UI component library",
+        "required": true,
+        "notes": "Core of new design system - MAJOR ADDITION"
+      },
+      "@tailwindcss/typography": {
+        "version": "^0.5.16",
+        "purpose": "Tailwind typography plugin",
+        "required": true,
+        "notes": "Text formatting utilities"
+      },
+      "@tanstack/react-query": {
+        "version": "^5.84.2",
+        "purpose": "Data fetching/caching",
+        "required": false,
+        "notes": "Optional; current project uses fetch directly"
+      },
+      "tailwindcss": {
+        "version": "^3.4.17",
+        "purpose": "Utility-first CSS framework",
+        "required": true,
+        "notes": "Foundation of new styling approach - CRITICAL"
+      },
+      "typescript": {
+        "version": "^5.9.2",
+        "purpose": "TypeScript compiler",
+        "required": true,
+        "notes": "Upgrade from implicit to explicit setup"
+      }
+    }
+  },
+  "dependencyUpgradePlan": {
+    "phase1_mandatory": [
+      {
+        "package": "react",
+        "current": "^18.2.0",
+        "target": "^18.3.1",
+        "type": "Minor Upgrade",
+        "riskLevel": "LOW",
+        "reason": "Sync with template; bug fixes and performance",
+        "mitigations": ["Run full test suite after", "Check for deprecation warnings"],
+        "estimatedEffort": "15 minutes"
+      },
+      {
+        "package": "react-dom",
+        "current": "^18.2.0",
+        "target": "^18.3.1",
+        "type": "Minor Upgrade",
+        "riskLevel": "LOW",
+        "reason": "Must match React version",
+        "mitigations": ["Paired with React upgrade"],
+        "estimatedEffort": "5 minutes"
+      },
+      {
+        "package": "vite",
+        "current": "^5.0.7",
+        "target": "^8.0.2",
+        "type": "MAJOR Upgrade",
+        "riskLevel": "MEDIUM",
+        "reason": "Template uses 8.0.2; significant feature updates",
+        "mitigations": [
+          "Review Vite 6, 7, 8 changelog for breaking changes",
+          "Test build process thoroughly",
+          "Check plugin compatibility (@vitejs/plugin-react)"
+        ],
+        "breakingChanges": [
+          "Config format changes in major versions",
+          "Plugin API may require updates",
+          "Environment variable handling may differ"
+        ],
+        "estimatedEffort": "1-2 hours"
+      },
+      {
+        "package": "@vitejs/plugin-react",
+        "current": "^4.2.1",
+        "target": "^6.0.1",
+        "type": "MAJOR Upgrade",
+        "riskLevel": "MEDIUM",
+        "reason": "Vite major upgrade requires matching plugin",
+        "mitigations": [
+          "Verify compatibility with Vite 8.0.2",
+          "Test JSX transformation and HMR"
+        ],
+        "breakingChanges": [
+          "Plugin API updates",
+          "Default JSX runtime may change"
+        ],
+        "estimatedEffort": "1 hour"
+      },
+      {
+        "package": "@playwright/test",
+        "current": "^1.44.1",
+        "target": "^1.48.0 (latest 1.x)",
+        "type": "Minor Upgrade",
+        "riskLevel": "LOW",
+        "reason": "Bug fixes and improvements to test framework",
+        "mitigations": [
+          "Run full test suite after upgrade",
+          "Check for new test APIs that might be useful"
+        ],
+        "estimatedEffort": "15 minutes"
+      }
+    ],
+    "phase1_critical_additions": [
+      {
+        "package": "tailwindcss",
+        "version": "^3.4.17",
+        "type": "New Dependency",
+        "riskLevel": "HIGH (new architecture)",
+        "purpose": "Core styling framework",
+        "notes": "Replaces inline styles completely",
+        "dependencies": [
+          "autoprefixer",
+          "postcss",
+          "tailwind-merge",
+          "tailwindcss-animate"
+        ],
+        "estimatedEffort": "4-6 hours (full integration)"
+      },
+      {
+        "package": "@radix-ui/react-*",
+        "packages": 20,
+        "type": "New Component Library",
+        "riskLevel": "HIGH (new approach)",
+        "purpose": "Headless UI component primitives",
+        "includes": [
+          "@radix-ui/react-dialog (modals)",
+          "@radix-ui/react-alert-dialog",
+          "@radix-ui/react-checkbox",
+          "@radix-ui/react-label",
+          "@radix-ui/react-select",
+          "@radix-ui/react-slider",
+          "@radix-ui/react-switch",
+          "@radix-ui/react-tabs",
+          "@radix-ui/react-tooltip"
+        ],
+        "notes": "Requires component refactoring",
+        "estimatedEffort": "8-12 hours (per component migration)"
+      },
+      {
+        "package": "class-variance-authority",
+        "version": "^0.7.1",
+        "type": "New Utility",
+        "purpose": "Type-safe component variant patterns",
+        "notes": "Helps manage Tailwind + Radix component variants",
+        "estimatedEffort": "2 hours (optional but recommended)"
+      },
+      {
+        "package": "clsx",
+        "version": "^2.1.1",
+        "type": "New Utility",
+        "purpose": "Utility for conditional classnames",
+        "notes": "Essential for dynamic Tailwind class binding",
+        "estimatedEffort": "1 hour (basic setup)"
+      },
+      {
+        "package": "tailwind-merge",
+        "version": "^2.6.0",
+        "type": "New Utility",
+        "purpose": "Merge Tailwind classes without conflicts",
+        "notes": "Prevents Tailwind class conflicts in variants",
+        "estimatedEffort": "1 hour"
+      },
+      {
+        "package": "tailwindcss-animate",
+        "version": "^1.0.7",
+        "type": "New Plugin",
+        "purpose": "Animation utilities for Tailwind",
+        "notes": "Replaces CSS animations with Tailwind classes",
+        "estimatedEffort": "1 hour"
+      }
+    ],
+    "phase1_optional_but_recommended": [
+      {
+        "package": "zod",
+        "version": "^3.25.76",
+        "type": "New Library",
+        "riskLevel": "LOW",
+        "purpose": "Runtime schema validation",
+        "benefit": "Validates API responses at runtime; improves type safety",
+        "notes": "Already in template; consider adopting",
+        "estimatedEffort": "2-3 hours (optional enhancement)"
+      },
+      {
+        "package": "sonner",
+        "version": "^1.7.4",
+        "type": "New Library",
+        "riskLevel": "LOW",
+        "purpose": "Toast notifications",
+        "benefit": "Modern toast UI; can replace current alert patterns",
+        "notes": "Nice-to-have for better UX",
+        "estimatedEffort": "1-2 hours (optional)"
+      },
+      {
+        "package": "lucide-react",
+        "version": "^0.539.0",
+        "type": "New Library",
+        "riskLevel": "LOW",
+        "purpose": "Icon library",
+        "benefit": "Professional icons; replaces emoji icons in UI",
+        "notes": "Optional but improves visual polish",
+        "estimatedEffort": "2-3 hours (optional enhancement)"
+      }
+    ],
+    "skip_for_frontend_only_migration": [
+      "@neondatabase/serverless (backend database client)",
+      "drizzle-orm (backend ORM)",
+      "drizzle-kit (backend tooling)",
+      "express (backend server)",
+      "@types/express (backend types)",
+      "serverless-http (backend adapter)",
+      "@types/cors (backend types)",
+      "@types/node (backend types)",
+      "tsx (backend runtime)",
+      "react-day-picker (form-specific; skip unless needed)",
+      "react-hook-form (form library; current uses React state)",
+      "@hookform/resolvers (form validation resolvers)",
+      "recharts (charting library; not in scope)",
+      "@react-three/fiber (3D rendering; not in scope)",
+      "@react-three/drei (3D utilities; not in scope)",
+      "framer-motion (advanced animations; optional)",
+      "embla-carousel-react (carousel component; not in scope)",
+      "cmdk (command palette; advanced feature)"
+    ]
+  },
+  "risksAndMitigations": {
+    "risk1_major_vite_upgrade": {
+      "severity": "MEDIUM",
+      "description": "Vite 5.0.7 -> 8.0.2 is 3 major versions; significant breaking changes likely",
+      "impact": "Build process may break; plugin compatibility issues",
+      "mitigations": [
+        "Review Vite migration guides for v6, v7, v8",
+        "Test in isolated branch first",
+        "Maintain backup of vite.config.ts",
+        "Check all plugins for compatibility (only using @vitejs/plugin-react)"
+      ],
+      "rollbackPlan": "Revert to v5.0.7 if critical issues; run npm install <old-version>"
+    },
+    "risk2_tailwind_configuration": {
+      "severity": "MEDIUM",
+      "description": "Tailwind 3.4.17 requires new configuration approach; not drop-in replacement",
+      "impact": "CSS not generated correctly; styles won't apply; build errors",
+      "mitigations": [
+        "Copy tailwind.config.ts from template as base",
+        "Customize colors/tokens for current brand (teal primary)",
+        "Set up postcss.config.js correctly",
+        "Import global.css in main entry point",
+        "Test CSS generation in dev and build"
+      ],
+      "rollbackPlan": "Remove Tailwind setup and revert to inline styles"
+    },
+    "risk3_radix_ui_learning_curve": {
+      "severity": "HIGH",
+      "description": "Team unfamiliar with Radix UI; significant API learning required",
+      "impact": "Slower component migration; potential bugs in implementation",
+      "mitigations": [
+        "Read Radix UI documentation thoroughly before starting",
+        "Create component pattern/template for each Radix UI type",
+        "Migrate one component type at a time (buttons, modals, forms, etc.)",
+        "Code review each Radix UI component migration",
+        "Write tests for each Radix UI component"
+      ],
+      "rollbackPlan": "Not applicable; must implement correctly"
+    },
+    "risk4_test_compatibility": {
+      "severity": "MEDIUM",
+      "description": "Playwright tests may break due to DOM structure changes with Radix UI",
+      "impact": "Tests fail; blocked deployments",
+      "mitigations": [
+        "Review TEST_SELECTOR_RISK_ASSESSMENT.md before migration",
+        "Update fragile selectors proactively (guest count, table headers)",
+        "Use getByRole for Radix UI components (semantic roles)",
+        "Run tests after each component migration"
+      ],
+      "rollbackPlan": "Revert component and fix selectors incrementally"
+    },
+    "risk5_build_size_increase": {
+      "severity": "LOW-MEDIUM",
+      "description": "Adding Tailwind, Radix UI, and utilities will increase bundle size",
+      "impact": "Slower initial page load; increased build time",
+      "mitigations": [
+        "Enable Tailwind purging (default in v3.4)",
+        "Tree-shake unused Radix UI components",
+        "Code split with dynamic imports if possible",
+        "Measure bundle size before/after (npm bundle-analyzer)"
+      ],
+      "rollbackPlan": "Optimize imports; remove unused dependencies"
+    },
+    "risk6_color_scheme_change": {
+      "severity": "MEDIUM",
+      "description": "New template uses purple + gold; current uses teal + green",
+      "impact": "Visual changes may not match brand expectations",
+      "mitigations": [
+        "Review design-tokens-mapping.json for color changes",
+        "Discuss with stakeholders before migration",
+        "Consider overriding template tokens for brand consistency",
+        "Get design approval before finalizing colors"
+      ],
+      "rollbackPlan": "Customize tailwind.config.ts to use current color palette"
+    }
+  },
+  "safeUpgradePath": {
+    "step1_prepare": [
+      "Create new git branch: feature/design-migration",
+      "Document current package versions",
+      "Run full test suite on current code (baseline)",
+      "Create backup of package-lock.json"
+    ],
+    "step2_core_dependencies": [
+      "npm install react@^18.3.1",
+      "npm install react-dom@^18.3.1",
+      "npm test (verify no regressions)",
+      "git commit -m 'Upgrade: React 18.2 -> 18.3'"
+    ],
+    "step3_build_tools": [
+      "npm install --save-dev vite@^8.0.2",
+      "npm install --save-dev @vitejs/plugin-react@^6.0.1",
+      "Update vite.config.ts if needed (review changelog)",
+      "npm run build (test build process)",
+      "npm run dev (test dev server)",
+      "git commit -m 'Upgrade: Vite 5 -> 8, update plugin'"
+    ],
+    "step4_testing": [
+      "npm install --save-dev @playwright/test@latest",
+      "npm test (run full test suite)",
+      "Update any selector issues (from risk assessment)",
+      "git commit -m 'Upgrade: Playwright test framework'"
+    ],
+    "step5_styling_foundation": [
+      "npm install --save-dev tailwindcss@^3.4.17",
+      "npm install --save-dev autoprefixer@^10.4.21",
+      "npm install --save-dev postcss@^8.5.6",
+      "Create postcss.config.js",
+      "Create tailwind.config.ts (from template)",
+      "Create/update global.css with Tailwind directives",
+      "npm run build (verify CSS generation)",
+      "git commit -m 'Add: TailwindCSS foundation'"
+    ],
+    "step6_ui_libraries": [
+      "npm install --save-dev @radix-ui/react-dialog@^1.1.14",
+      "npm install --save-dev @radix-ui/react-label@^2.1.7",
+      "npm install --save-dev @radix-ui/react-select@^2.2.5",
+      "...install other Radix UI packages as needed",
+      "npm install --save-dev clsx@^2.1.1",
+      "npm install --save-dev tailwind-merge@^2.6.0",
+      "npm install --save-dev class-variance-authority@^0.7.1",
+      "npm install --save-dev tailwindcss-animate@^1.0.7",
+      "git commit -m 'Add: Radix UI component library'"
+    ],
+    "step7_migrate_components": [
+      "Start with simplest component: Button",
+      "Migrate to Radix UI + Tailwind",
+      "Update tests",
+      "npm test",
+      "git commit -m 'Migrate: Button component to Radix UI + TW'",
+      "Repeat for: Form inputs, Modal, Alerts, Tables",
+      "Each component = separate commit"
+    ],
+    "step8_verify": [
+      "npm test (all tests pass)",
+      "npm run build (production build succeeds)",
+      "npm run dev (dev server works)",
+      "Visual inspection of all pages",
+      "Accessibility check with axe-core"
+    ],
+    "step9_submit_pr": [
+      "Create pull request",
+      "Link to Phase 0 deliverables",
+      "Request design + code review",
+      "Merge after approval"
+    ]
+  },
+  "estimatedMigrationEffort": {
+    "dependency_upgrades": "4 hours",
+    "tailwind_setup": "3 hours",
+    "radix_ui_integration": "2 hours",
+    "component_migrations": "16-20 hours (depends on number of components)",
+    "testing_and_fixes": "4 hours",
+    "documentation": "2 hours",
+    "review_and_approval": "2-3 hours",
+    "total_estimated": "33-38 hours (5-6 days of development)"
+  },
+  "successCriteria": {
+    "all_tests_pass": "41 tests pass without manual selector updates (except 4-5 identified)",
+    "no_build_errors": "npm run build completes without errors",
+    "no_console_errors": "Dev server runs without console errors or warnings",
+    "performance_maintained": "Bundle size <10% increase; build time comparable",
+    "accessibility_preserved": "All semantic roles and labels maintained",
+    "visual_fidelity": "Design matches new template or approved customizations"
+  },
+  "decision_points": {
+    "color_scheme": {
+      "question": "Accept new purple primary + gold accent colors?",
+      "impact": "Visual brand change",
+      "recommendation": "Discuss with stakeholders; can override in tailwind.config.ts",
+      "options": [
+        "Adopt new template colors (purple + gold)",
+        "Override template to keep teal + green",
+        "Hybrid: use template structure but customize colors"
+      ]
+    },
+    "advanced_features": {
+      "question": "Include optional libraries (Sonner, Lucide, Zod)?",
+      "impact": "Enhanced UX but additional learning curve",
+      "recommendation": "Start with core (Tailwind + Radix). Add optional in Phase 2.",
+      "options": [
+        "Phase 1: Core only (Tailwind + Radix UI)",
+        "Phase 1: Add optional libraries for polish",
+        "Phase 2: Evaluate and adopt selectively"
+      ]
+    },
+    "react_query": {
+      "question": "Adopt TanStack React Query for data fetching?",
+      "impact": "Better caching and data management",
+      "recommendation": "Phase 2 opportunity; not required for migration",
+      "notes": "Current code uses fetch directly; could improve with React Query"
+    }
+  },
+  "rollbackProcedures": {
+    "before_major_change": "git tag v1-pre-upgrade && git checkout -b backup-branch",
+    "if_vite_breaks": "npm install vite@5.0.7 && npm install @vitejs/plugin-react@4.2.1",
+    "if_tailwind_breaks": "Remove tailwind/postcss, revert to inline styles in git",
+    "if_radix_breaks": "Revert individual component commits, keep others",
+    "full_rollback": "git reset --hard <tag> && npm install"
+  },
+  "references": {
+    "vite_migration_guide": "https://vitejs.dev/guide/migration.html",
+    "tailwind_installation": "https://tailwindcss.com/docs/installation",
+    "radix_ui_docs": "https://www.radix-ui.com/docs/primitives/overview/introduction",
+    "react_18_upgrade": "https://react.dev/blog/2024/06/13/whats-new-in-react-19",
+    "template_project": "C:\\Users\\asher\\Downloads\\wedding-portal-platform-25d"
+  }
+}

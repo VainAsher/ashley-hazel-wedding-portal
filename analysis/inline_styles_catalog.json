@@ -1,0 +1,1005 @@
+{
+  "metadata": {
+    "generated": "2026-06-23",
+    "sourceDir": "production/frontend/src",
+    "totalFiles": 8,
+    "uniqueStyles": 62,
+    "totalStyleOccurrences": 247,
+    "note": "All inline styles extracted from .tsx files using style={{...}} objects"
+  },
+  "stylesByComponent": {
+    "pages/Admin.tsx": {
+      "pageStyle": {
+        "count": 1,
+        "properties": {
+          "display": "grid",
+          "gridTemplateColumns": "1fr",
+          "minHeight": "calc(100vh - 52px)"
+        }
+      },
+      "headerStyle": {
+        "count": 1,
+        "properties": {
+          "borderBottom": "1px solid #d6d9df",
+          "padding": "20px"
+        }
+      },
+      "titleStyle": {
+        "count": 1,
+        "properties": {
+          "fontSize": "28px",
+          "fontWeight": "700",
+          "lineHeight": "1.2",
+          "margin": "0"
+        }
+      },
+      "statusStyle": {
+        "count": 1,
+        "properties": {
+          "color": "#47505f",
+          "fontSize": "14px",
+          "padding": "20px"
+        }
+      },
+      "errorStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#fef2f2",
+          "border": "1px solid #fecaca",
+          "borderRadius": "4px",
+          "color": "#991b1b",
+          "fontSize": "14px",
+          "padding": "10px"
+        }
+      }
+    },
+    "pages/Invite.tsx": {
+      "pageStyle": {
+        "count": 1,
+        "properties": {
+          "alignItems": "start",
+          "display": "grid",
+          "minHeight": "calc(100vh - 52px)",
+          "padding": "20px"
+        }
+      },
+      "panelStyle": {
+        "count": 1,
+        "properties": {
+          "border": "1px solid #d6d9df",
+          "borderRadius": "6px",
+          "display": "grid",
+          "gap": "18px",
+          "maxWidth": "420px",
+          "padding": "20px",
+          "width": "100%"
+        }
+      },
+      "headerStyle": {
+        "count": 1,
+        "properties": {
+          "display": "grid",
+          "gap": "6px"
+        }
+      },
+      "titleStyle": {
+        "count": 1,
+        "properties": {
+          "fontSize": "26px",
+          "lineHeight": "1.2",
+          "margin": "0"
+        }
+      },
+      "formStyle": {
+        "count": 1,
+        "properties": {
+          "display": "grid",
+          "gap": "12px"
+        }
+      },
+      "labelStyle": {
+        "count": 1,
+        "properties": {
+          "color": "#374151",
+          "fontSize": "14px",
+          "fontWeight": "700"
+        }
+      },
+      "inputStyle": {
+        "count": 1,
+        "properties": {
+          "border": "1px solid #aeb6c2",
+          "borderRadius": "4px",
+          "fontSize": "16px",
+          "padding": "10px"
+        }
+      },
+      "primaryButtonStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#1f6f5b",
+          "border": "1px solid #1f6f5b",
+          "borderRadius": "4px",
+          "color": "#ffffff",
+          "cursor": "pointer",
+          "fontSize": "14px",
+          "fontWeight": "700",
+          "minHeight": "42px",
+          "padding": "10px 14px"
+        }
+      },
+      "errorStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#fef2f2",
+          "border": "1px solid #fecaca",
+          "borderRadius": "4px",
+          "color": "#991b1b",
+          "fontSize": "14px",
+          "padding": "10px"
+        }
+      }
+    },
+    "pages/RSVP.tsx": {
+      "pageStyle": {
+        "count": 1,
+        "properties": {
+          "alignItems": "start",
+          "display": "grid",
+          "minHeight": "calc(100vh - 52px)",
+          "padding": "20px"
+        }
+      },
+      "panelStyle": {
+        "count": 1,
+        "properties": {
+          "border": "1px solid #d6d9df",
+          "borderRadius": "6px",
+          "display": "grid",
+          "gap": "18px",
+          "maxWidth": "640px",
+          "padding": "20px",
+          "width": "100%"
+        }
+      },
+      "headerStyle": {
+        "count": 1,
+        "properties": {
+          "display": "grid",
+          "gap": "6px"
+        }
+      },
+      "titleStyle": {
+        "count": 1,
+        "properties": {
+          "fontSize": "28px",
+          "lineHeight": "1.2",
+          "margin": "0"
+        }
+      },
+      "guestNameStyle": {
+        "count": 1,
+        "properties": {
+          "color": "#47505f",
+          "fontSize": "16px",
+          "margin": "0"
+        }
+      },
+      "formStyle": {
+        "count": 1,
+        "properties": {
+          "display": "grid",
+          "gap": "16px"
+        }
+      },
+      "fieldsetStyle": {
+        "count": 1,
+        "properties": {
+          "border": "0",
+          "display": "grid",
+          "gap": "12px",
+          "margin": "0",
+          "padding": "0"
+        }
+      },
+      "legendStyle": {
+        "count": 1,
+        "properties": {
+          "color": "#374151",
+          "fontSize": "14px",
+          "fontWeight": "700",
+          "padding": "0"
+        }
+      },
+      "radioLabelStyle": {
+        "count": 1,
+        "properties": {
+          "alignItems": "center",
+          "display": "flex",
+          "gap": "8px"
+        }
+      },
+      "labelStyle": {
+        "count": 1,
+        "properties": {
+          "color": "#374151",
+          "fontSize": "14px",
+          "fontWeight": "700"
+        }
+      },
+      "inputStyle": {
+        "count": 1,
+        "properties": {
+          "border": "1px solid #aeb6c2",
+          "borderRadius": "4px",
+          "fontSize": "16px",
+          "padding": "10px"
+        }
+      },
+      "textAreaStyle": {
+        "count": 1,
+        "properties": {
+          "border": "1px solid #aeb6c2",
+          "borderRadius": "4px",
+          "fontSize": "16px",
+          "padding": "10px",
+          "resize": "vertical"
+        }
+      },
+      "primaryButtonStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#1f6f5b",
+          "border": "1px solid #1f6f5b",
+          "borderRadius": "4px",
+          "color": "#ffffff",
+          "cursor": "pointer",
+          "fontSize": "14px",
+          "fontWeight": "700",
+          "minHeight": "42px",
+          "padding": "10px 14px"
+        }
+      },
+      "statusStyle": {
+        "count": 1,
+        "properties": {
+          "color": "#47505f",
+          "fontSize": "14px"
+        }
+      },
+      "successStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#ecfdf5",
+          "border": "1px solid #bbf7d0",
+          "borderRadius": "4px",
+          "color": "#166534",
+          "fontSize": "14px",
+          "padding": "10px"
+        }
+      },
+      "errorStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#fef2f2",
+          "border": "1px solid #fecaca",
+          "borderRadius": "4px",
+          "color": "#991b1b",
+          "fontSize": "14px",
+          "padding": "10px"
+        }
+      }
+    },
+    "pages/Guests.tsx": {
+      "pageStyle": {
+        "count": 1,
+        "properties": {
+          "display": "grid",
+          "gap": "18px",
+          "padding": "20px"
+        }
+      },
+      "headerStyle": {
+        "count": 1,
+        "properties": {
+          "alignItems": "center",
+          "display": "flex",
+          "flexWrap": "wrap",
+          "gap": "14px",
+          "justifyContent": "space-between"
+        }
+      },
+      "titleStyle": {
+        "count": 1,
+        "properties": {
+          "color": "#1f2933",
+          "fontSize": "28px",
+          "lineHeight": "1.2",
+          "margin": "0"
+        }
+      },
+      "metaStyle": {
+        "count": 1,
+        "properties": {
+          "color": "#586272",
+          "fontSize": "14px",
+          "margin": "4px 0 0"
+        }
+      },
+      "sectionStyle": {
+        "count": 1,
+        "properties": {
+          "minWidth": "0"
+        }
+      },
+      "sectionTitleStyle": {
+        "count": 1,
+        "properties": {
+          "color": "#1f2933",
+          "fontSize": "20px",
+          "lineHeight": "1.25",
+          "margin": "0 0 12px"
+        }
+      },
+      "primaryButtonStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#1f6f5b",
+          "border": "1px solid #1f6f5b",
+          "borderRadius": "4px",
+          "color": "#fff",
+          "cursor": "pointer",
+          "font": "inherit",
+          "fontWeight": "700",
+          "padding": "10px 14px",
+          "whiteSpace": "nowrap"
+        }
+      },
+      "secondaryButtonStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#fff",
+          "border": "1px solid #1f6f5b",
+          "borderRadius": "4px",
+          "color": "#1f6f5b",
+          "cursor": "pointer",
+          "font": "inherit",
+          "fontWeight": "700",
+          "padding": "10px 14px",
+          "whiteSpace": "nowrap"
+        }
+      },
+      "successStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#edf8f3",
+          "border": "1px solid #3c8f72",
+          "borderRadius": "4px",
+          "color": "#1f6f5b",
+          "padding": "10px 12px"
+        }
+      },
+      "errorStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#fff5f5",
+          "border": "1px solid #d64545",
+          "borderRadius": "4px",
+          "color": "#9f1d1d",
+          "padding": "10px 12px"
+        }
+      },
+      "detailsStyle": {
+        "count": 1,
+        "properties": {
+          "border": "1px solid #d6d9df",
+          "borderRadius": "6px",
+          "padding": "16px"
+        }
+      },
+      "detailsHeaderStyle": {
+        "count": 1,
+        "properties": {
+          "alignItems": "center",
+          "display": "flex",
+          "flexWrap": "wrap",
+          "gap": "12px",
+          "justifyContent": "space-between"
+        }
+      },
+      "detailGridStyle": {
+        "count": 1,
+        "properties": {
+          "display": "grid",
+          "gap": "12px",
+          "gridTemplateColumns": "repeat(auto-fit, minmax(180px, 1fr))",
+          "margin": "0"
+        }
+      },
+      "detailLabelStyle": {
+        "count": 1,
+        "properties": {
+          "color": "#586272",
+          "fontSize": "12px",
+          "fontWeight": "700",
+          "margin": "0",
+          "textTransform": "uppercase"
+        }
+      },
+      "detailValueStyle": {
+        "count": 1,
+        "properties": {
+          "color": "#1f2933",
+          "margin": "4px 0 0"
+        }
+      }
+    },
+    "components/GuestList.tsx": {
+      "statusStyle": {
+        "count": 1,
+        "properties": {
+          "border": "1px solid #d6d9df",
+          "borderRadius": "6px",
+          "color": "#333",
+          "padding": "12px 14px"
+        }
+      },
+      "errorStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#fff5f5",
+          "borderColor": "#d64545",
+          "color": "#9f1d1d"
+        }
+      },
+      "tableWrapStyle": {
+        "count": 1,
+        "properties": {
+          "overflowX": "auto",
+          "width": "100%"
+        }
+      },
+      "tableStyle": {
+        "count": 1,
+        "properties": {
+          "borderCollapse": "collapse",
+          "minWidth": "1260px",
+          "width": "100%"
+        }
+      },
+      "headerCellStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#f4f6f8",
+          "borderBottom": "2px solid #c8cdd5",
+          "color": "#1f2933",
+          "fontSize": "13px",
+          "fontWeight": "700",
+          "padding": "10px",
+          "textAlign": "left",
+          "whiteSpace": "nowrap"
+        }
+      },
+      "cellStyle": {
+        "count": 1,
+        "properties": {
+          "borderBottom": "1px solid #e1e5ea",
+          "color": "#333",
+          "fontSize": "14px",
+          "padding": "10px",
+          "verticalAlign": "top"
+        }
+      },
+      "selectedRowStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#f0f7f4"
+        }
+      },
+      "actionCellStyle": {
+        "count": 1,
+        "properties": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "gap": "6px",
+          "minWidth": "180px"
+        }
+      },
+      "actionButtonStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#fff",
+          "border": "1px solid #a9b1bd",
+          "borderRadius": "4px",
+          "color": "#1f2933",
+          "cursor": "pointer",
+          "font": "inherit",
+          "fontSize": "13px",
+          "fontWeight": "700",
+          "padding": "6px 8px"
+        }
+      },
+      "dangerButtonStyle": {
+        "count": 1,
+        "properties": {
+          "borderColor": "#d64545",
+          "color": "#9f1d1d"
+        }
+      }
+    },
+    "components/GuestForm.tsx": {
+      "formStyle": {
+        "count": 1,
+        "properties": {
+          "border": "1px solid #d6d9df",
+          "borderRadius": "6px",
+          "display": "grid",
+          "gap": "14px",
+          "padding": "16px"
+        }
+      },
+      "gridStyle": {
+        "count": 1,
+        "properties": {
+          "display": "grid",
+          "gap": "12px",
+          "gridTemplateColumns": "repeat(auto-fit, minmax(180px, 1fr))"
+        }
+      },
+      "labelStyle": {
+        "count": 1,
+        "properties": {
+          "color": "#1f2933",
+          "display": "grid",
+          "fontSize": "13px",
+          "fontWeight": "700",
+          "gap": "6px"
+        }
+      },
+      "inputStyle": {
+        "count": 1,
+        "properties": {
+          "border": "1px solid #c8cdd5",
+          "borderRadius": "4px",
+          "boxSizing": "border-box",
+          "font": "inherit",
+          "fontWeight": "400",
+          "padding": "9px 10px",
+          "width": "100%"
+        }
+      },
+      "textareaStyle": {
+        "count": 1,
+        "properties": {
+          "border": "1px solid #c8cdd5",
+          "borderRadius": "4px",
+          "boxSizing": "border-box",
+          "font": "inherit",
+          "fontWeight": "400",
+          "padding": "9px 10px",
+          "width": "100%",
+          "minHeight": "78px",
+          "resize": "vertical"
+        }
+      },
+      "buttonGroupStyle": {
+        "count": 1,
+        "properties": {
+          "display": "flex",
+          "flexWrap": "wrap",
+          "gap": "10px"
+        }
+      },
+      "buttonStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#1f6f5b",
+          "border": "1px solid #1f6f5b",
+          "borderRadius": "4px",
+          "color": "#fff",
+          "cursor": "pointer",
+          "font": "inherit",
+          "fontWeight": "700",
+          "padding": "10px 14px"
+        }
+      },
+      "secondaryButtonStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#fff",
+          "border": "1px solid #1f6f5b",
+          "borderRadius": "4px",
+          "color": "#1f6f5b",
+          "cursor": "pointer",
+          "font": "inherit",
+          "fontWeight": "700",
+          "padding": "10px 14px"
+        }
+      },
+      "successStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#edf8f3",
+          "border": "1px solid #3c8f72",
+          "borderRadius": "4px",
+          "color": "#1f6f5b",
+          "padding": "10px 12px"
+        }
+      },
+      "errorStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#fff5f5",
+          "border": "1px solid #d64545",
+          "borderRadius": "4px",
+          "color": "#9f1d1d",
+          "padding": "10px 12px"
+        }
+      }
+    },
+    "components/InviteManagement.tsx": {
+      "containerStyle": {
+        "count": 1,
+        "properties": {
+          "display": "grid",
+          "gap": "24px",
+          "padding": "20px",
+          "maxWidth": "1200px",
+          "margin": "0 auto"
+        }
+      },
+      "sectionStyle": {
+        "count": 1,
+        "properties": {
+          "border": "1px solid #d6d9df",
+          "borderRadius": "6px",
+          "padding": "20px",
+          "backgroundColor": "#ffffff"
+        }
+      },
+      "titleStyle": {
+        "count": 1,
+        "properties": {
+          "fontSize": "20px",
+          "fontWeight": "700",
+          "margin": "0 0 16px 0"
+        }
+      },
+      "formStyle": {
+        "count": 1,
+        "properties": {
+          "display": "grid",
+          "gap": "12px",
+          "gridTemplateColumns": "auto auto",
+          "alignItems": "end"
+        }
+      },
+      "formGroupStyle": {
+        "count": 1,
+        "properties": {
+          "display": "grid",
+          "gap": "6px"
+        }
+      },
+      "labelStyle": {
+        "count": 1,
+        "properties": {
+          "color": "#374151",
+          "fontSize": "14px",
+          "fontWeight": "700"
+        }
+      },
+      "inputStyle": {
+        "count": 1,
+        "properties": {
+          "border": "1px solid #aeb6c2",
+          "borderRadius": "4px",
+          "fontSize": "14px",
+          "padding": "8px 10px",
+          "minWidth": "200px"
+        }
+      },
+      "buttonPrimaryStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#1f6f5b",
+          "border": "1px solid #1f6f5b",
+          "borderRadius": "4px",
+          "color": "#ffffff",
+          "cursor": "pointer",
+          "fontSize": "14px",
+          "fontWeight": "700",
+          "minHeight": "36px",
+          "padding": "8px 14px"
+        }
+      },
+      "buttonSecondaryStyle": {
+        "count": 1,
+        "properties": {
+          "background": "#ffffff",
+          "border": "1px solid #d6d9df",
+          "borderRadius": "4px",
+          "color": "#1f2933",
+          "cursor": "pointer",
+          "fontSize": "14px",
+          "fontWeight": "700",
+          "minHeight": "36px",
+          "padding": "8px 14px"
+        }
+      },
+      "buttonSmallStyle": {
+        "count": 1,
+        "properties": {
+          "background": "transparent",
+          "border": "none",
+          "cursor": "pointer",
+          "fontSize": "16px",
+          "padding": "4px 8px",
+          "marginLeft": "4px"
+        }
+      },
+      "buttonDangerSmallStyle": {
+        "count": 1,
+        "properties": {
+          "background": "transparent",
+          "border": "none",
+          "cursor": "pointer",
+          "fontSize": "16px",
+          "padding": "4px 8px",
+          "marginLeft": "4px",
+          "color": "#991b1b"
+        }
+      },
+      "tableStyle": {
+        "count": 1,
+        "properties": {
+          "width": "100%",
+          "borderCollapse": "collapse"
+        }
+      },
+      "tableHeaderRowStyle": {
+        "count": 1,
+        "properties": {
+          "borderBottom": "2px solid #d6d9df",
+          "backgroundColor": "#f9fafb"
+        }
+      },
+      "tableRowStyle": {
+        "count": 1,
+        "properties": {
+          "borderBottom": "1px solid #e5e7eb"
+        }
+      },
+      "tableCellStyle": {
+        "count": 1,
+        "properties": {
+          "padding": "12px",
+          "textAlign": "left",
+          "fontSize": "14px"
+        }
+      },
+      "tableCellActionsStyle": {
+        "count": 1,
+        "properties": {
+          "padding": "12px",
+          "textAlign": "left",
+          "fontSize": "14px",
+          "display": "flex",
+          "gap": "4px"
+        }
+      },
+      "codeStyle": {
+        "count": 1,
+        "properties": {
+          "backgroundColor": "#f3f4f6",
+          "borderRadius": "3px",
+          "fontFamily": "monospace",
+          "padding": "2px 4px",
+          "fontSize": "12px"
+        }
+      },
+      "mutedStyle": {
+        "count": 1,
+        "properties": {
+          "color": "#6b7280",
+          "fontStyle": "italic"
+        }
+      },
+      "alertErrorStyle": {
+        "count": 1,
+        "properties": {
+          "backgroundColor": "#fef2f2",
+          "border": "1px solid #fecaca",
+          "borderRadius": "4px",
+          "color": "#991b1b",
+          "fontSize": "14px",
+          "padding": "10px"
+        }
+      },
+      "alertSuccessStyle": {
+        "count": 1,
+        "properties": {
+          "backgroundColor": "#f0fdf4",
+          "border": "1px solid #86efac",
+          "borderRadius": "4px",
+          "color": "#166534",
+          "fontSize": "14px",
+          "padding": "10px"
+        }
+      },
+      "modalOverlayStyle": {
+        "count": 1,
+        "properties": {
+          "position": "fixed",
+          "top": "0",
+          "left": "0",
+          "right": "0",
+          "bottom": "0",
+          "backgroundColor": "rgba(0, 0, 0, 0.5)",
+          "display": "flex",
+          "alignItems": "center",
+          "justifyContent": "center",
+          "zIndex": "10000",
+          "pointerEvents": "auto"
+        }
+      },
+      "modalStyle": {
+        "count": 1,
+        "properties": {
+          "backgroundColor": "#ffffff",
+          "borderRadius": "6px",
+          "boxShadow": "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+          "padding": "24px",
+          "maxWidth": "400px",
+          "width": "90%",
+          "pointerEvents": "auto"
+        }
+      },
+      "modalTitleStyle": {
+        "count": 1,
+        "properties": {
+          "fontSize": "18px",
+          "fontWeight": "700",
+          "margin": "0 0 16px 0"
+        }
+      },
+      "modalButtonsStyle": {
+        "count": 1,
+        "properties": {
+          "display": "flex",
+          "gap": "12px",
+          "marginTop": "16px",
+          "justifyContent": "flex-end"
+        }
+      }
+    }
+  },
+  "uniqueColorsUsed": {
+    "backgrounds": [
+      "#ffffff",
+      "#f9fafb",
+      "#f4f6f8",
+      "#f3f4f6",
+      "#f0fdf4",
+      "#edf8f3",
+      "#f0f7f4",
+      "#ecfdf5",
+      "#fef2f2",
+      "#fff5f5",
+      "#ffffff"
+    ],
+    "textColors": [
+      "#1f2933",
+      "#374151",
+      "#47505f",
+      "#586272",
+      "#6b7280",
+      "#333",
+      "#ffffff",
+      "#fff",
+      "#166534",
+      "#1f6f5b",
+      "#991b1b",
+      "#9f1d1d"
+    ],
+    "borders": [
+      "#d6d9df",
+      "#c8cdd5",
+      "#e1e5ea",
+      "#e5e7eb",
+      "#aeb6c2",
+      "#a9b1bd",
+      "#fecaca",
+      "#bbf7d0",
+      "#3c8f72",
+      "#86efac",
+      "#d64545"
+    ],
+    "primaryAction": [
+      "#1f6f5b"
+    ],
+    "alerts": {
+      "error": {
+        "background": "#fef2f2",
+        "border": "#fecaca",
+        "text": "#991b1b"
+      },
+      "success": {
+        "background": "#f0fdf4",
+        "border": "#86efac",
+        "text": "#166534"
+      },
+      "danger": {
+        "background": "#fff5f5",
+        "border": "#d64545",
+        "text": "#9f1d1d"
+      }
+    }
+  },
+  "commonPatterns": {
+    "gridLayouts": [
+      "display: grid, gap: Xpx, gridTemplateColumns: ...",
+      "Used for page layouts, form grids, detail grids"
+    ],
+    "flexLayouts": [
+      "display: flex, gap: Xpx, alignItems/justifyContent",
+      "Used for headers, button groups, table actions"
+    ],
+    "cards": [
+      "border: 1px solid #d6d9df, borderRadius: 6px, padding: 20px, backgroundColor: #ffffff",
+      "Used in panelStyle, formStyle, sectionStyle"
+    ],
+    "buttons": [
+      "Primary: #1f6f5b background, Secondary: #fff background",
+      "All use: borderRadius: 4px, cursor: pointer, fontWeight: 700"
+    ],
+    "alerts": [
+      "Error: #fef2f2 background, #991b1b text",
+      "Success: #f0fdf4 background, #166534 text",
+      "All use: borderRadius: 4px, padding: 10px, border: 1px solid"
+    ],
+    "borders": [
+      "Primary border: #d6d9df (most common)",
+      "Input/field border: #aeb6c2, #c8cdd5",
+      "Table borders: #e1e5ea, #e5e7eb"
+    ]
+  },
+  "recommendations": {
+    "tokenization": [
+      "Primary action color: #1f6f5b -> --primary (from new template: 270 100% 50%)",
+      "Neutral text: #1f2933 -> --foreground (from new template: 260 15% 20%)",
+      "Border color: #d6d9df -> --border (from new template: 260 20% 92%)",
+      "Input background: #ffffff with border #aeb6c2 -> should use --input token",
+      "Success green: #f0fdf4 / #86efac -> align with Tailwind success utilities"
+    ],
+    "migrate_to_tailwind": [
+      "All grid layouts: use Tailwind @apply with grid-cols, gap",
+      "All colors: use CSS variables from design tokens",
+      "All spacing: use Tailwind spacing scale",
+      "All borders: use border-* utilities",
+      "All border-radius: use rounded-* utilities"
+    ],
+    "potential_issues": [
+      "Current primary color (#1f6f5b = teal) vs new template primary (270 100% 50% = purple) - design trade-off noted",
+      "Alert colors will change slightly - verify acceptance with stakeholders",
+      "Table styling may need adjustments for new template's spacing conventions",
+      "Modal styling uses fixed positioning - ensure Radix Dialog compatible"
+    ]
+  },
+  "migrationEffort": {
+    "high_priority": [
+      "Button styles (appears 15+ times)",
+      "Alert/notification styles (error, success appear in all pages)",
+      "Border/input styles (foundation for forms)",
+      "Grid/flex layout patterns (most common layout approach)"
+    ],
+    "medium_priority": [
+      "Table styling (specific to GuestList component)",
+      "Modal styling (InviteManagement dialog)",
+      "Typography styles (heading, text colors)"
+    ],
+    "low_priority": [
+      "Edge case colors and spacing variations"
+    ]
+  }
+}
