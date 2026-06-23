@@ -381,12 +381,15 @@ reconcile_db_password() {
   [ -n "${POSTGRES_PASSWORD:-}" ] \
     || die "POSTGRES_PASSWORD is empty; cannot reconcile DB role password."
 
+  # Single-quote-escape the secret (double any embedded single quotes) so it can
+  # be embedded safely as a SQL string literal. psql does not interpolate :'var'
+  # in -c command strings, so we build the literal here instead. The secret is
+  # not written to the log (only this message is).
+  local pw_escaped="${POSTGRES_PASSWORD//\'/\'\'}"
   log "Reconciling '$db_user' role password to the current secret."
-  # Pass the password as a psql variable and quote it with :'pw' so special
-  # characters are handled safely and it is never interpolated into SQL text.
   compose_q exec -T postgresql \
-    psql -U "$db_user" -d "$db_name" -v ON_ERROR_STOP=1 -v pw="$POSTGRES_PASSWORD" \
-    -c "ALTER USER \"$db_user\" WITH PASSWORD :'pw';" >/dev/null \
+    psql -U "$db_user" -d "$db_name" -v ON_ERROR_STOP=1 \
+    -c "ALTER USER \"$db_user\" WITH PASSWORD '$pw_escaped';" >/dev/null \
     || die "Could not reconcile DB role password."
 }
 
