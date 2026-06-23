@@ -109,7 +109,9 @@ async def create_item(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_coordinator),
 ) -> dict[str, object]:
-    if item.wedding_id != current_user.wedding_id:
+    if item.wedding_id is None:
+        item.wedding_id = current_user.wedding_id
+    elif item.wedding_id != current_user.wedding_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot create budget items for other weddings",

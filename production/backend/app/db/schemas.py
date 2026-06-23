@@ -244,7 +244,8 @@ class VendorBase(BaseModel):
 
 
 class VendorCreate(VendorBase):
-    pass
+    # Defaults to the authenticated user's wedding; clients need not send it.
+    wedding_id: int | None = Field(default=None, gt=0)
 
 
 class VendorUpdate(BaseModel):
@@ -311,7 +312,8 @@ class BudgetItemBase(BaseModel):
 
 
 class BudgetItemCreate(BudgetItemBase):
-    pass
+    # Defaults to the authenticated user's wedding; clients need not send it.
+    wedding_id: int | None = Field(default=None, gt=0)
 
 
 class BudgetItemUpdate(BaseModel):
@@ -392,7 +394,8 @@ class EventBase(BaseModel):
 
 
 class EventCreate(EventBase):
-    pass
+    # Defaults to the authenticated user's wedding; clients need not send it.
+    wedding_id: int | None = Field(default=None, gt=0)
 
 
 class EventUpdate(BaseModel):

@@ -71,7 +71,9 @@ async def create_vendor(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_coordinator),
 ) -> dict[str, object]:
-    if vendor.wedding_id != current_user.wedding_id:
+    if vendor.wedding_id is None:
+        vendor.wedding_id = current_user.wedding_id
+    elif vendor.wedding_id != current_user.wedding_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot create vendors for other weddings",

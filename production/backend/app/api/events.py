@@ -41,7 +41,9 @@ async def create_event(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_coordinator),
 ) -> Event:
-    if event.wedding_id != current_user.wedding_id:
+    if event.wedding_id is None:
+        event.wedding_id = current_user.wedding_id
+    elif event.wedding_id != current_user.wedding_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot create events for other weddings",
