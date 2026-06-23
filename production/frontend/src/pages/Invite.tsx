@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { AuthApiError, fetchCurrentUser, loginWithInviteCode } from '../api/auth'
+import { AuthApiError } from '../api/auth'
+import { useAuth } from '../contexts/AuthContext'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
@@ -23,6 +24,7 @@ function inviteErrorMessage(error: unknown): string {
 
 export function Invite() {
   const navigate = useNavigate()
+  const { login } = useAuth()
   const [inviteCode, setInviteCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -39,8 +41,9 @@ export function Invite() {
 
     setSubmitting(true)
     try {
-      await loginWithInviteCode(trimmedCode)
-      const user = await fetchCurrentUser()
+      // Route through AuthContext so the shared user (and the layout header
+      // that reads it) updates on login — not just this page's local fetch.
+      const user = await login(trimmedCode)
       navigate(user.role === 'guest' ? '/rsvp' : '/admin')
     } catch (err) {
       setError(inviteErrorMessage(err))

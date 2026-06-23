@@ -11,7 +11,7 @@ interface AuthContextType {
   user: AuthUser | null
   loading: boolean
   error: string | null
-  login: (code: string) => Promise<void>
+  login: (code: string) => Promise<AuthUser>
   logout: () => Promise<void>
 }
 
@@ -53,12 +53,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     fetchUser()
   }, [])
 
-  const login = async (code: string) => {
+  const login = async (code: string): Promise<AuthUser> => {
     try {
       setLoading(true)
       setError(null)
       const response = await loginWithInviteCode(code)
       setUser(response.user)
+      return response.user
     } catch (err) {
       if (err instanceof AuthApiError) {
         setError(err.message)

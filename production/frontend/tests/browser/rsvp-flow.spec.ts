@@ -157,7 +157,9 @@ if (LIVE_E2E) {
           invite_id: 1,
           guest_id: 1,
         }
-        await json(route, authUser)
+        // /api/auth/login returns a LoginResponse ({ user }), matching the real
+        // backend; the bare user object is what GET /api/auth/me returns.
+        await json(route, { user: authUser })
       } else {
         await json(route, { detail: 'Code not found' }, 401)
       }
