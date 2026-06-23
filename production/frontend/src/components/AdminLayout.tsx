@@ -91,8 +91,11 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
         </div>
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      {/* Main Content. min-w-0 lets this flex column shrink below its content's
+          intrinsic width so wide tables scroll inside their own overflow-x
+          container instead of forcing the whole page to scroll horizontally
+          (which otherwise destabilizes header controls on narrow viewports). */}
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
           <div className="px-4 sm:px-6 lg:px-8 py-4">
