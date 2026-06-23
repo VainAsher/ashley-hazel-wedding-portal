@@ -91,8 +91,8 @@ if (LIVE_E2E) {
     // Step 3: Wait for redirect to /rsvp after successful login
     await expect(page).toHaveURL(/\/rsvp$/, { timeout: 10000 })
 
-    // Step 4: Verify guest name appears in the form
-    await expect(page.getByText(TEST_GUEST_NAME)).toBeVisible()
+    // Step 4: Verify guest name appears in the form (in main content, not header)
+    await expect(page.getByRole('main').getByText(TEST_GUEST_NAME)).toBeVisible()
     await expect(page.getByRole('heading', { name: 'RSVP' })).toBeVisible()
 
     // Step 5: Fill out the RSVP form
@@ -115,7 +115,7 @@ if (LIVE_E2E) {
     await page.getByRole('button', { name: 'Save RSVP' }).click()
 
     // Step 7: Verify success message
-    await expect(page.getByRole('status')).toHaveText('RSVP saved.', { timeout: 5000 })
+    await expect(page.locator('[role="alert"]').filter({ hasText: 'RSVP saved.' })).toBeVisible({ timeout: 5000 })
     await expect(page.getByRole('button', { name: 'Saved' })).toBeDisabled()
 
     // Step 8: Reload page and verify persistence
@@ -228,8 +228,8 @@ if (LIVE_E2E) {
     // Step 3: Wait for redirect to /rsvp
     await expect(page).toHaveURL(/\/rsvp$/, { timeout: 5000 })
 
-    // Step 4: Verify guest name and form
-    await expect(page.getByText(TEST_GUEST_NAME)).toBeVisible()
+    // Step 4: Verify guest name and form (in main content, not header)
+    await expect(page.getByRole('main').getByText(TEST_GUEST_NAME)).toBeVisible()
     await expect(page.getByRole('heading', { name: 'RSVP' })).toBeVisible()
 
     // Step 5: Fill out form
@@ -247,7 +247,7 @@ if (LIVE_E2E) {
     await page.getByRole('button', { name: 'Save RSVP' }).click()
 
     // Step 7: Verify success
-    await expect(page.getByRole('status')).toHaveText('RSVP saved.')
+    await expect(page.locator('[role="alert"]').filter({ hasText: 'RSVP saved.' })).toBeVisible({ timeout: 5000 })
     await expect(page.getByRole('button', { name: 'Saved' })).toBeDisabled()
 
     // Verify PATCH was called

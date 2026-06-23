@@ -140,9 +140,9 @@ test('renders current guest RSVP state', async ({ page }) => {
 
   await page.goto('/rsvp')
 
-  // Check heading and guest name
+  // Check heading and guest name (get the main one in the card, not header)
   await expect(page.getByRole('heading', { name: 'RSVP' })).toBeVisible()
-  await expect(page.getByText('Demo Guest')).toBeVisible()
+  await expect(page.getByRole('main').getByText('Demo Guest')).toBeVisible()
 
   // Check attendance status
   await expect(page.getByLabel('Accept')).toBeChecked()
@@ -179,8 +179,8 @@ test('submits RSVP changes and locks the saved form', async ({ page }) => {
   // Submit the form
   await page.getByRole('button', { name: 'Save RSVP' }).click()
 
-  // Verify success
-  await expect(page.getByRole('status')).toHaveText('RSVP saved.')
+  // Verify success - wait for success alert to appear
+  await expect(page.locator('[role="alert"]').filter({ hasText: 'RSVP saved.' })).toBeVisible({ timeout: 5000 })
   await expect(page.getByRole('button', { name: 'Saved' })).toBeDisabled()
   await expect(page.getByLabel('Accept')).toBeDisabled()
 
