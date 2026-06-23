@@ -356,6 +356,40 @@ class BudgetItemResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# ---------------------------------------------------------------------------
+# Wedding settings
+# ---------------------------------------------------------------------------
+
+
+class WeddingSettingsResponse(BaseModel):
+    id: int
+    couple_names: str
+    wedding_date: date
+    ceremony_time: time | None = None
+    ceremony_location: str | None = None
+    reception_location: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class WeddingSettingsUpdate(BaseModel):
+    couple_names: str | None = Field(default=None, min_length=1, max_length=255)
+    wedding_date: date | None = None
+    ceremony_time: time | None = None
+    ceremony_location: str | None = Field(default=None, max_length=255)
+    reception_location: str | None = Field(default=None, max_length=255)
+
+    @field_validator("couple_names")
+    @classmethod
+    def couple_names_must_not_be_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        couple_names = value.strip()
+        if not couple_names:
+            raise ValueError("Couple names are required")
+        return couple_names
+
+
 class BudgetCategorySummary(BaseModel):
     category_id: int
     category_name: str

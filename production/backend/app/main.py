@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.api import auth, budget, events, guests, invites, tasks, vendors
+from app.api import auth, budget, events, guests, invites, settings as settings_api, tasks, vendors
 from app.config import Environment, get_settings
 from app.db.database import SessionLocal
 from app.db.models import Invite
@@ -51,6 +51,7 @@ app.include_router(tasks.router)
 app.include_router(budget.router)
 app.include_router(vendors.router)
 app.include_router(events.router)
+app.include_router(settings_api.router)
 
 
 @app.middleware("http")
