@@ -3,7 +3,10 @@ from __future__ import annotations
 import enum
 from datetime import date, datetime, time
 
+from decimal import Decimal
+
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -11,6 +14,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     Text,
     Time,
@@ -90,6 +94,9 @@ class Wedding(Base):
     invites: Mapped[list["Invite"]] = orm_relationship(back_populates="wedding")
     tasks: Mapped[list["Task"]] = orm_relationship(back_populates="wedding")
     wedding_party: Mapped[list["WeddingParty"]] = orm_relationship(back_populates="wedding")
+    vendors: Mapped[list["Vendor"]] = orm_relationship(back_populates="wedding")
+    budget_items: Mapped[list["BudgetItem"]] = orm_relationship(back_populates="wedding")
+    events: Mapped[list["Event"]] = orm_relationship(back_populates="wedding")
 
 
 class Guest(Base):
@@ -295,3 +302,102 @@ class Task(Base):
 
     wedding: Mapped[Wedding] = orm_relationship(back_populates="tasks")
     assigned_party: Mapped["WeddingParty | None"] = orm_relationship()
+
+
+class BudgetCategory(Base):
+    __tablename__ = "budget_categories"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    category_name: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    description: Mapped[str | None] = mapped_column(Text)
+
+    vendors: Mapped[list["Vendor"]] = orm_relationship(back_populates="category")
+    budget_items: Mapped[list["BudgetItem"]] = orm_relationship(back_populates="category")
+
+
+class Vendor(Base):
+    __tablename__ = "vendors"
+    __table_args__ = (
+        Index("idx_vendors_wedding_id", "wedding_id"),
+        Index("idx_vendors_category", "category_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), nullable=False
+    )
+    vendor_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("budget_categories.id"), nullable=False
+    )
+    contact_person: Mapped[str | None] = mapped_column(String(255))
+    email: Mapped[str | None] = mapped_column(String(255))
+    phone: Mapped[str | None] = mapped_column(String(20))
+    website: Mapped[str | None] = mapped_column(String(255))
+    contract_signed: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("FALSE")
+    )
+    contract_file: Mapped[str | None] = mapped_column(String(500))
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    wedding: Mapped[Wedding] = orm_relationship(back_populates="vendors")
+    category: Mapped[BudgetCategory] = orm_relationship(back_populates="vendors")
+    budget_items: Mapped[list["BudgetItem"]] = orm_relationship(back_populates="vendor")
+
+
+class BudgetItem(Base):
+    __tablename__ = "budget_items"
+    __table_args__ = (
+        Index("idx_budget_items_wedding_id", "wedding_id"),
+        Index("idx_budget_items_category", "category_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), nullable=False
+    )
+    vendor_id: Mapped[int | None] = mapped_column(
+        ForeignKey("vendors.id", ondelete="SET NULL")
+    )
+    category_id: Mapped[int] = mapped_column(
+        ForeignKey("budget_categories.id"), nullable=False
+    )
+    description: Mapped[str] = mapped_column(String(255), nullable=False)
+    estimated_cost: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    actual_cost: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    paid: Mapped[bool] = mapped_column(Boolean, server_default=text("FALSE"))
+    payment_date: Mapped[date | None] = mapped_column(Date)
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    wedding: Mapped[Wedding] = orm_relationship(back_populates="budget_items")
+    category: Mapped[BudgetCategory] = orm_relationship(back_populates="budget_items")
+    vendor: Mapped["Vendor | None"] = orm_relationship(back_populates="budget_items")
+
+
+class Event(Base):
+    __tablename__ = "events"
+    __table_args__ = (
+        Index("idx_events_wedding_id", "wedding_id"),
+        Index("idx_events_date", "event_date"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), nullable=False
+    )
+    event_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    event_date: Mapped[date] = mapped_column(Date, nullable=False)
+    event_time: Mapped[time | None] = mapped_column(Time)
+    location: Mapped[str | None] = mapped_column(String(255))
+    description: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    wedding: Mapped[Wedding] = orm_relationship(back_populates="events")

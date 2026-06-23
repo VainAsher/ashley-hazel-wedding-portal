@@ -1,5 +1,6 @@
 import re
-from datetime import date, datetime
+from datetime import date, datetime, time
+from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -200,5 +201,226 @@ class InviteResponse(BaseModel):
     guest_id: int | None
     household_name: str | None
     created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Budget categories
+# ---------------------------------------------------------------------------
+
+
+class BudgetCategoryResponse(BaseModel):
+    id: int
+    category_name: str
+    description: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Vendors
+# ---------------------------------------------------------------------------
+
+
+class VendorBase(BaseModel):
+    wedding_id: int = Field(gt=0)
+    vendor_name: str = Field(min_length=1, max_length=255)
+    category_id: int = Field(gt=0)
+    contact_person: str | None = Field(default=None, max_length=255)
+    email: str | None = Field(default=None, max_length=255)
+    phone: str | None = Field(default=None, max_length=20)
+    website: str | None = Field(default=None, max_length=255)
+    contract_signed: bool = False
+    notes: str | None = None
+
+    @field_validator("vendor_name")
+    @classmethod
+    def vendor_name_must_not_be_blank(cls, value: str) -> str:
+        name = value.strip()
+        if not name:
+            raise ValueError("Vendor name is required")
+        return name
+
+
+class VendorCreate(VendorBase):
+    pass
+
+
+class VendorUpdate(BaseModel):
+    vendor_name: str | None = Field(default=None, min_length=1, max_length=255)
+    category_id: int | None = Field(default=None, gt=0)
+    contact_person: str | None = Field(default=None, max_length=255)
+    email: str | None = Field(default=None, max_length=255)
+    phone: str | None = Field(default=None, max_length=20)
+    website: str | None = Field(default=None, max_length=255)
+    contract_signed: bool | None = None
+    notes: str | None = None
+
+    @field_validator("vendor_name")
+    @classmethod
+    def vendor_name_must_not_be_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        name = value.strip()
+        if not name:
+            raise ValueError("Vendor name is required")
+        return name
+
+
+class VendorResponse(BaseModel):
+    id: int
+    wedding_id: int
+    vendor_name: str
+    category_id: int
+    category_name: str | None = None
+    contact_person: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    website: str | None = None
+    contract_signed: bool
+    notes: str | None = None
+    created_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Budget items
+# ---------------------------------------------------------------------------
+
+
+class BudgetItemBase(BaseModel):
+    wedding_id: int = Field(gt=0)
+    vendor_id: int | None = Field(default=None, gt=0)
+    category_id: int = Field(gt=0)
+    description: str = Field(min_length=1, max_length=255)
+    estimated_cost: Decimal | None = None
+    actual_cost: Decimal | None = None
+    paid: bool = False
+    payment_date: date | None = None
+    notes: str | None = None
+
+    @field_validator("description")
+    @classmethod
+    def description_must_not_be_blank(cls, value: str) -> str:
+        description = value.strip()
+        if not description:
+            raise ValueError("Budget item description is required")
+        return description
+
+
+class BudgetItemCreate(BudgetItemBase):
+    pass
+
+
+class BudgetItemUpdate(BaseModel):
+    vendor_id: int | None = Field(default=None, gt=0)
+    category_id: int | None = Field(default=None, gt=0)
+    description: str | None = Field(default=None, min_length=1, max_length=255)
+    estimated_cost: Decimal | None = None
+    actual_cost: Decimal | None = None
+    paid: bool | None = None
+    payment_date: date | None = None
+    notes: str | None = None
+
+    @field_validator("description")
+    @classmethod
+    def description_must_not_be_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        description = value.strip()
+        if not description:
+            raise ValueError("Budget item description is required")
+        return description
+
+
+class BudgetItemResponse(BaseModel):
+    id: int
+    wedding_id: int
+    vendor_id: int | None = None
+    vendor_name: str | None = None
+    category_id: int
+    category_name: str | None = None
+    description: str
+    estimated_cost: Decimal | None = None
+    actual_cost: Decimal | None = None
+    paid: bool
+    payment_date: date | None = None
+    notes: str | None = None
+    created_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BudgetCategorySummary(BaseModel):
+    category_id: int
+    category_name: str
+    estimated: Decimal
+    actual: Decimal
+    paid: Decimal
+
+
+class BudgetSummaryResponse(BaseModel):
+    total_estimated: Decimal
+    total_actual: Decimal
+    total_paid: Decimal
+    remaining: Decimal
+    by_category: list[BudgetCategorySummary]
+
+
+# ---------------------------------------------------------------------------
+# Events
+# ---------------------------------------------------------------------------
+
+
+class EventBase(BaseModel):
+    wedding_id: int = Field(gt=0)
+    event_name: str = Field(min_length=1, max_length=255)
+    event_date: date
+    event_time: time | None = None
+    location: str | None = Field(default=None, max_length=255)
+    description: str | None = None
+
+    @field_validator("event_name")
+    @classmethod
+    def event_name_must_not_be_blank(cls, value: str) -> str:
+        name = value.strip()
+        if not name:
+            raise ValueError("Event name is required")
+        return name
+
+
+class EventCreate(EventBase):
+    pass
+
+
+class EventUpdate(BaseModel):
+    event_name: str | None = Field(default=None, min_length=1, max_length=255)
+    event_date: date | None = None
+    event_time: time | None = None
+    location: str | None = Field(default=None, max_length=255)
+    description: str | None = None
+
+    @field_validator("event_name")
+    @classmethod
+    def event_name_must_not_be_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        name = value.strip()
+        if not name:
+            raise ValueError("Event name is required")
+        return name
+
+
+class EventResponse(BaseModel):
+    id: int
+    wedding_id: int
+    event_name: str
+    event_date: date
+    event_time: time | None = None
+    location: str | None = None
+    description: str | None = None
+    created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
