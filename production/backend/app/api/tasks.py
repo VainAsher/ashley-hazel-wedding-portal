@@ -26,7 +26,9 @@ async def create_task(
     current_user: UserResponse = Depends(require_coordinator),
 ) -> Task:
     """Create a new task for the current wedding."""
-    if task.wedding_id != current_user.wedding_id:
+    if task.wedding_id is None:
+        task.wedding_id = current_user.wedding_id
+    elif task.wedding_id != current_user.wedding_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot create tasks for other weddings",

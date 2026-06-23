@@ -142,7 +142,8 @@ class TaskBase(BaseModel):
 
 
 class TaskCreate(TaskBase):
-    pass
+    # Defaults to the authenticated user's wedding; clients need not send it.
+    wedding_id: int | None = Field(default=None, gt=0)
 
 
 class TaskUpdate(BaseModel):

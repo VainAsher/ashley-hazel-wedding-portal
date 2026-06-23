@@ -62,7 +62,6 @@ const PRIORITY_BADGE: Record<TaskPriority, string> = {
 type DialogMode = 'create' | 'edit'
 
 interface TaskFormState {
-  wedding_id: string
   title: string
   description: string
   status: TaskStatus
@@ -73,7 +72,6 @@ interface TaskFormState {
 
 function emptyFormState(): TaskFormState {
   return {
-    wedding_id: '1',
     title: '',
     description: '',
     status: 'not_started',
@@ -85,7 +83,6 @@ function emptyFormState(): TaskFormState {
 
 function formStateFromTask(task: Task): TaskFormState {
   return {
-    wedding_id: String(task.wedding_id),
     title: task.title,
     description: task.description ?? '',
     status: task.status,
@@ -101,9 +98,6 @@ function optionalText(value: string): string | null {
 }
 
 function validate(form: TaskFormState): string | null {
-  if (!Number(form.wedding_id) || Number(form.wedding_id) < 1) {
-    return 'Wedding ID is required.'
-  }
   if (!form.title.trim()) {
     return 'Task title is required.'
   }
@@ -112,7 +106,6 @@ function validate(form: TaskFormState): string | null {
 
 function buildPayload(form: TaskFormState): TaskPayload {
   return {
-    wedding_id: Number(form.wedding_id),
     title: form.title.trim(),
     description: optionalText(form.description),
     status: form.status,
@@ -390,17 +383,6 @@ export function Timeline() {
 
           <form noValidate onSubmit={handleSubmit} className="grid gap-4">
             {formError && <Alert variant="destructive">{formError}</Alert>}
-
-            <div className="grid gap-2">
-              <Label htmlFor="task-wedding-id">Wedding ID</Label>
-              <Input
-                id="task-wedding-id"
-                type="number"
-                min={1}
-                value={form.wedding_id}
-                onChange={(event) => updateField('wedding_id', event.target.value)}
-              />
-            </div>
 
             <div className="grid gap-2">
               <Label htmlFor="task-title">Title</Label>

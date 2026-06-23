@@ -15,7 +15,7 @@ export interface Task {
 }
 
 export interface TaskPayload {
-  wedding_id: number
+  // wedding_id is derived from the authenticated user on the server.
   title: string
   description: string | null
   status: TaskStatus
