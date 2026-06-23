@@ -13,6 +13,8 @@ import {
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Alert } from '../components/ui/alert'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import { GuestLayout } from '../components/GuestLayout'
 
 interface RsvpFormData {
   rsvpStatus: RsvpStatus
@@ -150,115 +152,155 @@ export function RSVP() {
   const formDisabled = submitting || saved
 
   return (
-    <main className="grid items-start min-h-[calc(100vh-52px)] p-5">
-      <section className="border border-[#d6d9df] rounded-md grid gap-[18px] max-w-2xl p-5 w-full">
-        <header className="grid gap-1.5">
-          <h1 className="text-2xl leading-tight m-0">RSVP</h1>
-          {guest && <p className="text-[#47505f] text-base m-0">{guest.name}</p>}
-        </header>
-
+    <GuestLayout>
+      <div className="max-w-2xl mx-auto w-full">
         {loading && (
-          <div role="status" className="text-[#47505f] text-sm">
-            Loading RSVP...
-          </div>
+          <Card>
+            <CardContent className="pt-6">
+              <div role="status" className="text-gray-600 text-sm">
+                Loading RSVP...
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="mb-6">
             {error}
           </Alert>
         )}
 
         {!loading && guest && (
-          <form onSubmit={handleSubmit} className="grid gap-4">
-            <fieldset disabled={formDisabled} className="border-0 grid gap-3 m-0 p-0">
-              <legend className="text-[#374151] text-sm font-bold p-0">Attendance</legend>
-              <label className="flex items-center gap-2">
-                <input
-                  checked={formData.rsvpStatus === 'accepted'}
-                  name="rsvpStatus"
-                  onChange={updateField('rsvpStatus')}
-                  type="radio"
-                  value="accepted"
-                />
-                Accept
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  checked={formData.rsvpStatus === 'declined'}
-                  name="rsvpStatus"
-                  onChange={updateField('rsvpStatus')}
-                  type="radio"
-                  value="declined"
-                />
-                Decline
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  checked={formData.rsvpStatus === 'tentative'}
-                  name="rsvpStatus"
-                  onChange={updateField('rsvpStatus')}
-                  type="radio"
-                  value="tentative"
-                />
-                Tentative
-              </label>
-            </fieldset>
+          <>
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>RSVP</CardTitle>
+                <CardDescription>{guest.name}</CardDescription>
+              </CardHeader>
+            </Card>
 
-            <fieldset disabled={formDisabled} className="border-0 grid gap-3 m-0 p-0">
-              <label htmlFor="meal-choice" className="text-sm font-bold text-[#374151]">
-                Meal Choice
-              </label>
-              <select
-                id="meal-choice"
-                name="mealChoice"
-                onChange={updateField('mealChoice')}
-                className="flex h-10 w-full rounded-md border border-[#aeb6c2] bg-white px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={formData.mealChoice}
-              >
-                <option value="">Select meal</option>
-                <option value="chicken">Chicken</option>
-                <option value="fish">Fish</option>
-                <option value="vegetarian">Vegetarian</option>
-              </select>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Attendance Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Attendance</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <fieldset disabled={formDisabled} className="border-0 space-y-3 m-0 p-0">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        checked={formData.rsvpStatus === 'accepted'}
+                        name="rsvpStatus"
+                        onChange={updateField('rsvpStatus')}
+                        type="radio"
+                        value="accepted"
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm font-medium">Accept</span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        checked={formData.rsvpStatus === 'declined'}
+                        name="rsvpStatus"
+                        onChange={updateField('rsvpStatus')}
+                        type="radio"
+                        value="declined"
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm font-medium">Decline</span>
+                    </label>
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        checked={formData.rsvpStatus === 'tentative'}
+                        name="rsvpStatus"
+                        onChange={updateField('rsvpStatus')}
+                        type="radio"
+                        value="tentative"
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm font-medium">Tentative</span>
+                    </label>
+                  </fieldset>
+                </CardContent>
+              </Card>
 
-              <label htmlFor="dietary-notes" className="text-sm font-bold text-[#374151]">
-                Dietary Notes
-              </label>
-              <textarea
-                id="dietary-notes"
-                maxLength={500}
-                name="dietaryNotes"
-                onChange={updateField('dietaryNotes')}
-                rows={4}
-                className="flex w-full rounded-md border border-[#aeb6c2] bg-white px-3 py-2 text-base resize-vertical focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={formData.dietaryNotes}
-              />
+              {/* Meal & Preferences Card - Only show if attending */}
+              {formData.rsvpStatus === 'accepted' && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Meal & Preferences</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <fieldset disabled={formDisabled} className="border-0 space-y-4 m-0 p-0">
+                      {/* Meal Choice */}
+                      <div className="space-y-2">
+                        <label htmlFor="meal-choice" className="text-sm font-medium text-gray-700">
+                          Meal Choice
+                        </label>
+                        <select
+                          id="meal-choice"
+                          name="mealChoice"
+                          onChange={updateField('mealChoice')}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          value={formData.mealChoice}
+                        >
+                          <option value="">Select meal</option>
+                          <option value="chicken">Chicken</option>
+                          <option value="fish">Fish</option>
+                          <option value="vegetarian">Vegetarian</option>
+                        </select>
+                      </div>
 
-              <label htmlFor="plus-one-name" className="text-sm font-bold text-[#374151]">
-                Plus One Name
-              </label>
-              <Input
-                id="plus-one-name"
-                name="plusOneName"
-                onChange={updateField('plusOneName')}
-                type="text"
-                value={formData.plusOneName}
-              />
-            </fieldset>
+                      {/* Dietary Notes */}
+                      <div className="space-y-2">
+                        <label htmlFor="dietary-notes" className="text-sm font-medium text-gray-700">
+                          Dietary Notes
+                        </label>
+                        <textarea
+                          id="dietary-notes"
+                          maxLength={500}
+                          name="dietaryNotes"
+                          onChange={updateField('dietaryNotes')}
+                          rows={4}
+                          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-base resize-vertical focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          value={formData.dietaryNotes}
+                        />
+                      </div>
 
-            {statusMessage && (
-              <Alert variant="success">
-                {statusMessage}
-              </Alert>
-            )}
+                      {/* Plus One Name */}
+                      <div className="space-y-2">
+                        <label htmlFor="plus-one-name" className="text-sm font-medium text-gray-700">
+                          Plus One Name
+                        </label>
+                        <Input
+                          id="plus-one-name"
+                          name="plusOneName"
+                          onChange={updateField('plusOneName')}
+                          type="text"
+                          value={formData.plusOneName}
+                          placeholder="Enter name of your plus one"
+                        />
+                      </div>
+                    </fieldset>
+                  </CardContent>
+                </Card>
+              )}
 
-            <Button disabled={formDisabled} type="submit">
-              {saved ? 'Saved' : submitting ? 'Saving...' : 'Save RSVP'}
-            </Button>
-          </form>
+              {/* Status Message */}
+              {statusMessage && (
+                <Alert variant="success">
+                  {statusMessage}
+                </Alert>
+              )}
+
+              {/* Submit Button */}
+              <Button disabled={formDisabled} type="submit" size="lg" className="w-full">
+                {saved ? 'Saved' : submitting ? 'Saving...' : 'Save RSVP'}
+              </Button>
+            </form>
+          </>
         )}
-      </section>
-    </main>
+      </div>
+    </GuestLayout>
   )
 }
