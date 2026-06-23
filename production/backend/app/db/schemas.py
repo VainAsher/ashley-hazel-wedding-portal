@@ -345,8 +345,9 @@ class BudgetItemResponse(BaseModel):
     category_id: int
     category_name: str | None = None
     description: str
-    estimated_cost: Decimal | None = None
-    actual_cost: Decimal | None = None
+    # Serialized as JSON numbers (not Decimal strings) for the frontend.
+    estimated_cost: float | None = None
+    actual_cost: float | None = None
     paid: bool
     payment_date: date | None = None
     notes: str | None = None
@@ -358,16 +359,16 @@ class BudgetItemResponse(BaseModel):
 class BudgetCategorySummary(BaseModel):
     category_id: int
     category_name: str
-    estimated: Decimal
-    actual: Decimal
-    paid: Decimal
+    estimated: float
+    actual: float
+    paid: float
 
 
 class BudgetSummaryResponse(BaseModel):
-    total_estimated: Decimal
-    total_actual: Decimal
-    total_paid: Decimal
-    remaining: Decimal
+    total_estimated: float
+    total_actual: float
+    total_paid: float
+    remaining: float
     by_category: list[BudgetCategorySummary]
 
 
