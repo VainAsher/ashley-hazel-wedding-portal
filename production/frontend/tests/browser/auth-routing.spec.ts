@@ -125,7 +125,7 @@ test('authenticated guest root traffic lands on RSVP form', async ({ page }) => 
 
   await expect(page).toHaveURL(/\/rsvp$/)
   await expect(page.getByRole('heading', { name: 'RSVP' })).toBeVisible()
-  await expect(page.getByText('Route Guest')).toBeVisible()
+  await expect(page.getByRole('main').getByText('Route Guest')).toBeVisible()
 })
 
 test('authenticated couple root traffic lands on admin stub', async ({ page }) => {
