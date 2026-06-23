@@ -110,8 +110,7 @@ test('routes from invite entry to guests and renders guest data', async ({ page 
   await page.getByRole('link', { name: 'Guests', exact: true }).click()
   await expect(page).toHaveURL(/\/guests$/)
   await expect(page.getByRole('heading', { name: 'Guest Management' })).toBeVisible()
-  await expect(page.getByText('Browser Validation Guest')).toBeVisible()
-  await expect(page.getByText('browser.validation@example.com')).toBeVisible()
+  await expect(page.getByRole('cell', { name: 'Browser Validation Guest', exact: true })).toBeVisible()
 })
 
 test('direct guests route and fallback route are browser-accessible', async ({ page }) => {

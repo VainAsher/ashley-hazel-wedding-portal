@@ -2,6 +2,7 @@ import { expect, test, type Page, type Route } from '@playwright/test'
 import { cleanupPageState, initializeErrorTracking, filterIgnorableErrors, getBrowserErrors } from './fixtures/page-cleanup'
 
 type RsvpStatus = 'pending' | 'accepted' | 'declined' | 'tentative'
+type MealChoice = 'chicken' | 'fish' | 'vegetarian'
 
 interface Guest {
   id: number
@@ -11,6 +12,7 @@ interface Guest {
   phone: string | null
   relationship: string | null
   rsvp_status: RsvpStatus
+  meal_choice: MealChoice | null
   dietary_restrictions: string | null
   plus_one_name: string | null
   plus_one_rsvp: RsvpStatus | null
@@ -30,7 +32,8 @@ const initialGuest: Guest = {
   phone: '555-0100',
   relationship: 'friend',
   rsvp_status: 'accepted',
-  dietary_restrictions: null,
+  meal_choice: 'chicken',
+  dietary_restrictions: 'Gluten free',
   plus_one_name: null,
   plus_one_rsvp: null,
   plus_one_dietary: null,
@@ -141,23 +144,36 @@ test.afterEach(async ({ page }) => {
   expect(unexpectedErrors).toEqual([])
 })
 
-async function openAddGuestForm(page: Page) {
-  await page.goto('/guests')
-  await page.getByRole('button', { name: 'Add Guest' }).click()
-  await expect(page.getByRole('heading', { name: 'Add Guest' })).toBeVisible()
+function mainRegion(page: Page) {
+  return page.getByRole('main')
 }
 
-async function fillRequiredGuestFields(page: Page, name: string, email: string) {
-  await page.getByLabel('Name').fill(name)
-  await page.getByLabel('Email').fill(email)
+function formDialog(page: Page) {
+  return page.getByRole('dialog')
+}
+
+async function openAddGuestForm(page: Page) {
+  await page.goto('/guests')
+  await mainRegion(page).getByRole('button', { name: 'Add Guest' }).click()
+  await expect(formDialog(page)).toBeVisible()
+  await expect(formDialog(page).getByRole('heading', { name: 'Add Guest' })).toBeVisible()
+}
+
+async function selectOption(page: Page, triggerLabel: string, optionName: string) {
+  await formDialog(page).getByLabel(triggerLabel).click()
+  await page.getByRole('option', { name: optionName }).click()
+}
+
+async function submitGuestForm(page: Page, buttonName: 'Add Guest' | 'Save Guest') {
+  await formDialog(page).getByRole('button', { name: buttonName }).click()
 }
 
 test('renders existing guest count and table columns', async ({ page }) => {
   await page.goto('/guests')
 
-  await expect(page.getByText('1 guests')).toBeVisible()
+  await expect(mainRegion(page).getByText('1 guests')).toBeVisible()
   await expect(page.getByRole('cell', { name: 'Existing Guest', exact: true })).toBeVisible()
-  for (const column of ['Actions', 'Name', 'Email', 'Phone', 'Relationship', 'RSVP']) {
+  for (const column of ['Name', 'RSVP Status', 'Meal', 'Dietary', 'Actions']) {
     await expect(page.locator('th').filter({ hasText: new RegExp(`^${column}$`) })).toBeVisible()
   }
 })
@@ -165,170 +181,161 @@ test('renders existing guest count and table columns', async ({ page }) => {
 test('opens and cancels the add guest form', async ({ page }) => {
   await openAddGuestForm(page)
 
-  await page.getByRole('button', { name: 'Cancel' }).first().click()
+  await formDialog(page).getByRole('button', { name: 'Cancel' }).click()
 
-  await expect(page.getByRole('heading', { name: 'Add Guest' })).not.toBeVisible()
+  await expect(formDialog(page)).not.toBeVisible()
   await expect(page.getByRole('cell', { name: 'Existing Guest', exact: true })).toBeVisible()
 })
 
 test('validates required guest name before submit', async ({ page }) => {
   await openAddGuestForm(page)
 
-  await page.getByRole('button', { name: 'Add Guest' }).click()
+  await submitGuestForm(page, 'Add Guest')
 
-  await expect(page.getByRole('alert')).toHaveText('Guest name is required.')
+  await expect(formDialog(page).getByRole('alert')).toHaveText('Guest name is required.')
 })
 
 test('validates email format before submit', async ({ page }) => {
   await openAddGuestForm(page)
-  await fillRequiredGuestFields(page, 'Invalid Email Guest', 'not-an-email')
+  await formDialog(page).getByLabel('Name').fill('Invalid Email Guest')
+  await formDialog(page).getByLabel('Email').fill('not-an-email')
 
-  await page.getByRole('button', { name: 'Add Guest' }).click()
+  await submitGuestForm(page, 'Add Guest')
 
-  await expect(page.getByRole('alert')).toHaveText('Email must contain @.')
+  await expect(formDialog(page).getByRole('alert')).toHaveText('Email must contain @.')
 })
 
 test('validates wedding id before submit', async ({ page }) => {
   await openAddGuestForm(page)
-  await page.getByLabel('Wedding ID').fill('0')
-  await fillRequiredGuestFields(page, 'Invalid Wedding Guest', 'invalid-wedding@example.com')
+  await formDialog(page).getByLabel('Wedding ID').fill('0')
+  await formDialog(page).getByLabel('Name').fill('Invalid Wedding Guest')
 
-  await page.getByRole('button', { name: 'Add Guest' }).click()
+  await submitGuestForm(page, 'Add Guest')
 
-  await expect(page.getByRole('alert')).toHaveText('Wedding ID is required.')
+  await expect(formDialog(page).getByRole('alert')).toHaveText('Wedding ID is required.')
 })
 
-test('adds a guest with plus-one and dietary details', async ({ page }) => {
+test('adds a guest with meal and dietary details', async ({ page }) => {
   await openAddGuestForm(page)
-  await fillRequiredGuestFields(page, 'Detailed E2E Guest', 'detailed.e2e@example.com')
-  await page.getByLabel('Dietary Restrictions').fill('Vegetarian')
-  await page.getByLabel('Plus One', { exact: true }).fill('Detailed Plus One')
-  await page.getByLabel('Plus One RSVP').selectOption('accepted')
-  await page.getByLabel('Plus One Dietary').fill('Nut allergy')
-  await page.getByLabel('Table').fill('8')
-  await page.getByLabel('Seat').fill('4')
-  await page.getByLabel('Notes').fill('Needs aisle seat')
+  await formDialog(page).getByLabel('Name').fill('Detailed E2E Guest')
+  await formDialog(page).getByLabel('Email').fill('detailed.e2e@example.com')
+  await selectOption(page, 'RSVP Status', 'Accepted')
+  await selectOption(page, 'Meal', 'Vegetarian')
+  await formDialog(page).getByLabel('Dietary').fill('Nut allergy')
+  await formDialog(page).getByLabel('Table').fill('8')
+  await formDialog(page).getByLabel('Seat').fill('4')
 
-  await page.getByRole('button', { name: 'Add Guest' }).click()
+  await submitGuestForm(page, 'Add Guest')
 
   await expect(page.getByRole('status')).toHaveText('Guest added successfully.')
   await expect(page.getByRole('cell', { name: 'Detailed E2E Guest', exact: true })).toBeVisible()
-  await expect(page.getByRole('cell', { name: 'Vegetarian' })).toBeVisible()
-  await expect(page.getByRole('cell', { name: 'Detailed Plus One' })).toBeVisible()
-  await expect(page.getByRole('cell', { name: 'Nut allergy' })).toBeVisible()
+  await expect(page.getByRole('cell', { name: 'vegetarian', exact: true })).toBeVisible()
+  await expect(page.getByRole('cell', { name: 'Nut allergy', exact: true })).toBeVisible()
 })
 
-test('cancels edit without changing selected guest details', async ({ page }) => {
+test('cancels edit without saving changes', async ({ page }) => {
   await page.goto('/guests')
-  await page.getByRole('button', { name: 'View Existing Guest' }).click()
-  await page.getByRole('button', { name: 'Edit Guest' }).click()
-  await page.getByLabel('Relationship').fill('changed relationship')
+  await page.getByRole('button', { name: 'Edit Existing Guest' }).click()
+  await expect(formDialog(page).getByRole('heading', { name: 'Edit Guest' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Cancel' }).last().click()
+  await formDialog(page).getByLabel('Dietary').fill('changed dietary')
+  await formDialog(page).getByRole('button', { name: 'Cancel' }).click()
 
-  const details = page.locator('section[aria-labelledby="guest-details-title"]')
-  await expect(details.getByText('friend')).toBeVisible()
-  await expect(details.getByText('changed relationship')).not.toBeVisible()
+  await expect(formDialog(page)).not.toBeVisible()
+  await expect(page.getByRole('cell', { name: 'Gluten free', exact: true })).toBeVisible()
+  await expect(page.getByRole('cell', { name: 'changed dietary', exact: true })).not.toBeVisible()
 })
 
 test('dismisses delete confirmation and keeps guest visible', async ({ page }) => {
   await page.goto('/guests')
-  page.once('dialog', async (dialog) => {
-    expect(dialog.message()).toContain('Delete Existing Guest')
-    await dialog.dismiss()
-  })
 
   await page.getByRole('button', { name: 'Delete Existing Guest' }).click()
+  const dialog = formDialog(page)
+  await expect(dialog.getByText('Delete Existing Guest?')).toBeVisible()
 
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+
+  await expect(dialog).not.toBeVisible()
   await expect(page.getByRole('cell', { name: 'Existing Guest', exact: true })).toBeVisible()
   await expect(page.getByRole('status')).not.toBeVisible()
 })
 
 test('shows empty state after deleting the only guest', async ({ page }) => {
   await page.goto('/guests')
-  page.once('dialog', async (dialog) => {
-    await dialog.accept()
-  })
 
   await page.getByRole('button', { name: 'Delete Existing Guest' }).click()
+  await formDialog(page).getByRole('button', { name: 'Delete', exact: true }).click()
 
   await expect(page.getByRole('status')).toHaveText('Guest deleted successfully.')
-  await expect(page.getByText('No guests found.')).toBeVisible()
-  await expect(page.getByText('0 guests')).toBeVisible()
+  await expect(mainRegion(page).getByText('No guests found.')).toBeVisible()
+  await expect(mainRegion(page).getByText('0 guests')).toBeVisible()
 })
 
 test('completes add guest flow on a mobile viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await openAddGuestForm(page)
-  await fillRequiredGuestFields(page, 'Mobile E2E Guest', 'mobile.e2e@example.com')
+  await formDialog(page).getByLabel('Name').fill('Mobile E2E Guest')
+  await formDialog(page).getByLabel('Email').fill('mobile.e2e@example.com')
 
-  await page.getByRole('button', { name: 'Add Guest' }).click()
+  await submitGuestForm(page, 'Add Guest')
 
   await expect(page.getByRole('status')).toHaveText('Guest added successfully.')
   await expect(page.getByRole('cell', { name: 'Mobile E2E Guest', exact: true })).toBeVisible()
 })
 
-test('completes add, view, edit, and delete guest flow', async ({ page }) => {
+test('completes add, edit, and delete guest flow', async ({ page }) => {
   await page.goto('/guests')
-  await expect(page.getByRole('heading', { name: 'Guest Management' })).toBeVisible()
-  await expect(page.getByText('Existing Guest')).toBeVisible()
+  await expect(mainRegion(page).getByRole('heading', { name: 'Guests', exact: true })).toBeVisible()
+  await expect(page.getByRole('cell', { name: 'Existing Guest', exact: true })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Add Guest' }).click()
-  await page.getByLabel('Name').fill('E2E Taylor')
-  await page.getByLabel('Email').fill('e2e.taylor@example.com')
-  await page.getByLabel('Phone').fill('555-0199')
-  await page.getByLabel('Relationship').fill('colleague')
-  await page.getByLabel('RSVP', { exact: true }).selectOption('accepted')
-  await page.getByLabel('Table').fill('5')
-  await page.getByLabel('Seat').fill('3')
-  await page.getByLabel('Notes').fill('Browser-created guest')
-  await page.getByRole('button', { name: 'Add Guest' }).click()
+  // Add
+  await mainRegion(page).getByRole('button', { name: 'Add Guest' }).click()
+  await formDialog(page).getByLabel('Name').fill('E2E Taylor')
+  await formDialog(page).getByLabel('Email').fill('e2e.taylor@example.com')
+  await selectOption(page, 'RSVP Status', 'Accepted')
+  await formDialog(page).getByLabel('Table').fill('5')
+  await formDialog(page).getByLabel('Seat').fill('3')
+  await submitGuestForm(page, 'Add Guest')
 
   await expect(page.getByRole('status')).toHaveText('Guest added successfully.')
   await expect(page.getByRole('cell', { name: 'E2E Taylor', exact: true })).toBeVisible()
 
-  await page.getByRole('button', { name: 'View E2E Taylor' }).click()
-  const details = page.locator('section[aria-labelledby="guest-details-title"]')
-  await expect(page.getByRole('heading', { name: 'Guest Details' })).toBeVisible()
-  await expect(details.getByText('e2e.taylor@example.com')).toBeVisible()
-
+  // Edit
   await page.getByRole('button', { name: 'Edit E2E Taylor' }).click()
-  await expect(page.getByRole('heading', { name: 'Edit Guest' })).toBeVisible()
-  await page.getByLabel('Relationship').fill('family')
-  await page.getByLabel('RSVP', { exact: true }).selectOption('tentative')
-  await page.getByRole('button', { name: 'Save Guest' }).click()
+  await expect(formDialog(page).getByRole('heading', { name: 'Edit Guest' })).toBeVisible()
+  await formDialog(page).getByLabel('Dietary').fill('Vegan')
+  await selectOption(page, 'RSVP Status', 'Tentative')
+  await submitGuestForm(page, 'Save Guest')
 
   await expect(page.getByRole('status')).toHaveText('Guest updated successfully.')
-  await expect(page.getByRole('heading', { name: 'Guest Details' })).toBeVisible()
-  await expect(details.getByText('family')).toBeVisible()
-  await expect(details.getByText('tentative')).toBeVisible()
+  const taylorRow = page.getByRole('row', { name: /E2E Taylor/ })
+  await expect(taylorRow.getByRole('cell', { name: 'tentative', exact: true })).toBeVisible()
+  await expect(taylorRow.getByRole('cell', { name: 'Vegan', exact: true })).toBeVisible()
 
-  page.once('dialog', async (dialog) => {
-    expect(dialog.message()).toContain('Delete E2E Taylor')
-    await dialog.accept()
-  })
+  // Delete
   await page.getByRole('button', { name: 'Delete E2E Taylor' }).click()
+  await expect(formDialog(page).getByText('Delete E2E Taylor?')).toBeVisible()
+  await formDialog(page).getByRole('button', { name: 'Delete', exact: true }).click()
 
   await expect(page.getByRole('status')).toHaveText('Guest deleted successfully.')
   await expect(page.getByRole('cell', { name: 'E2E Taylor', exact: true })).not.toBeVisible()
 })
 
 test('shows validation and API errors, then clears them after success', async ({ page }) => {
-  await page.goto('/guests')
-  await page.getByRole('button', { name: 'Add Guest' }).click()
+  await openAddGuestForm(page)
 
-  await page.getByLabel('Name').fill('Error Case Guest')
-  await page.getByLabel('Table').fill('0')
-  await page.getByRole('button', { name: 'Add Guest' }).click()
-  await expect(page.getByRole('alert')).toHaveText('Table number must be 1 or greater.')
+  await formDialog(page).getByLabel('Name').fill('Error Case Guest')
+  await formDialog(page).getByLabel('Table').fill('0')
+  await submitGuestForm(page, 'Add Guest')
+  await expect(formDialog(page).getByRole('alert')).toHaveText('Table number must be 1 or greater.')
 
-  await page.getByLabel('Table').fill('1')
-  await page.getByLabel('Email').fill('duplicate@example.com')
-  await page.getByRole('button', { name: 'Add Guest' }).click()
-  await expect(page.getByRole('alert')).toHaveText('Duplicate email')
+  await formDialog(page).getByLabel('Table').fill('1')
+  await formDialog(page).getByLabel('Email').fill('duplicate@example.com')
+  await submitGuestForm(page, 'Add Guest')
+  await expect(formDialog(page).getByRole('alert')).toHaveText('Duplicate email')
 
-  await page.getByLabel('Email').fill('error-case@example.com')
-  await page.getByRole('button', { name: 'Add Guest' }).click()
+  await formDialog(page).getByLabel('Email').fill('error-case@example.com')
+  await submitGuestForm(page, 'Add Guest')
   await expect(page.getByRole('status')).toHaveText('Guest added successfully.')
-  await expect(page.getByRole('alert')).not.toBeVisible()
+  await expect(page.getByRole('cell', { name: 'Error Case Guest', exact: true })).toBeVisible()
 })
