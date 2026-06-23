@@ -1,0 +1,64 @@
+/* Design Tokens - Color Variables (HSL Format)
+ * Based on template defaults: purple primary, gold accent
+ * Light mode: default theme
+ * Dark mode: `.dark` selector variant
+ */
+
+:root {
+  /* Primary Colors - Purple */
+  --primary: 270 100% 50%;
+  --primary-foreground: 0 0% 100%;
+
+  /* Secondary Colors - Dark Gray */
+  --secondary: 260 30% 25%;
+  --secondary-foreground: 0 0% 100%;
+
+  /* Accent Colors - Gold/Yellow */
+  --accent: 45 100% 50%;
+  --accent-foreground: 260 15% 20%;
+
+  /* Base Colors - Light/Dark */
+  --background: 0 0% 100%;
+  --foreground: 260 15% 20%;
+
+  /* Border & Muted - Grays */
+  --border: 260 20% 92%;
+  --input: 260 20% 92%;
+  --muted: 260 14% 89%;
+  --muted-foreground: 260 8% 52%;
+
+  /* Destructive - Red */
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+
+  /* Ring - Focus state (matches primary) */
+  --ring: 270 100% 50%;
+
+  /* Border Radius */
+  --radius: 0.75rem;
+}
+
+/* Dark Mode Theme */
+.dark {
+  --primary: 270 100% 50%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 260 30% 25%;
+  --secondary-foreground: 0 0% 100%;
+
+  --accent: 45 100% 50%;
+  --accent-foreground: 260 15% 20%;
+
+  --background: 260 15% 10%;
+  --foreground: 0 0% 98%;
+
+  --border: 260 20% 20%;
+  --input: 260 20% 20%;
+  --muted: 260 14% 25%;
+  --muted-foreground: 260 8% 68%;
+
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+
+  --ring: 270 100% 50%;
+}
