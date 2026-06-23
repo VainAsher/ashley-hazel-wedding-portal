@@ -163,6 +163,26 @@ jobs:
         run: |
           psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/008_seed_test_data.sql
 
+      - name: Smoke test real login (un-mocked, against running backend image)
+        run: |
+          set -euo pipefail
+          # The frontend e2e suite mocks /api/auth, so it never exercises the
+          # real login path. Hit the actual running backend with a seeded code
+          # to guarantee the real frontend->backend auth contract works.
+          code="$(curl --silent --show-error --max-time 10 \
+            -o /tmp/login.json -w '%{http_code}' \
+            -X POST http://127.0.0.1:3001/api/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"invite_code":"DEMO-COUPLE"}')"
+          echo "login HTTP ${code}"; cat /tmp/login.json; echo
+          test "${code}" = "200"
+          grep -q '"role":"couple"' /tmp/login.json
+          # Readiness must report ready against the migrated, seeded DB.
+          ready="$(curl --silent --show-error --max-time 10 \
+            -o /tmp/ready.json -w '%{http_code}' http://127.0.0.1:3001/health/ready)"
+          echo "ready HTTP ${ready}"; cat /tmp/ready.json; echo
+          test "${ready}" = "200"
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:

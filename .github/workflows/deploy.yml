@@ -309,11 +309,20 @@ jobs:
 
           if [ "$WD_DEPLOY_ENVIRONMENT" = "staging" ]; then
             echo "== Endpoint checks (staging host ports) =="
-            # Backend health
+            # Backend liveness
             if curl --fail --silent --show-error --max-time 10 http://localhost:3001/health >/dev/null; then
               echo "backend /health: OK"
             else
               echo "::error::backend /health did not respond OK" >&2
+              exit 1
+            fi
+            # Backend readiness — actually queries the DB, so a backend that
+            # cannot reach the database or whose core schema is missing/drifted
+            # fails the gate instead of passing as a false-green deploy.
+            if curl --fail --silent --show-error --max-time 10 http://localhost:3001/health/ready >/dev/null; then
+              echo "backend /health/ready: OK"
+            else
+              echo "::error::backend /health/ready failed — DB unreachable or core schema missing/drifted" >&2
               exit 1
             fi
             # Frontend health (host port defaults to 80)
