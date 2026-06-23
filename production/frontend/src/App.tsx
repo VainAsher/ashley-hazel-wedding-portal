@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
 
 import { HomeRedirect, RequireAdmin, RequireGuest } from './components/AuthRoutes'
@@ -5,6 +6,40 @@ import { Admin } from './pages/Admin'
 import { Guests } from './pages/Guests'
 import { Invite } from './pages/Invite'
 import { RSVP } from './pages/RSVP'
+
+// Admin module pages are route-level code-split so they stay out of the main
+// bundle until an admin actually navigates to them.
+const Invitations = lazy(() =>
+  import('./pages/admin/Invitations').then((m) => ({ default: m.Invitations })),
+)
+const RsvpAdmin = lazy(() =>
+  import('./pages/admin/RsvpAdmin').then((m) => ({ default: m.RsvpAdmin })),
+)
+const Budget = lazy(() =>
+  import('./pages/admin/Budget').then((m) => ({ default: m.Budget })),
+)
+const Events = lazy(() =>
+  import('./pages/admin/Events').then((m) => ({ default: m.Events })),
+)
+const Timeline = lazy(() =>
+  import('./pages/admin/Timeline').then((m) => ({ default: m.Timeline })),
+)
+const Communications = lazy(() =>
+  import('./pages/admin/Communications').then((m) => ({ default: m.Communications })),
+)
+const Vendors = lazy(() =>
+  import('./pages/admin/Vendors').then((m) => ({ default: m.Vendors })),
+)
+const Gallery = lazy(() =>
+  import('./pages/admin/Gallery').then((m) => ({ default: m.Gallery })),
+)
+const Settings = lazy(() =>
+  import('./pages/admin/Settings').then((m) => ({ default: m.Settings })),
+)
+
+function adminRoute(element: React.ReactNode) {
+  return <RequireAdmin>{element}</RequireAdmin>
+}
 
 function App() {
   return (
@@ -45,35 +80,38 @@ function App() {
           </NavLink>
         </nav>
 
-        <Routes>
-          <Route element={<HomeRedirect />} path="/" />
-          <Route element={<Invite />} path="/invite" />
-          <Route
-            element={
-              <RequireGuest>
-                <RSVP />
-              </RequireGuest>
-            }
-            path="/rsvp"
-          />
-          <Route
-            element={
-              <RequireAdmin>
-                <Admin />
-              </RequireAdmin>
-            }
-            path="/admin"
-          />
-          <Route
-            element={
-              <RequireAdmin>
-                <Guests />
-              </RequireAdmin>
-            }
-            path="/guests"
-          />
-          <Route element={<Navigate replace to="/invite" />} path="*" />
-        </Routes>
+        <Suspense
+          fallback={
+            <div role="status" className="p-5 text-sm text-[#47505f]">
+              Loading...
+            </div>
+          }
+        >
+          <Routes>
+            <Route element={<HomeRedirect />} path="/" />
+            <Route element={<Invite />} path="/invite" />
+            <Route
+              element={
+                <RequireGuest>
+                  <RSVP />
+                </RequireGuest>
+              }
+              path="/rsvp"
+            />
+            <Route element={adminRoute(<Admin />)} path="/admin" />
+            <Route element={adminRoute(<Guests />)} path="/guests" />
+            <Route element={adminRoute(<Invitations />)} path="/admin/invitations" />
+            <Route element={adminRoute(<RsvpAdmin />)} path="/admin/rsvp" />
+            <Route element={adminRoute(<Budget />)} path="/admin/budget" />
+            <Route element={adminRoute(<Events />)} path="/admin/events" />
+            <Route element={adminRoute(<Timeline />)} path="/admin/timeline" />
+            <Route element={adminRoute(<Communications />)} path="/admin/communications" />
+            <Route element={adminRoute(<Vendors />)} path="/admin/vendors" />
+            <Route element={adminRoute(<Gallery />)} path="/admin/gallery" />
+            <Route element={adminRoute(<Settings />)} path="/admin/settings" />
+            <Route element={<Navigate replace to="/invite" />} path="*" />
+          </Routes>
+        </Suspense>
       </div>
     </BrowserRouter>
   )
@@ -92,22 +130,6 @@ const navStyle = {
   gap: '4px',
   minHeight: '52px',
   padding: '0 20px',
-}
-
-const navLinkStyle = {
-  borderBottomColor: 'transparent',
-  borderBottomStyle: 'solid',
-  borderBottomWidth: '3px',
-  color: '#47505f',
-  fontSize: '14px',
-  fontWeight: 700,
-  padding: '16px 12px 13px',
-  textDecoration: 'none',
-}
-
-const activeNavLinkStyle = {
-  borderBottomColor: '#1f6f5b',
-  color: '#1f2933',
 }
 
 export default App

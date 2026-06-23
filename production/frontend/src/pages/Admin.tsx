@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import {
   Activity,
   CalendarDays,
@@ -183,9 +183,9 @@ export function Admin() {
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Planning Modules</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {planningModules.map(({ icon: Icon, label, description, href }) => (
-              <a
+              <Link
                 key={label}
-                href={href}
+                to={href}
                 className="block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               >
                 <Card className="h-full transition-shadow hover:shadow-md">
@@ -199,7 +199,7 @@ export function Admin() {
                     <CardDescription>{description}</CardDescription>
                   </CardHeader>
                 </Card>
-              </a>
+              </Link>
             ))}
           </div>
         </section>

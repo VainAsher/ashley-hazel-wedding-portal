@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 
@@ -13,11 +14,15 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const adminMenuItems = [
-    { label: 'Dashboard', href: '/admin/dashboard', icon: '📊' },
-    { label: 'Guests', href: '/admin/guests', icon: '👥' },
+    { label: 'Dashboard', href: '/admin', icon: '📊' },
+    { label: 'Guests', href: '/guests', icon: '👥' },
     { label: 'Invitations', href: '/admin/invitations', icon: '📧' },
     { label: 'RSVP', href: '/admin/rsvp', icon: '✅' },
+    { label: 'Budget', href: '/admin/budget', icon: '💰' },
     { label: 'Events', href: '/admin/events', icon: '📅' },
+    { label: 'Timeline', href: '/admin/timeline', icon: '🗓️' },
+    { label: 'Communications', href: '/admin/communications', icon: '💬' },
+    { label: 'Vendors', href: '/admin/vendors', icon: '🏪' },
     { label: 'Gallery', href: '/admin/gallery', icon: '🖼️' },
     { label: 'Settings', href: '/admin/settings', icon: '⚙️' },
   ]
@@ -51,9 +56,9 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
           {adminMenuItems.map((item) => (
-            <a
+            <Link
               key={item.href}
-              href={item.href}
+              to={item.href}
               className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors group"
               title={!sidebarOpen ? item.label : undefined}
             >
@@ -63,7 +68,7 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
                   {item.label}
                 </span>
               )}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -98,12 +103,12 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
                   <React.Fragment key={index}>
                     {index > 0 && <span>/</span>}
                     {item.href ? (
-                      <a
-                        href={item.href}
+                      <Link
+                        to={item.href}
                         className="text-blue-600 hover:text-blue-700 underline"
                       >
                         {item.label}
-                      </a>
+                      </Link>
                     ) : (
                       <span className="text-gray-900 font-medium">{item.label}</span>
                     )}
