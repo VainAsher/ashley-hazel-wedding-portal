@@ -140,9 +140,14 @@ test('renders current guest RSVP state', async ({ page }) => {
 
   await page.goto('/rsvp')
 
+  // Check heading and guest name
   await expect(page.getByRole('heading', { name: 'RSVP' })).toBeVisible()
   await expect(page.getByText('Demo Guest')).toBeVisible()
+
+  // Check attendance status
   await expect(page.getByLabel('Accept')).toBeChecked()
+
+  // Check meal preferences (should be visible when accepted)
   await expect(page.getByLabel('Meal Choice')).toHaveValue('vegetarian')
   await expect(page.getByLabel('Dietary Notes')).toHaveValue('No nuts')
   await expect(page.getByLabel('Plus One Name')).toHaveValue('Demo Plus One')
@@ -162,18 +167,27 @@ test('submits RSVP changes and locks the saved form', async ({ page }) => {
   })
 
   await page.goto('/rsvp')
-  await page.getByLabel('Tentative').check()
+
+  // Change to accepted first to show meal preferences
+  await page.getByLabel('Accept').check()
+
+  // Fill meal preferences
   await page.getByLabel('Meal Choice').selectOption('fish')
   await page.getByLabel('Dietary Notes').fill('Dairy-free')
   await page.getByLabel('Plus One Name').fill('Taylor Guest')
+
+  // Submit the form
   await page.getByRole('button', { name: 'Save RSVP' }).click()
 
+  // Verify success
   await expect(page.getByRole('status')).toHaveText('RSVP saved.')
   await expect(page.getByRole('button', { name: 'Saved' })).toBeDisabled()
-  await expect(page.getByLabel('Tentative')).toBeDisabled()
+  await expect(page.getByLabel('Accept')).toBeDisabled()
+
+  // Verify API received correct data
   expect(requests).toEqual([
     {
-      rsvp_status: 'tentative',
+      rsvp_status: 'accepted',
       meal_choice: 'fish',
       dietary_notes: 'Dairy-free',
       plus_one_name: 'Taylor Guest',
@@ -188,10 +202,37 @@ test('shows API errors without leaving the form', async ({ page }) => {
   })
 
   await page.goto('/rsvp')
+
+  // Change status to declined
   await page.getByLabel('Decline').check()
   await page.getByRole('button', { name: 'Save RSVP' }).click()
 
-  await expect(page.getByRole('alert')).toHaveText('Unable to save RSVP')
+  // Verify error is shown
+  const alerts = page.getByRole('alert')
+  await expect(alerts).not.toHaveCount(0)
+  await expect(alerts.first()).toContainText('Unable to save RSVP')
+
+  // Verify form remains enabled for retry
   await expect(page.getByRole('button', { name: 'Save RSVP' })).toBeEnabled()
   await expect(page.getByLabel('Decline')).toBeEnabled()
+})
+
+test('hides meal preferences when not accepting invitation', async ({ page }) => {
+  await installRsvpApi(page)
+
+  await page.goto('/rsvp')
+
+  // Initially, guest is accepted so meal preferences are visible
+  await expect(page.getByLabel('Meal Choice')).toBeVisible()
+  await expect(page.getByLabel('Dietary Notes')).toBeVisible()
+
+  // Change to declined - meal preferences should disappear
+  await page.getByLabel('Decline').check()
+  await expect(page.getByLabel('Meal Choice')).not.toBeVisible()
+  await expect(page.getByLabel('Dietary Notes')).not.toBeVisible()
+
+  // Change back to accepted - meal preferences should reappear
+  await page.getByLabel('Accept').check()
+  await expect(page.getByLabel('Meal Choice')).toBeVisible()
+  await expect(page.getByLabel('Dietary Notes')).toBeVisible()
 })

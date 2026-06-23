@@ -100,7 +100,13 @@ if (LIVE_E2E) {
     const dietaryNotes = 'Gluten-free'
     const plusOneName = 'Live Test Plus One'
 
+    // Accept to show meal preferences
     await page.getByLabel('Accept').check()
+
+    // Meal preferences should now be visible
+    await expect(page.getByLabel('Meal Choice')).toBeVisible()
+
+    // Fill out preferences
     await page.getByLabel('Meal Choice').selectOption(mealChoice)
     await page.getByLabel('Dietary Notes').fill(dietaryNotes)
     await page.getByLabel('Plus One Name').fill(plusOneName)
@@ -228,6 +234,11 @@ if (LIVE_E2E) {
 
     // Step 5: Fill out form
     await page.getByLabel('Accept').check()
+
+    // Meal preferences should now be visible
+    await expect(page.getByLabel('Meal Choice')).toBeVisible()
+
+    // Fill out preferences
     await page.getByLabel('Meal Choice').selectOption('fish')
     await page.getByLabel('Dietary Notes').fill('Gluten-free')
     await page.getByLabel('Plus One Name').fill('Mocked Plus One')
