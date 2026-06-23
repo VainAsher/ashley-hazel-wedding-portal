@@ -2,6 +2,9 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { AuthApiError, fetchCurrentUser, loginWithInviteCode } from '../api/auth'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Alert } from '../components/ui/alert'
 
 function inviteErrorMessage(error: unknown): string {
   if (error instanceof AuthApiError && error.status === 401) {
@@ -44,104 +47,36 @@ export function Invite() {
   }
 
   return (
-    <main style={pageStyle}>
-      <section style={panelStyle}>
-        <div style={headerStyle}>
-          <h1 style={titleStyle}>Enter Invite Code</h1>
+    <main className="grid items-start min-h-[calc(100vh-52px)] p-5">
+      <section className="border border-[#d6d9df] rounded-md grid gap-[18px] max-w-[420px] p-5 w-full">
+        <div className="grid gap-1.5">
+          <h1 className="text-2xl leading-tight font-semibold">Enter Invite Code</h1>
         </div>
 
-        <form onSubmit={handleSubmit} style={formStyle}>
-          <label htmlFor="invite-code" style={labelStyle}>
+        <form onSubmit={handleSubmit} className="grid gap-3">
+          <label htmlFor="invite-code" className="text-sm font-bold text-[#374151]">
             Invite Code
           </label>
-          <input
+          <Input
             autoComplete="off"
             id="invite-code"
             name="inviteCode"
             onChange={(event) => setInviteCode(event.target.value)}
-            style={inputStyle}
             type="text"
             value={inviteCode}
           />
 
           {error && (
-            <div role="alert" style={errorStyle}>
+            <Alert variant="destructive">
               {error}
-            </div>
+            </Alert>
           )}
 
-          <button disabled={submitting} style={primaryButtonStyle} type="submit">
+          <Button disabled={submitting} type="submit">
             {submitting ? 'Checking...' : 'Enter'}
-          </button>
+          </Button>
         </form>
       </section>
     </main>
   )
-}
-
-const pageStyle = {
-  alignItems: 'start',
-  display: 'grid',
-  minHeight: 'calc(100vh - 52px)',
-  padding: '20px',
-}
-
-const panelStyle = {
-  border: '1px solid #d6d9df',
-  borderRadius: '6px',
-  display: 'grid',
-  gap: '18px',
-  maxWidth: '420px',
-  padding: '20px',
-  width: '100%',
-}
-
-const headerStyle = {
-  display: 'grid',
-  gap: '6px',
-}
-
-const titleStyle = {
-  fontSize: '26px',
-  lineHeight: 1.2,
-  margin: 0,
-}
-
-const formStyle = {
-  display: 'grid',
-  gap: '12px',
-}
-
-const labelStyle = {
-  color: '#374151',
-  fontSize: '14px',
-  fontWeight: 700,
-}
-
-const inputStyle = {
-  border: '1px solid #aeb6c2',
-  borderRadius: '4px',
-  fontSize: '16px',
-  padding: '10px',
-}
-
-const primaryButtonStyle = {
-  background: '#1f6f5b',
-  border: '1px solid #1f6f5b',
-  borderRadius: '4px',
-  color: '#ffffff',
-  cursor: 'pointer',
-  fontSize: '14px',
-  fontWeight: 700,
-  minHeight: '42px',
-  padding: '10px 14px',
-}
-
-const errorStyle = {
-  background: '#fef2f2',
-  border: '1px solid #fecaca',
-  borderRadius: '4px',
-  color: '#991b1b',
-  fontSize: '14px',
-  padding: '10px',
 }
