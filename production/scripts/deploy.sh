@@ -360,6 +360,37 @@ apply_migrations() {
 }
 
 # ---------------------------------------------------------------------------
+# Reconcile the application DB role's password to the current POSTGRES_PASSWORD
+# secret. Postgres only applies POSTGRES_PASSWORD on first volume init, so once
+# the data volume exists a rotated secret leaves the role on its OLD password
+# and the backend can no longer authenticate — every DB query fails even though
+# the container reports "healthy" (liveness does not touch the DB). Re-running
+# an idempotent ALTER USER over the local-socket trust path (the same path
+# migrations use, so it works regardless of the role's current password) keeps
+# the role password in sync on every deploy. Safe to run repeatedly.
+# ---------------------------------------------------------------------------
+reconcile_db_password() {
+  if [ "$DRY_RUN" = "1" ]; then
+    log "[dry-run] skipping DB role password reconciliation"
+    return 0
+  fi
+
+  local db_user="${POSTGRES_USER:-wedding}"
+  local db_name="${POSTGRES_DB:-wedding_dev}"
+
+  [ -n "${POSTGRES_PASSWORD:-}" ] \
+    || die "POSTGRES_PASSWORD is empty; cannot reconcile DB role password."
+
+  log "Reconciling '$db_user' role password to the current secret."
+  # Pass the password as a psql variable and quote it with :'pw' so special
+  # characters are handled safely and it is never interpolated into SQL text.
+  compose_q exec -T postgresql \
+    psql -U "$db_user" -d "$db_name" -v ON_ERROR_STOP=1 -v pw="$POSTGRES_PASSWORD" \
+    -c "ALTER USER \"$db_user\" WITH PASSWORD :'pw';" >/dev/null \
+    || die "Could not reconcile DB role password."
+}
+
+# ---------------------------------------------------------------------------
 # Rollback state
 # ---------------------------------------------------------------------------
 record_tags() {
@@ -453,6 +484,8 @@ deploy() {
     fi
     die "Deploy of $IMAGE_TAG failed health checks and no previous tag exists to roll back to."
   fi
+
+  reconcile_db_password
 
   apply_migrations
 
