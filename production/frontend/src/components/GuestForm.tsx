@@ -50,7 +50,7 @@ function initialFormState(defaultWeddingId: number): GuestFormState {
   }
 }
 
-function formStateFromGuest(guest: Guest | null | undefined, defaultWeddingId: number) {
+function formStateFromGuest(guest: Guest | null | undefined, defaultWeddingId: number): GuestFormState {
   if (!guest) {
     return initialFormState(defaultWeddingId)
   }
@@ -64,7 +64,7 @@ function formStateFromGuest(guest: Guest | null | undefined, defaultWeddingId: n
     rsvp_status: guest.rsvp_status,
     dietary_restrictions: guest.dietary_restrictions ?? '',
     plus_one_name: guest.plus_one_name ?? '',
-    plus_one_rsvp: guest.plus_one_rsvp ?? '',
+    plus_one_rsvp: (guest.plus_one_rsvp ?? '') as '' | RsvpStatus,
     plus_one_dietary: guest.plus_one_dietary ?? '',
     table_number: guest.table_number === null ? '' : String(guest.table_number),
     seat_number: guest.seat_number === null ? '' : String(guest.seat_number),

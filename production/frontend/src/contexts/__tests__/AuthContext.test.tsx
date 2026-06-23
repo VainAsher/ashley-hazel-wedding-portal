@@ -1,6 +1,7 @@
 import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import '@testing-library/jest-dom'
 import { AuthProvider, useAuth } from '../AuthContext'
 import * as authApi from '@/api/auth'
 

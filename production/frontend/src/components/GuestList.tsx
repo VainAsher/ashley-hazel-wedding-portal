@@ -204,7 +204,7 @@ const errorStyle = {
 }
 
 const tableWrapStyle = {
-  overflowX: 'auto',
+  overflowX: 'auto' as const,
   width: '100%',
 }
 

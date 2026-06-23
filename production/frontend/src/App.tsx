@@ -12,37 +12,33 @@ function App() {
       <div style={appStyle}>
         <nav aria-label="Primary" style={navStyle}>
           <NavLink
-            style={({ isActive }) => ({
-              ...navLinkStyle,
-              ...(isActive ? activeNavLinkStyle : null),
-            })}
+            className={({ isActive }) =>
+              `nav-link ${isActive ? 'nav-link-active' : ''}`
+            }
             to="/invite"
           >
             Invite
           </NavLink>
           <NavLink
-            style={({ isActive }) => ({
-              ...navLinkStyle,
-              ...(isActive ? activeNavLinkStyle : null),
-            })}
+            className={({ isActive }) =>
+              `nav-link ${isActive ? 'nav-link-active' : ''}`
+            }
             to="/rsvp"
           >
             RSVP
           </NavLink>
           <NavLink
-            style={({ isActive }) => ({
-              ...navLinkStyle,
-              ...(isActive ? activeNavLinkStyle : null),
-            })}
+            className={({ isActive }) =>
+              `nav-link ${isActive ? 'nav-link-active' : ''}`
+            }
             to="/admin"
           >
             Admin
           </NavLink>
           <NavLink
-            style={({ isActive }) => ({
-              ...navLinkStyle,
-              ...(isActive ? activeNavLinkStyle : null),
-            })}
+            className={({ isActive }) =>
+              `nav-link ${isActive ? 'nav-link-active' : ''}`
+            }
             to="/guests"
           >
             Guests
