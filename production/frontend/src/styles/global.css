@@ -1,0 +1,277 @@
+/* Global Styles */
+
+/* Import design tokens */
+@import './design-tokens.css';
+
+/* Import Google Fonts */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap");
+
+/* Tailwind CSS Directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base HTML Element Styles */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  *,
+  *::before,
+  *::after {
+    @apply box-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-semibold tracking-tight;
+  }
+
+  h1 {
+    @apply text-4xl font-bold;
+  }
+
+  h2 {
+    @apply text-3xl font-bold;
+  }
+
+  h3 {
+    @apply text-2xl font-semibold;
+  }
+
+  h4 {
+    @apply text-xl font-semibold;
+  }
+
+  h5 {
+    @apply text-lg font-semibold;
+  }
+
+  h6 {
+    @apply text-base font-semibold;
+  }
+
+  p {
+    @apply text-base leading-relaxed;
+  }
+
+  a {
+    @apply text-primary hover:text-primary/80 transition-colors;
+  }
+
+  button {
+    @apply font-medium transition-colors;
+  }
+
+  input,
+  textarea,
+  select {
+    @apply border border-input bg-background text-foreground;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-muted-foreground;
+  }
+
+  input:focus,
+  textarea:focus,
+  select:focus {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  hr {
+    @apply border-t border-border;
+  }
+
+  code,
+  kbd,
+  pre {
+    @apply font-mono;
+  }
+
+  code {
+    @apply bg-muted px-1.5 py-0.5 rounded text-sm;
+  }
+
+  pre {
+    @apply bg-muted p-4 rounded-lg overflow-auto;
+  }
+
+  table {
+    @apply w-full;
+  }
+
+  th {
+    @apply bg-muted text-foreground font-semibold text-left px-4 py-2 border-b border-border;
+  }
+
+  td {
+    @apply px-4 py-2 border-b border-border;
+  }
+}
+
+/* Component Utilities */
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+
+  .btn-secondary {
+    @apply btn bg-secondary text-secondary-foreground hover:bg-secondary/90;
+  }
+
+  .btn-accent {
+    @apply btn bg-accent text-accent-foreground hover:bg-accent/90;
+  }
+
+  .btn-outline {
+    @apply btn border-2 border-primary text-primary hover:bg-primary/10;
+  }
+
+  .btn-ghost {
+    @apply btn text-foreground hover:bg-muted;
+  }
+
+  .btn-destructive {
+    @apply btn bg-destructive text-destructive-foreground hover:bg-destructive/90;
+  }
+
+  .card {
+    @apply rounded-lg border border-border bg-background p-6;
+  }
+
+  .input-base {
+    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .label-base {
+    @apply text-sm font-medium text-foreground;
+  }
+
+  .text-muted {
+    @apply text-muted-foreground;
+  }
+
+  .divider {
+    @apply my-4 h-px bg-border;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full bg-muted px-3 py-1 text-sm font-medium text-muted-foreground;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary text-primary-foreground;
+  }
+
+  .badge-accent {
+    @apply badge bg-accent text-accent-foreground;
+  }
+
+  .badge-destructive {
+    @apply badge bg-destructive text-destructive-foreground;
+  }
+}
+
+/* Utility Patterns */
+@layer utilities {
+  /* Responsive display utilities */
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+
+  .flex-between {
+    @apply flex items-center justify-between;
+  }
+
+  .grid-center {
+    @apply grid place-items-center;
+  }
+
+  /* Text utilities */
+  .text-xs {
+    @apply text-xs;
+  }
+
+  .text-sm {
+    @apply text-sm;
+  }
+
+  .text-base {
+    @apply text-base;
+  }
+
+  .text-lg {
+    @apply text-lg;
+  }
+
+  .text-xl {
+    @apply text-xl;
+  }
+
+  .text-2xl {
+    @apply text-2xl;
+  }
+
+  /* Container queries support */
+  .container {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Scroll behavior */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Accessibility - Visually hidden but screen-reader accessible */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Print styles */
+@media print {
+  body {
+    @apply bg-white text-black;
+  }
+
+  a {
+    @apply text-blue-600 underline;
+  }
+
+  .no-print {
+    @apply hidden;
+  }
+}
