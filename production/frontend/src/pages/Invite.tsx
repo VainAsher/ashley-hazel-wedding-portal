@@ -4,7 +4,10 @@ import { useNavigate } from 'react-router-dom'
 import { AuthApiError, fetchCurrentUser, loginWithInviteCode } from '../api/auth'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
 import { Alert } from '../components/ui/alert'
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { AuthLayout } from '../components/AuthLayout'
 
 function inviteErrorMessage(error: unknown): string {
   if (error instanceof AuthApiError && error.status === 401) {
@@ -47,36 +50,40 @@ export function Invite() {
   }
 
   return (
-    <main className="grid items-start min-h-[calc(100vh-52px)] p-5">
-      <section className="border border-[#d6d9df] rounded-md grid gap-[18px] max-w-[420px] p-5 w-full">
-        <div className="grid gap-1.5">
-          <h1 className="text-2xl leading-tight font-semibold">Enter Invite Code</h1>
-        </div>
+    <AuthLayout title="Enter Invite Code">
+      <Card>
+        <CardHeader>
+          <CardTitle>Welcome</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="invite-code">
+                Invite Code
+              </Label>
+              <Input
+                autoComplete="off"
+                id="invite-code"
+                name="inviteCode"
+                onChange={(event) => setInviteCode(event.target.value)}
+                placeholder="Enter your invite code"
+                type="text"
+                value={inviteCode}
+              />
+            </div>
 
-        <form onSubmit={handleSubmit} className="grid gap-3">
-          <label htmlFor="invite-code" className="text-sm font-bold text-[#374151]">
-            Invite Code
-          </label>
-          <Input
-            autoComplete="off"
-            id="invite-code"
-            name="inviteCode"
-            onChange={(event) => setInviteCode(event.target.value)}
-            type="text"
-            value={inviteCode}
-          />
+            {error && (
+              <Alert variant="destructive">
+                {error}
+              </Alert>
+            )}
 
-          {error && (
-            <Alert variant="destructive">
-              {error}
-            </Alert>
-          )}
-
-          <Button disabled={submitting} type="submit">
-            {submitting ? 'Checking...' : 'Enter'}
-          </Button>
-        </form>
-      </section>
-    </main>
+            <Button disabled={submitting} type="submit" className="w-full">
+              {submitting ? 'Checking...' : 'Enter'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+    </AuthLayout>
   )
 }
