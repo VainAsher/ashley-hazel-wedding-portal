@@ -143,6 +143,21 @@ test('authenticated couple root traffic lands on admin stub', async ({ page }) =
 
   await expect(page).toHaveURL(/\/admin$/)
   await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible()
+
+  // New dashboard layout: scope to <main> to avoid strict-mode duplicate-text
+  // violations with the AdminLayout sidebar/header navigation.
+  const main = page.getByRole('main')
+  await expect(main.getByRole('heading', { name: 'Planning Modules' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Recent Activity' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Invite Management' })).toBeVisible()
+
+  // Stat cards render placeholder figures.
+  await expect(main.getByText('RSVP Status')).toBeVisible()
+  await expect(main.getByText('Responses received (placeholder)')).toBeVisible()
+
+  // Planning modules link out (Guests resolves to the real /guests route).
+  await expect(main.getByRole('link', { name: /Guests/ })).toHaveAttribute('href', '/guests')
+  await expect(main.getByRole('link', { name: /Budget/ })).toHaveAttribute('href', '/admin/budget')
 })
 
 test('guest admin traffic redirects to RSVP form', async ({ page }) => {

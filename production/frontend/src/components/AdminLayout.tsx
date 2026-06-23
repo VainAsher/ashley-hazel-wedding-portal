@@ -24,11 +24,12 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
+      {/* Sidebar: off-canvas on mobile, in-flow on >= sm screens so it never
+          squeezes the main content on narrow viewports. */}
       <aside
         className={`${
           sidebarOpen ? 'w-64' : 'w-20'
-        } bg-gray-900 text-white transition-all duration-300 flex flex-col sticky top-0 h-screen`}
+        } bg-gray-900 text-white transition-all duration-300 flex-col sticky top-0 h-screen hidden sm:flex`}
       >
         {/* Logo */}
         <div className="h-16 border-b border-gray-800 flex items-center justify-between px-4">
@@ -120,17 +121,6 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
         <main className="flex-1 px-4 sm:px-6 lg:px-8 py-8 overflow-auto">
           {children}
         </main>
-      </div>
-
-      {/* Mobile Sidebar Toggle (for small screens) */}
-      <div className="sm:hidden fixed bottom-4 right-4 z-50">
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg"
-          aria-label="Toggle navigation"
-        >
-          {sidebarOpen ? '✕' : '☰'}
-        </button>
       </div>
     </div>
   )
