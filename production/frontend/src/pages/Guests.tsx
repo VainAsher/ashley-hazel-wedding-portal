@@ -2,6 +2,8 @@ import { useRef, useState } from 'react'
 
 import { GuestForm } from '../components/GuestForm'
 import { GuestList, type Guest, type GuestListHandle } from '../components/GuestList'
+import { Button } from '../components/ui/button'
+import { Alert } from '../components/ui/alert'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
@@ -102,36 +104,36 @@ export function Guests() {
   }
 
   return (
-    <main style={pageStyle}>
-      <section style={headerStyle}>
+    <main className="grid gap-[18px] p-5">
+      <section className="flex flex-wrap items-center gap-3.5 justify-between">
         <div>
-          <h1 style={titleStyle}>Guest Management</h1>
-          <p style={metaStyle}>{guestCount} guests</p>
+          <h1 className="text-[#1f2933] text-2xl leading-tight m-0">Guest Management</h1>
+          <p className="text-[#586272] text-sm m-1 mt-1">{guestCount} guests</p>
         </div>
 
-        <button
+        <Button
           onClick={handleAddGuest}
-          style={formMode === 'create' ? secondaryButtonStyle : primaryButtonStyle}
+          variant={formMode === 'create' ? 'outline' : 'default'}
           type="button"
         >
           {formMode === 'create' ? 'Cancel' : 'Add Guest'}
-        </button>
+        </Button>
       </section>
 
       {feedback && (
-        <div aria-live="polite" role="status" style={successStyle}>
+        <Alert variant="success" aria-live="polite" role="status">
           {feedback}
-        </div>
+        </Alert>
       )}
       {actionError && (
-        <div role="alert" style={errorStyle}>
+        <Alert variant="destructive">
           {actionError}
-        </div>
+        </Alert>
       )}
 
       {formMode && (
-        <section style={sectionStyle}>
-          <h2 style={sectionTitleStyle}>{formMode === 'edit' ? 'Edit Guest' : 'Add Guest'}</h2>
+        <section className="min-w-0">
+          <h2 className="text-[#1f2933] text-xl leading-[1.25] m-0 mb-3">{formMode === 'edit' ? 'Edit Guest' : 'Add Guest'}</h2>
           <GuestForm
             guest={selectedGuest}
             mode={formMode === 'edit' ? 'edit' : 'create'}
@@ -142,57 +144,57 @@ export function Guests() {
       )}
 
       {selectedGuest && formMode !== 'edit' && (
-        <section aria-labelledby="guest-details-title" style={detailsStyle}>
-          <div style={detailsHeaderStyle}>
-            <h2 id="guest-details-title" style={sectionTitleStyle}>
+        <section aria-labelledby="guest-details-title" className="border border-[#d6d9df] rounded-md p-4">
+          <div className="flex flex-wrap items-center gap-3 justify-between">
+            <h2 id="guest-details-title" className="text-[#1f2933] text-xl leading-[1.25] m-0 mb-3">
               Guest Details
             </h2>
-            <button
+            <Button
               onClick={() => handleEditGuest(selectedGuest)}
-              style={secondaryButtonStyle}
+              variant="outline"
               type="button"
             >
               Edit Guest
-            </button>
+            </Button>
           </div>
-          <dl style={detailGridStyle}>
+          <dl className="grid gap-3 grid-cols-[repeat(auto-fit,minmax(180px,1fr))] m-0">
             <div>
-              <dt style={detailLabelStyle}>Name</dt>
-              <dd style={detailValueStyle}>{selectedGuest.name}</dd>
+              <dt className="text-[#586272] text-xs font-bold m-0 uppercase">Name</dt>
+              <dd className="text-[#1f2933] m-1 mt-1">{selectedGuest.name}</dd>
             </div>
             <div>
-              <dt style={detailLabelStyle}>Email</dt>
-              <dd style={detailValueStyle}>{formatValue(selectedGuest.email)}</dd>
+              <dt className="text-[#586272] text-xs font-bold m-0 uppercase">Email</dt>
+              <dd className="text-[#1f2933] m-1 mt-1">{formatValue(selectedGuest.email)}</dd>
             </div>
             <div>
-              <dt style={detailLabelStyle}>Phone</dt>
-              <dd style={detailValueStyle}>{formatValue(selectedGuest.phone)}</dd>
+              <dt className="text-[#586272] text-xs font-bold m-0 uppercase">Phone</dt>
+              <dd className="text-[#1f2933] m-1 mt-1">{formatValue(selectedGuest.phone)}</dd>
             </div>
             <div>
-              <dt style={detailLabelStyle}>Relationship</dt>
-              <dd style={detailValueStyle}>{formatValue(selectedGuest.relationship)}</dd>
+              <dt className="text-[#586272] text-xs font-bold m-0 uppercase">Relationship</dt>
+              <dd className="text-[#1f2933] m-1 mt-1">{formatValue(selectedGuest.relationship)}</dd>
             </div>
             <div>
-              <dt style={detailLabelStyle}>RSVP</dt>
-              <dd style={detailValueStyle}>{selectedGuest.rsvp_status}</dd>
+              <dt className="text-[#586272] text-xs font-bold m-0 uppercase">RSVP</dt>
+              <dd className="text-[#1f2933] m-1 mt-1">{selectedGuest.rsvp_status}</dd>
             </div>
             <div>
-              <dt style={detailLabelStyle}>Table</dt>
-              <dd style={detailValueStyle}>{formatValue(selectedGuest.table_number)}</dd>
+              <dt className="text-[#586272] text-xs font-bold m-0 uppercase">Table</dt>
+              <dd className="text-[#1f2933] m-1 mt-1">{formatValue(selectedGuest.table_number)}</dd>
             </div>
             <div>
-              <dt style={detailLabelStyle}>Seat</dt>
-              <dd style={detailValueStyle}>{formatValue(selectedGuest.seat_number)}</dd>
+              <dt className="text-[#586272] text-xs font-bold m-0 uppercase">Seat</dt>
+              <dd className="text-[#1f2933] m-1 mt-1">{formatValue(selectedGuest.seat_number)}</dd>
             </div>
             <div>
-              <dt style={detailLabelStyle}>Notes</dt>
-              <dd style={detailValueStyle}>{formatValue(selectedGuest.notes)}</dd>
+              <dt className="text-[#586272] text-xs font-bold m-0 uppercase">Notes</dt>
+              <dd className="text-[#1f2933] m-1 mt-1">{formatValue(selectedGuest.notes)}</dd>
             </div>
           </dl>
         </section>
       )}
 
-      <section style={sectionStyle}>
+      <section className="min-w-0">
         <GuestList
           ref={listRef}
           onCountChange={setGuestCount}
@@ -206,110 +208,3 @@ export function Guests() {
       </section>
     </main>
   )
-}
-
-const pageStyle = {
-  display: 'grid',
-  gap: '18px',
-  padding: '20px',
-}
-
-const headerStyle = {
-  alignItems: 'center',
-  display: 'flex',
-  flexWrap: 'wrap' as const,
-  gap: '14px',
-  justifyContent: 'space-between',
-}
-
-const titleStyle = {
-  color: '#1f2933',
-  fontSize: '28px',
-  lineHeight: 1.2,
-  margin: 0,
-}
-
-const metaStyle = {
-  color: '#586272',
-  fontSize: '14px',
-  margin: '4px 0 0',
-}
-
-const sectionStyle = {
-  minWidth: 0,
-}
-
-const sectionTitleStyle = {
-  color: '#1f2933',
-  fontSize: '20px',
-  lineHeight: 1.25,
-  margin: '0 0 12px',
-}
-
-const primaryButtonStyle = {
-  background: '#1f6f5b',
-  border: '1px solid #1f6f5b',
-  borderRadius: '4px',
-  color: '#fff',
-  cursor: 'pointer',
-  font: 'inherit',
-  fontWeight: 700,
-  padding: '10px 14px',
-  whiteSpace: 'nowrap' as const,
-}
-
-const secondaryButtonStyle = {
-  ...primaryButtonStyle,
-  background: '#fff',
-  color: '#1f6f5b',
-}
-
-const successStyle = {
-  background: '#edf8f3',
-  border: '1px solid #3c8f72',
-  borderRadius: '4px',
-  color: '#1f6f5b',
-  padding: '10px 12px',
-}
-
-const errorStyle = {
-  background: '#fff5f5',
-  border: '1px solid #d64545',
-  borderRadius: '4px',
-  color: '#9f1d1d',
-  padding: '10px 12px',
-}
-
-const detailsStyle = {
-  border: '1px solid #d6d9df',
-  borderRadius: '6px',
-  padding: '16px',
-}
-
-const detailsHeaderStyle = {
-  alignItems: 'center',
-  display: 'flex',
-  flexWrap: 'wrap' as const,
-  gap: '12px',
-  justifyContent: 'space-between',
-}
-
-const detailGridStyle = {
-  display: 'grid',
-  gap: '12px',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-  margin: 0,
-}
-
-const detailLabelStyle = {
-  color: '#586272',
-  fontSize: '12px',
-  fontWeight: 700,
-  margin: 0,
-  textTransform: 'uppercase' as const,
-}
-
-const detailValueStyle = {
-  color: '#1f2933',
-  margin: '4px 0 0',
-}

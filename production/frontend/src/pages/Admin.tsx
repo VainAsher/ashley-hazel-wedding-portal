@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { fetchCurrentUser, type AuthUser } from '../api/auth'
 import { InviteManagement } from '../components/InviteManagement'
+import { Alert } from '../components/ui/alert'
 
 interface AuthState {
   error: string | null
@@ -52,8 +53,8 @@ export function Admin() {
 
   if (loading) {
     return (
-      <main style={pageStyle}>
-        <div role="status" style={statusStyle}>
+      <main className="grid grid-cols-1 min-h-[calc(100vh-52px)]">
+        <div role="status" className="text-[#47505f] text-sm p-5">
           Loading...
         </div>
       </main>
@@ -62,10 +63,10 @@ export function Admin() {
 
   if (error) {
     return (
-      <main style={pageStyle}>
-        <div role="alert" style={errorStyle}>
+      <main className="grid grid-cols-1 min-h-[calc(100vh-52px)]">
+        <Alert variant="destructive">
           {error}
-        </div>
+        </Alert>
       </main>
     )
   }
@@ -79,44 +80,11 @@ export function Admin() {
   }
 
   return (
-    <main style={pageStyle}>
-      <header style={headerStyle}>
-        <h1 style={titleStyle}>Admin Dashboard</h1>
+    <main className="grid grid-cols-1 min-h-[calc(100vh-52px)]">
+      <header className="border-b border-[#d6d9df] p-5">
+        <h1 className="text-2xl font-bold leading-tight m-0">Admin Dashboard</h1>
       </header>
       <InviteManagement weddingId={user.wedding_id} />
     </main>
   )
-}
-
-const pageStyle = {
-  display: 'grid',
-  gridTemplateColumns: '1fr',
-  minHeight: 'calc(100vh - 52px)',
-}
-
-const headerStyle = {
-  borderBottom: '1px solid #d6d9df',
-  padding: '20px',
-}
-
-const titleStyle = {
-  fontSize: '28px',
-  fontWeight: 700,
-  lineHeight: 1.2,
-  margin: 0,
-}
-
-const statusStyle = {
-  color: '#47505f',
-  fontSize: '14px',
-  padding: '20px',
-}
-
-const errorStyle = {
-  background: '#fef2f2',
-  border: '1px solid #fecaca',
-  borderRadius: '4px',
-  color: '#991b1b',
-  fontSize: '14px',
-  padding: '10px',
 }

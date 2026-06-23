@@ -10,6 +10,9 @@ import {
   type MealChoice,
   type RsvpStatus,
 } from '../api/rsvp'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Alert } from '../components/ui/alert'
 
 interface RsvpFormData {
   rsvpStatus: RsvpStatus
@@ -147,30 +150,30 @@ export function RSVP() {
   const formDisabled = submitting || saved
 
   return (
-    <main style={pageStyle}>
-      <section style={panelStyle}>
-        <header style={headerStyle}>
-          <h1 style={titleStyle}>RSVP</h1>
-          {guest && <p style={guestNameStyle}>{guest.name}</p>}
+    <main className="grid items-start min-h-[calc(100vh-52px)] p-5">
+      <section className="border border-[#d6d9df] rounded-md grid gap-[18px] max-w-2xl p-5 w-full">
+        <header className="grid gap-1.5">
+          <h1 className="text-2xl leading-tight m-0">RSVP</h1>
+          {guest && <p className="text-[#47505f] text-base m-0">{guest.name}</p>}
         </header>
 
         {loading && (
-          <div role="status" style={statusStyle}>
+          <div role="status" className="text-[#47505f] text-sm">
             Loading RSVP...
           </div>
         )}
 
         {error && (
-          <div role="alert" style={errorStyle}>
+          <Alert variant="destructive">
             {error}
-          </div>
+          </Alert>
         )}
 
         {!loading && guest && (
-          <form onSubmit={handleSubmit} style={formStyle}>
-            <fieldset disabled={formDisabled} style={fieldsetStyle}>
-              <legend style={legendStyle}>Attendance</legend>
-              <label style={radioLabelStyle}>
+          <form onSubmit={handleSubmit} className="grid gap-4">
+            <fieldset disabled={formDisabled} className="border-0 grid gap-3 m-0 p-0">
+              <legend className="text-[#374151] text-sm font-bold p-0">Attendance</legend>
+              <label className="flex items-center gap-2">
                 <input
                   checked={formData.rsvpStatus === 'accepted'}
                   name="rsvpStatus"
@@ -180,7 +183,7 @@ export function RSVP() {
                 />
                 Accept
               </label>
-              <label style={radioLabelStyle}>
+              <label className="flex items-center gap-2">
                 <input
                   checked={formData.rsvpStatus === 'declined'}
                   name="rsvpStatus"
@@ -190,7 +193,7 @@ export function RSVP() {
                 />
                 Decline
               </label>
-              <label style={radioLabelStyle}>
+              <label className="flex items-center gap-2">
                 <input
                   checked={formData.rsvpStatus === 'tentative'}
                   name="rsvpStatus"
@@ -202,15 +205,15 @@ export function RSVP() {
               </label>
             </fieldset>
 
-            <fieldset disabled={formDisabled} style={fieldsetStyle}>
-              <label htmlFor="meal-choice" style={labelStyle}>
+            <fieldset disabled={formDisabled} className="border-0 grid gap-3 m-0 p-0">
+              <label htmlFor="meal-choice" className="text-sm font-bold text-[#374151]">
                 Meal Choice
               </label>
               <select
                 id="meal-choice"
                 name="mealChoice"
                 onChange={updateField('mealChoice')}
-                style={inputStyle}
+                className="flex h-10 w-full rounded-md border border-[#aeb6c2] bg-white px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={formData.mealChoice}
               >
                 <option value="">Select meal</option>
@@ -219,7 +222,7 @@ export function RSVP() {
                 <option value="vegetarian">Vegetarian</option>
               </select>
 
-              <label htmlFor="dietary-notes" style={labelStyle}>
+              <label htmlFor="dietary-notes" className="text-sm font-bold text-[#374151]">
                 Dietary Notes
               </label>
               <textarea
@@ -228,148 +231,33 @@ export function RSVP() {
                 name="dietaryNotes"
                 onChange={updateField('dietaryNotes')}
                 rows={4}
-                style={textAreaStyle}
+                className="flex w-full rounded-md border border-[#aeb6c2] bg-white px-3 py-2 text-base resize-vertical focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
                 value={formData.dietaryNotes}
               />
 
-              <label htmlFor="plus-one-name" style={labelStyle}>
+              <label htmlFor="plus-one-name" className="text-sm font-bold text-[#374151]">
                 Plus One Name
               </label>
-              <input
+              <Input
                 id="plus-one-name"
                 name="plusOneName"
                 onChange={updateField('plusOneName')}
-                style={inputStyle}
                 type="text"
                 value={formData.plusOneName}
               />
             </fieldset>
 
             {statusMessage && (
-              <div role="status" style={successStyle}>
+              <Alert variant="success">
                 {statusMessage}
-              </div>
+              </Alert>
             )}
 
-            <button disabled={formDisabled} style={primaryButtonStyle} type="submit">
+            <Button disabled={formDisabled} type="submit">
               {saved ? 'Saved' : submitting ? 'Saving...' : 'Save RSVP'}
-            </button>
+            </Button>
           </form>
         )}
       </section>
     </main>
   )
-}
-
-const pageStyle = {
-  alignItems: 'start',
-  display: 'grid',
-  minHeight: 'calc(100vh - 52px)',
-  padding: '20px',
-}
-
-const panelStyle = {
-  border: '1px solid #d6d9df',
-  borderRadius: '6px',
-  display: 'grid',
-  gap: '18px',
-  maxWidth: '640px',
-  padding: '20px',
-  width: '100%',
-}
-
-const headerStyle = {
-  display: 'grid',
-  gap: '6px',
-}
-
-const titleStyle = {
-  fontSize: '28px',
-  lineHeight: 1.2,
-  margin: 0,
-}
-
-const guestNameStyle = {
-  color: '#47505f',
-  fontSize: '16px',
-  margin: 0,
-}
-
-const formStyle = {
-  display: 'grid',
-  gap: '16px',
-}
-
-const fieldsetStyle = {
-  border: '0',
-  display: 'grid',
-  gap: '12px',
-  margin: 0,
-  padding: 0,
-}
-
-const legendStyle = {
-  color: '#374151',
-  fontSize: '14px',
-  fontWeight: 700,
-  padding: 0,
-}
-
-const radioLabelStyle = {
-  alignItems: 'center',
-  display: 'flex',
-  gap: '8px',
-}
-
-const labelStyle = {
-  color: '#374151',
-  fontSize: '14px',
-  fontWeight: 700,
-}
-
-const inputStyle = {
-  border: '1px solid #aeb6c2',
-  borderRadius: '4px',
-  fontSize: '16px',
-  padding: '10px',
-}
-
-const textAreaStyle = {
-  ...inputStyle,
-  resize: 'vertical' as const,
-}
-
-const primaryButtonStyle = {
-  background: '#1f6f5b',
-  border: '1px solid #1f6f5b',
-  borderRadius: '4px',
-  color: '#ffffff',
-  cursor: 'pointer',
-  fontSize: '14px',
-  fontWeight: 700,
-  minHeight: '42px',
-  padding: '10px 14px',
-}
-
-const statusStyle = {
-  color: '#47505f',
-  fontSize: '14px',
-}
-
-const successStyle = {
-  background: '#ecfdf5',
-  border: '1px solid #bbf7d0',
-  borderRadius: '4px',
-  color: '#166534',
-  fontSize: '14px',
-  padding: '10px',
-}
-
-const errorStyle = {
-  background: '#fef2f2',
-  border: '1px solid #fecaca',
-  borderRadius: '4px',
-  color: '#991b1b',
-  fontSize: '14px',
-  padding: '10px',
-}
