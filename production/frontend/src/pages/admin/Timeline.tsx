@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 
 import { AdminLayout } from '@/components/AdminLayout'
 import { Alert } from '@/components/ui/alert'
+import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -53,10 +54,10 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
   { value: 'high', label: 'High' },
 ]
 
-const PRIORITY_BADGE: Record<TaskPriority, string> = {
-  low: 'bg-gray-100 text-gray-700',
-  medium: 'bg-blue-100 text-blue-800',
-  high: 'bg-red-100 text-red-800',
+const PRIORITY_VARIANT: Record<TaskPriority, BadgeProps['variant']> = {
+  low: 'neutral',
+  medium: 'info',
+  high: 'danger',
 }
 
 type DialogMode = 'create' | 'edit'
@@ -298,12 +299,9 @@ export function Timeline() {
               >
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-gray-900 m-0">{column.label}</h3>
-                  <span
-                    className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700"
-                    aria-label={`${column.tasks.length} tasks`}
-                  >
+                  <Badge variant="neutral" aria-label={`${column.tasks.length} tasks`}>
                     {column.tasks.length}
-                  </span>
+                  </Badge>
                 </div>
 
                 <div className="grid gap-3">
@@ -317,11 +315,9 @@ export function Timeline() {
                         <CardContent className="p-3 grid gap-2">
                           <div className="flex items-start justify-between gap-2">
                             <p className="font-medium text-gray-900 m-0">{task.title}</p>
-                            <span
-                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_BADGE[task.priority]}`}
-                            >
+                            <Badge variant={PRIORITY_VARIANT[task.priority]}>
                               {priorityLabel(task.priority)}
-                            </span>
+                            </Badge>
                           </div>
 
                           {task.description && (

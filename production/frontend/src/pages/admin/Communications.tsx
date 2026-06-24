@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 
 import { AdminLayout } from '@/components/AdminLayout'
 import { Alert } from '@/components/ui/alert'
+import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -79,10 +80,10 @@ const AUDIENCE_LABELS: Record<CommunicationAudience, string> = {
   declined: 'Declined',
 }
 
-const STATUS_BADGE_CLASS: Record<CommunicationStatus, string> = {
-  draft: 'bg-gray-100 text-gray-700',
-  scheduled: 'bg-amber-100 text-amber-800',
-  sent: 'bg-green-100 text-green-800',
+const STATUS_VARIANT: Record<CommunicationStatus, BadgeProps['variant']> = {
+  draft: 'neutral',
+  scheduled: 'warning',
+  sent: 'success',
 }
 
 const STATUS_LABELS: Record<CommunicationStatus, string> = {
@@ -381,17 +382,13 @@ export function Communications() {
                   <TableRow key={message.id}>
                     <TableCell className="font-medium text-gray-900">{message.subject}</TableCell>
                     <TableCell>
-                      <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
-                        {CHANNEL_LABELS[message.channel]}
-                      </span>
+                      <Badge variant="info">{CHANNEL_LABELS[message.channel]}</Badge>
                     </TableCell>
                     <TableCell>{AUDIENCE_LABELS[message.audience]}</TableCell>
                     <TableCell>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE_CLASS[message.status]}`}
-                      >
+                      <Badge variant={STATUS_VARIANT[message.status]}>
                         {STATUS_LABELS[message.status]}
-                      </span>
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       {displayValue(message.sent_at ?? message.scheduled_for)}

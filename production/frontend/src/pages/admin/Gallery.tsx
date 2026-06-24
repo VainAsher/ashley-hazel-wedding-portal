@@ -4,6 +4,7 @@ import { ImageIcon } from 'lucide-react'
 
 import { AdminLayout } from '@/components/AdminLayout'
 import { Alert } from '@/components/ui/alert'
+import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -25,20 +26,17 @@ import {
   type GalleryStatus,
 } from '@/hooks/useGallery'
 
-const STATUS_STYLES: Record<GalleryStatus, string> = {
-  approved: 'bg-green-100 text-green-800',
-  pending: 'bg-amber-100 text-amber-800',
-  rejected: 'bg-red-100 text-red-800',
+const STATUS_VARIANT: Record<GalleryStatus, BadgeProps['variant']> = {
+  approved: 'success',
+  pending: 'warning',
+  rejected: 'danger',
 }
 
 function StatusBadge({ status }: { status: GalleryStatus }) {
-  const className = STATUS_STYLES[status] ?? 'bg-gray-100 text-gray-700'
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ${className}`}
-    >
+    <Badge variant={STATUS_VARIANT[status] ?? 'neutral'} className="capitalize">
       {status}
-    </span>
+    </Badge>
   )
 }
 

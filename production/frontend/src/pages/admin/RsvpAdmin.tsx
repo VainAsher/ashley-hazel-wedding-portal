@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 
 import { AdminLayout } from '@/components/AdminLayout'
 import { Alert } from '@/components/ui/alert'
+import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
@@ -35,11 +36,11 @@ const MEAL_LABELS: Record<string, string> = {
   vegetarian: 'Vegetarian',
 }
 
-const STATUS_BADGE: Record<RsvpStatus, string> = {
-  accepted: 'bg-green-100 text-green-800',
-  declined: 'bg-red-100 text-red-800',
-  pending: 'bg-gray-100 text-gray-700',
-  tentative: 'bg-yellow-100 text-yellow-800',
+const STATUS_VARIANT: Record<RsvpStatus, BadgeProps['variant']> = {
+  accepted: 'success',
+  declined: 'danger',
+  pending: 'neutral',
+  tentative: 'warning',
 }
 
 function displayValue(value: string | number | null | undefined): string {
@@ -213,11 +214,9 @@ export function RsvpAdmin() {
                       <TableRow key={guest.id}>
                         <TableCell className="font-medium text-gray-900">{guest.name}</TableCell>
                         <TableCell>
-                          <span
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_BADGE[guest.rsvp_status]}`}
-                          >
+                          <Badge variant={STATUS_VARIANT[guest.rsvp_status]} className="capitalize">
                             {guest.rsvp_status}
-                          </span>
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           {guest.meal_choice

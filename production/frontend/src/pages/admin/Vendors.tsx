@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 
 import { AdminLayout } from '@/components/AdminLayout'
 import { Alert } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -292,15 +293,9 @@ export function Vendors() {
                     <TableCell>{displayValue(vendor.email)}</TableCell>
                     <TableCell>{displayValue(vendor.phone)}</TableCell>
                     <TableCell>
-                      <span
-                        className={
-                          vendor.contract_signed
-                            ? 'inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800'
-                            : 'inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700'
-                        }
-                      >
+                      <Badge variant={vendor.contract_signed ? 'success' : 'neutral'}>
                         {vendor.contract_signed ? 'Signed' : 'Unsigned'}
-                      </span>
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-2">

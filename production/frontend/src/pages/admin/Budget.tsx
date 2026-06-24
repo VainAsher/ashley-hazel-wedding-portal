@@ -3,6 +3,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { formatCurrency } from '@/lib/format'
 import { AdminLayout } from '@/components/AdminLayout'
 import { Alert } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -352,15 +353,9 @@ export function Budget() {
                     <TableCell>{formatCurrency(item.estimated_cost)}</TableCell>
                     <TableCell>{formatCurrency(item.actual_cost)}</TableCell>
                     <TableCell>
-                      <span
-                        className={
-                          item.paid
-                            ? 'inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800'
-                            : 'inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700'
-                        }
-                      >
+                      <Badge variant={item.paid ? 'success' : 'neutral'}>
                         {item.paid ? 'Paid' : 'Unpaid'}
-                      </span>
+                      </Badge>
                     </TableCell>
                     <TableCell>{displayValue(item.payment_date)}</TableCell>
                     <TableCell>
