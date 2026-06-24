@@ -30,8 +30,11 @@ WORKDIR /app
 # App source only (see .dockerignore). Owned by the non-root user.
 COPY --chown=appuser:appuser . .
 
-# Log dir is the mount point for the backend_logs volume; must be writable by appuser.
-RUN mkdir -p logs && chown -R appuser:appuser logs
+# Log and uploads dirs are volume mount points; must exist and be writable by
+# appuser. Pre-creating uploads with appuser ownership means the named volume
+# (uploads_data) inherits that ownership on first mount, and the StaticFiles
+# mount / upload writes succeed whether or not a volume is attached.
+RUN mkdir -p logs uploads && chown -R appuser:appuser logs uploads
 
 USER appuser
 
