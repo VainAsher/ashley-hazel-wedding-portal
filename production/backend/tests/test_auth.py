@@ -172,6 +172,7 @@ class TestAuthRoutes:
             "name": "Ashley & Hazel",
             "role": "couple",
             "wedding_id": TEST_WEDDING_ID,
+            "wedding_phase": response.json()["user"]["wedding_phase"],
         }
 
     def test_me_returns_current_session_user(
