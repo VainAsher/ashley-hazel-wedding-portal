@@ -45,8 +45,13 @@
    ```bash
    pkill -f "python main.py"
    nohup venv/bin/python main.py > /tmp/wedding-dashboard-backend.log 2>&1 < /dev/null &
-   curl -sS http://localhost:3001/health
+   curl -sS http://localhost:3001/health        # liveness (does not touch DB)
+   curl -sS http://localhost:3001/health/ready   # readiness (verifies DB; 503 if unreachable)
    ```
+
+   After a credential change, prefer `/health/ready` to confirm the backend can
+   actually reach the database with the new password — `/health` will report
+   healthy even when the DB is unreachable.
 
 6. Confirm old credentials no longer work, then remove them from any password manager or rollback note after the maintenance window closes.
 

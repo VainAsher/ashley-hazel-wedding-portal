@@ -6,7 +6,9 @@ captured even when writes bypass the FastAPI application.
 
 ## Scope
 
-The first audit surface is the `guests` table because it is the active backend
+The audit trail currently covers the `guests` table **only**. No other table
+(invites, tasks, communications, gallery, blessings, weddings, etc.) is audited
+at the database level. Guests were chosen because they are the active backend
 workflow and the table most affected by Week 2 database hardening. Additional
 tables can reuse the same pattern with table-specific audit functions or a
 generic audit function in a later task.

@@ -37,3 +37,10 @@ Before this repo handles real data, create and approve:
 3. backup/export model
 4. data retention rule
 5. manual privacy review checklist
+
+## Current status (v1.0.0-rc1)
+
+As of v1.0.0-rc1 the production database holds **synthetic/demo data only** — seeded by
+migration `008_seed_test_data.sql` (e.g. "Demo Guest", "Alice Anderson", "Bob Butler", and
+the `DEMO-COUPLE` / `DEMO-COORDINATOR` / `DEMO-GUEST` invite codes). No real wedding PII is
+stored yet, and all five pre-approval items above remain open.

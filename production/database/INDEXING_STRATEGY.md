@@ -48,6 +48,30 @@ The initial schema already indexed several foreign keys and simple filters:
 | `idx_gifts_wedding_status` | Registry status tracking |
 | `idx_attire_wedding_status` | Attire status tracking |
 
+## Later Migrations
+
+`005_create_invites_table.sql`, `009_create_communications_and_gallery.sql`,
+and `011_create_blessings.sql` add their own indexes alongside the tables they
+create:
+
+| Index | Migration | Supports |
+|---|---|---|
+| `idx_invites_code` (unique) | 005 | Invite-code lookup at login. |
+| `idx_invites_wedding_role` | 005 | Invites by wedding and role. |
+| `idx_invites_guest_id` | 005 | Invite-to-guest reverse lookup. |
+| `idx_communications_wedding` | 009 | Communications listing per wedding. |
+| `idx_communications_wedding_status` | 009 | Communications filtered by status. |
+| `idx_gallery_wedding` | 009 | Gallery items per wedding. |
+| `idx_gallery_wedding_status` | 009 | Gallery items filtered by status. |
+| `idx_blessings_wedding` | 011 | Blessings wall per wedding. |
+| `idx_blessings_wedding_hidden` | 011 | Visible/hidden blessings filter. |
+
+> **Known drift:** migration 011 creates `idx_blessings_wedding_hidden`
+> (`wedding_id, hidden`), but the SQLAlchemy `Blessing` model declares
+> `idx_blessings_wedding_created` (`wedding_id, created_at DESC`) for its second
+> index. The model and the migration disagree on the second blessings index;
+> the migration is the source of truth for what actually exists in the database.
+
 ## Write Cost
 
 The indexes are limited to fields used in filters, ordering, and joins. Optional guest email and seating indexes are partial where useful to reduce index size and write cost.

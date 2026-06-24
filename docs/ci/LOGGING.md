@@ -22,6 +22,16 @@ LOG_BACKUP_COUNT=5
 Set `LOG_FILE_PATH=` to disable file logging. Relative paths are resolved from
 the backend process working directory.
 
+### In Docker
+
+The backend image runs with working directory `/app`, so the default relative
+`LOG_FILE_PATH=logs/app.log` resolves to `/app/logs/app.log`. That directory is
+the `backend_logs` named volume (mounted at `/app/logs` in `docker-compose.yml`,
+volume name `wedding-backend-logs`), so logs persist across `up`/`down` and
+deploys. Files rotate at `LOG_MAX_BYTES` (10 MB) keeping `LOG_BACKUP_COUNT` (5)
+backups — about 60 MB total per service. In production, `LOG_LEVEL` is set to
+`WARNING` via the prod override.
+
 ## Event Naming
 
 Use short event names as messages, such as:

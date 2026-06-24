@@ -1,5 +1,10 @@
 # Authentication Fixtures - Quick Reference
 
+> This is the API reference for `auth.fixture.ts`. Note that, as of V1.0-rc1, the
+> specs do **not** use these fixtures yet — they use plain `test` + inline
+> `page.route(...)` mocks + the `page-cleanup.ts` helpers (see `README.md`).
+> Use this when adopting the fixtures in a new spec.
+
 ## Import
 
 ```typescript
@@ -143,11 +148,14 @@ testUsers.coordinator // { id: 50, name: 'Event Coordinator', role: 'coordinator
 
 ## Error Tracking (Built-in)
 
-All fixtures automatically:
+`authenticatedTest` and `testWithAuth` automatically:
+- ✅ Reset state via `cleanupPageState`
 - ✅ Track browser console errors
 - ✅ Track page errors
-- ✅ Verify no unexpected errors in `afterEach`
-- ✅ Ignore expected 401 errors
+
+They do **not** assert errors for you in an `afterEach` — call
+`verifyNoUnexpectedErrors(page)` yourself at the end of the test. Its default
+ignore list covers 401s, `net::ERR_FAILED`, and clipboard permission errors.
 
 To verify errors manually:
 
@@ -258,10 +266,11 @@ testWithAuth('network debug', async ({ page }) => {
 ```
 tests/browser/
 ├── fixtures/
-│   ├── auth.fixture.ts          ← Main fixture file
-│   ├── auth.fixture.example.ts  ← Usage examples
+│   ├── page-cleanup.ts          ← Helpers the specs actually use
+│   ├── auth.fixture.ts          ← Fixture library (available, unused by specs)
+│   ├── auth.fixture.example.ts  ← Usage examples (unused template)
 │   ├── README.md                ← Full documentation
-│   ├── MIGRATION_GUIDE.md       ← How to migrate old tests
+│   ├── MIGRATION_GUIDE.md       ← Optional migration sketch
 │   └── QUICK_REFERENCE.md       ← This file
 ├── auth-routing.spec.ts
 ├── invite-management.spec.ts

@@ -14,6 +14,10 @@ and production.
 
 Real `.env` files remain ignored and must not be committed.
 
+The Docker stack also reads `POSTGRES_USER` (default `wedding`) and
+`POSTGRES_DB` (default `wedding_dev`) when composing `DATABASE_URL`;
+`POSTGRES_PASSWORD` is mandatory (compose fails fast if unset).
+
 ## Required Runtime Values
 
 All environments require:
@@ -27,6 +31,10 @@ All environments require:
   `LOG_BACKUP_COUNT`.
 - Optional Sentry settings through `SENTRY_DSN`, `SENTRY_ENVIRONMENT`,
   `SENTRY_RELEASE`, and `SENTRY_SAMPLE_RATE`.
+- Optional Prometheus-compatible metrics through `METRICS_ENABLED` (default
+  `true`), `SLOW_REQUEST_THRESHOLD_MS`, and `SLOW_QUERY_THRESHOLD_MS` (both
+  default `500`).
+- `DATABASE_ECHO_SQL` (default `false`) to log SQL — leave off outside debugging.
 
 Staging and production also require:
 
@@ -34,9 +42,18 @@ Staging and production also require:
 - `FRONTEND_URL`
 - `JWT_SECRET`
 - `API_KEY_SECRET`
+- `SESSION_SECRET_KEY` — the invite-code session signing key. Required outside
+  development and must be at least 16 characters; the validator also rejects
+  obvious dev/placeholder values.
+
+`SESSION_COOKIE_SECURE` (default `false`) is forced to `true` in production via
+`docker-compose.prod.yml`, since secure cookies require the HTTPS termination
+Traefik provides.
 
 Production requires HTTPS API, frontend, and CORS URLs. Production and staging
-reject `DEBUG=true`, placeholder secrets, and development-style secrets.
+reject `DEBUG=true`, placeholder secrets, and development-style secrets (the
+`JWT_SECRET` / `API_KEY_SECRET` / `SESSION_SECRET_KEY` rules above apply to all
+three).
 
 ## Validate An Environment
 
@@ -63,8 +80,10 @@ credentials. It prints whether Sentry is enabled, but never prints the DSN.
 ## Deployment
 
 `production/scripts/deploy.sh` loads `production/backend/.env` before applying
-migrations and starting the backend. Run the validator on the deployment server
-before enabling automated deployment:
+migrations and starting the backend, and re-validates that the required secrets
+(`POSTGRES_PASSWORD`, `JWT_SECRET`, `API_KEY_SECRET`, `SESSION_SECRET_KEY`) are
+present at deploy time, aborting if any are missing. Run the validator on the
+deployment server before enabling automated deployment:
 
 ```bash
 cd ~/wedding-dashboard/production/backend

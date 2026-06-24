@@ -2,6 +2,12 @@
 
 **Status:** Converts Deploy workflow from GitHub-hosted (public internet) to self-hosted (homelab internal network)
 
+> **Related docs**
+> - [`SETUP_GITHUB_SECRETS.md`](SETUP_GITHUB_SECRETS.md) — SSH key, repo/environment secrets, GitHub Environments.
+> - [`../docs/ci/DEPLOYMENT.md`](../docs/ci/DEPLOYMENT.md) — the `deploy.sh` flow this runner triggers, manual usage, and rollback.
+>
+> The Deploy workflow is `runs-on: self-hosted`; until this runner is registered and `Idle`, deploys queue with nothing to pick them up.
+
 ## Why Self-Hosted Runner?
 
 ✅ Direct network access to 192.168.0.32 (staging) and future production VM  

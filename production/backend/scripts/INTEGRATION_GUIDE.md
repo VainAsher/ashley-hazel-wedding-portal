@@ -144,12 +144,15 @@ jobs:
         run: |
           pip install -r production/backend/requirements.txt
       
-      - name: Apply migrations
+      - name: Apply schema and migrations
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost/wedding
         run: |
-          cd production/backend
-          alembic upgrade head
+          # This project uses raw SQL migrations applied via psql — NOT Alembic.
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/schema.sql
+          for f in production/database/migrations/[0-9]*.sql; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
       
       - name: Seed test database
         env:
@@ -168,6 +171,11 @@ jobs:
 
 **Pros**: Clean, explicit, works with CI/CD pipelines
 **Cons**: Requires CI config changes
+
+> Note: the migration loop above applies `008_seed_test_data.sql`, which is a
+> destructive test seed (it deletes and re-inserts `wedding_id = 1` data). That
+> is fine in CI but must never run against a real production wedding database.
+> See `production/database/migrations/README.md`.
 
 ### Option D: Via Docker Compose
 

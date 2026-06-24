@@ -2,6 +2,25 @@
 
 This directory contains scripts to seed the test database with valid invites and guests, enabling authentication testing.
 
+## Two Seeding Paths
+
+There are two separate seeders. They are not interchangeable:
+
+1. **`scripts/seed_test_data.py`** — the **idempotent**, SQLAlchemy-based seeder.
+   Safe to run repeatedly; it checks for existing rows before inserting and
+   never deletes. Use this for manual development seeding and CI.
+2. **`production/database/migrations/008_seed_test_data.sql`** — a
+   **DESTRUCTIVE** SQL seed that runs
+   `DELETE FROM invites/guests/users/wedding_party WHERE wedding_id = 1` and then
+   re-inserts the demo data. It is intended for **test/CI only** and is **NOT for
+   production**, because it will overwrite real `wedding_id = 1` data. Note that
+   it lives in the numbered-migrations directory and is therefore picked up by
+   `deploy.sh`'s `[0-9]*.sql` glob — see `migrations/README.md` for the risk and
+   the fencing requirement before any real production wedding DB.
+
+Both paths produce the same logical dataset (wedding ID 1 "Ashley & Hazel",
+three `DEMO-*` invites, five demo guests).
+
 ## Problem Solved
 
 Tests were failing with authentication errors because they tried to login with invite codes that didn't exist in the test database. These scripts populate the database with test data before tests run.
@@ -84,11 +103,27 @@ Test Invite Codes:
   Guest:       DEMO-GUEST
 ```
 
-### 2. SQL Seed Script (`seed_test_data.sql`)
+### 2. Validation Script (`validate_test_seeds.py`)
+
+After seeding, confirm the expected dataset exists:
+
+```bash
+cd production/backend
+python -m scripts.validate_test_seeds
+```
+
+It checks that wedding ID 1 ("Ashley & Hazel") exists, that the three `DEMO-*`
+invites are present with the right roles and guest links, that the five demo
+guests exist, and that the record counts (3 invites, 5 guests) match. See
+`INTEGRATION_GUIDE.md` for example output.
+
+### 3. SQL Seed Script (`seed_test_data.sql`)
 
 **Useful for direct database operations and documentation**
 
-The SQL script provides:
+This is the **idempotent** SQL seeder at `production/database/seed_test_data.sql`
+(`INSERT ... ON CONFLICT`, no deletes). It is distinct from the destructive
+`migrations/008_seed_test_data.sql` described above. The SQL script provides:
 - Pure SQL operations (no Python dependencies)
 - Explicit database state visibility
 - Useful for understanding schema relationships

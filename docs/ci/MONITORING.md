@@ -93,5 +93,11 @@ When Sentry reports a new backend error:
 TASK-015 adds Prometheus-compatible HTTP and database performance metrics at
 `GET /metrics`, plus structured slow request and slow query logs.
 
+`/metrics` is **unauthenticated**. In production this is acceptable because the
+backend publishes no host ports (`docker-compose.prod.yml` closes them), so it
+is reachable only on the internal `wedding` Docker network. In staging the
+backend is published on `:3001`, so `/metrics` is reachable on the host there —
+treat staging as internal-only.
+
 See `docs/ci/PERFORMANCE_MONITORING.md` for metrics names, configuration,
 scrape examples, and alert examples.

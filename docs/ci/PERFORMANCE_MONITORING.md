@@ -39,6 +39,14 @@ curl http://localhost:3001/metrics
 The endpoint returns Prometheus text format. It is excluded from the OpenAPI
 schema.
 
+`/metrics` is **unauthenticated**, so it is meant to be scraped from inside the
+network only. In production the backend publishes no host ports
+(`docker-compose.prod.yml` closes them), making `/metrics` reachable only on the
+internal `wedding` Docker network. In staging the backend is published on
+`:3001` (hence the `localhost:3001` examples here); keep that host internal.
+This metrics path is independent of Sentry — Sentry stays optional and disabled
+unless `SENTRY_DSN` is set (see `docs/ci/MONITORING.md`).
+
 ## Key Metrics
 
 - `http_requests_total`: request count by method, endpoint route template, and

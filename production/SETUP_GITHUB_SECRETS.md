@@ -3,14 +3,22 @@
 Step-by-step setup for the `Deploy` workflow (`.github/workflows/deploy.yml`).
 You only need to do this once per repository (plus per environment).
 
+> **Related docs**
+> - [`GITHUB_RUNNER_SETUP.md`](GITHUB_RUNNER_SETUP.md) — install the self-hosted
+>   runner that this workflow runs on (do this first).
+> - [`../docs/ci/DEPLOYMENT.md`](../docs/ci/DEPLOYMENT.md) — what `deploy.sh`
+>   actually does on the host, manual usage, and rollback.
+
 ---
 
 ## Overview
 
-The workflow runs on a GitHub-hosted runner, SSHes into the deploy host through
-the Cloudflare Tunnel, and runs `production/scripts/deploy.sh` there. To do that
-it needs: an SSH key + host coordinates, and the four app secrets that
-`docker-compose` injects into the stack.
+The workflow runs on a **self-hosted runner** on the internal homelab network
+(internal-tools VM, `.41`). The runner SSHes into the deploy host — over the
+internal IP `192.168.0.32` (staging) or through the Cloudflare Tunnel — and runs
+`production/scripts/deploy.sh` there. To do that it needs: an SSH key + host
+coordinates, and the four app secrets that `docker-compose` injects into the
+stack. Install the runner (`GITHUB_RUNNER_SETUP.md`) before configuring secrets.
 
 You will configure:
 1. An SSH key pair (private key → GitHub Secret; public key → host `authorized_keys`).

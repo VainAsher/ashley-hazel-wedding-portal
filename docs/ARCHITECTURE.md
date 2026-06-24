@@ -23,9 +23,12 @@ Volumes: pgdata (DB), backend_logs, uploads_data (/app/uploads gallery files)
 - **Invite-code login**: `POST /api/auth/login` with an invite code creates a session
   (httpOnly cookie via Starlette `SessionMiddleware`). `GET /api/auth/me` returns the
   current user; `POST /api/auth/logout` clears it.
-- **Roles**: `guest`, `coordinator`, `couple`. Route guards: `require_guest`,
-  `require_coordinator`, `require_couple`. Frontend mirrors this with `RequireGuest` /
-  `RequireAdmin` and `HomeRedirect` (guests land on `/dashboard`, staff on `/admin`).
+- **Roles**: `guest`, `coordinator`, `couple`. Route guards: `require_guest` (any
+  authenticated role), `require_coordinator` (couple OR coordinator), `require_couple`
+  (couple only). Frontend mirrors this with `RequireGuest` / `RequireAdmin` and
+  `HomeRedirect` (guests land on `/dashboard`, staff on `/admin`). Note: the SQL
+  `user_role` enum also defines a fourth value, `wedding_party`, that the auth system does
+  not use.
 - Everything is **wedding-scoped**: each request operates on `current_user.wedding_id`;
   create endpoints derive `wedding_id` from the session (clients never send it).
 
@@ -44,20 +47,32 @@ Schema is created by `production/database/schema.sql` on first boot; incremental
 changes are numbered SQL migrations in `production/database/migrations/` (applied by
 `deploy.sh` via a `schema_migrations` ledger, and listed explicitly in CI `test.yml`).
 
+> Note: `schema.sql` also defines five tables the backend does **not** model or use —
+> `users`, `tables`, `seating_arrangements`, `gifts`, and `attire`. Auth is driven by
+> `invites` + `guests` (not `users`), and seating is denormalized onto
+> `guests.table_number` / `guests.seat_number` rather than the `tables` /
+> `seating_arrangements` tables.
+
 ## API surface (by area)
 
-| Prefix | Purpose | Access |
+Access column uses the route-guard names: `require_guest` (any authenticated role),
+`require_coordinator` (couple/coordinator), `require_couple` (couple only).
+
+| Endpoint(s) | Purpose | Access |
 |---|---|---|
-| `/api/auth` | login / me / logout | public / session |
-| `/api/guests` | guest CRUD + guest RSVP self-update | coordinator / guest |
-| `/api/invites` | invite-code management | coordinator |
-| `/api/budget` | budget items + categories + summary | coordinator |
-| `/api/vendors`, `/api/events`, `/api/tasks` | planning CRUD | coordinator |
-| `/api/communications` | guest messages + send | coordinator |
-| `/api/gallery` | admin list/upload/moderate; `/submit` + `/approved` for guests | coordinator / guest |
-| `/api/blessings` | guest list/post; `/all` + moderate for admins | guest / coordinator |
-| `/api/portal/{wedding,schedule}` | guest-readable wedding info + events | guest |
-| `/api/settings/wedding` | wedding details + phase | coordinator |
+| `/api/auth` — `POST /login`, `GET /me`, `POST /logout` | login / me / logout | public / session |
+| `/api/guests` — `GET ""`, `POST ""`, `PUT /{id}`, `DELETE /{id}` | guest CRUD | require_coordinator |
+| `/api/guests` — `GET /{id}`, `PATCH /{id}` | guest RSVP self-update | require_guest |
+| `/api/invites` — full CRUD | invite-code management | require_couple |
+| `/api/budget` — items + categories + summary | budget | require_coordinator |
+| `/api/vendors`, `/api/events`, `/api/tasks` | planning CRUD | require_coordinator |
+| `/api/communications` | guest messages + send | require_coordinator |
+| `/api/gallery` — `GET ""`, `POST ""`, `PATCH /{id}`, `DELETE /{id}` | admin list/upload/moderate | require_coordinator |
+| `/api/gallery` — `POST /submit`, `GET /approved` | guest submit / view approved | require_guest |
+| `/api/blessings` — `GET ""`, `POST ""` | guest list/post | require_guest |
+| `/api/blessings` — `GET /all`, `PATCH /{id}`, `DELETE /{id}` | admin moderation | require_coordinator |
+| `/api/portal/wedding`, `/api/portal/schedule` | guest-readable wedding info + events | require_guest |
+| `/api/settings/wedding` — `GET`/`PUT` | wedding details + phase | require_coordinator |
 | `/health`, `/health/ready` | liveness / DB-readiness | public |
 
 ## Frontend structure

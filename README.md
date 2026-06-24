@@ -12,7 +12,9 @@ communications, invitations, settings). **Status: V1.0 release candidate.**
 
 ## Stack
 
-- **Backend** — Python / FastAPI + SQLAlchemy, PostgreSQL, session-cookie auth (`production/backend`)
+- **Backend** — Python / FastAPI + SQLAlchemy, PostgreSQL, session-cookie auth with three
+  roles (`guest`, `coordinator`, `couple`), plus `/health` (liveness) and `/health/ready`
+  (DB-readiness) endpoints (`production/backend`)
 - **Frontend** — React + TypeScript + Vite, React Query, Radix/shadcn UI, Tailwind (`production/frontend`)
 - **Database** — PostgreSQL with SQL migrations (`production/database`)
 - **Delivery** — Docker Compose, Nginx (serves the SPA + proxies `/api` and `/uploads`), GitHub Actions CI/CD to a staging host via a Cloudflare Tunnel

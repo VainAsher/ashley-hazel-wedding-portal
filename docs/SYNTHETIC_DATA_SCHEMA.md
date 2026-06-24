@@ -4,9 +4,18 @@ Date: 2026-06-10
 Source: `data/fixture.js`  
 Status: WD-003 in progress
 
+> **Scope: root static design prototype only.** This document describes the in-browser
+> fixture (`data/fixture.js`) used by the original static design concept at the repo root
+> (`index.html` / `app.js` / `styles.css`). It does **not** describe the production
+> application under `production/`, which has its own PostgreSQL schema and FastAPI backend.
+> For the real data model and API surface, see [`docs/ARCHITECTURE.md`](ARCHITECTURE.md).
+> Several fixture fields (`songs`, blessing `likes`, blessing `pinned`) have no equivalent
+> in production: there is no song-request feature, and production blessings use a `hidden`
+> moderation flag with no likes.
+
 ## Overview
 
-This document describes the structure and content of the synthetic data fixture used in the Wedding Dashboard prototype. All data is fictional and designed for testing, demonstration, and browser-based prototyping only.
+This document describes the structure and content of the synthetic data fixture used in the static Wedding Dashboard prototype. All data is fictional and designed for testing, demonstration, and browser-based prototyping only.
 
 ## Important: No Real Data
 
@@ -130,18 +139,19 @@ For testing and demonstration, you can safely modify:
 - Meal options (add/remove options)
 - Like counts (increase/decrease to simulate activity)
 
-## Not Yet Implemented
+## Not in this fixture
 
-This fixture does **not** include:
-- Profile card details for the couple (Ashley & Hazel) — see `index.html` profiles section for hardcoded content
-- Event schedule or timeline details
-- Venue information or map data
-- Travel and accommodation suggestions
-- Budget line items (see `index.html` budget section)
-- Planning board tasks and statuses
-- Contact information for vendors
+The static prototype's `data/fixture.js` only models guests, meal options, songs, and
+blessings. Other content shown in the static `index.html` — couple profile cards, an event
+schedule/timeline, venue/map data, travel and accommodation notes, budget line items,
+planning-board tasks, and vendor contacts — is hardcoded in `index.html` for the demo, not
+driven by this fixture.
 
-These are currently hardcoded in `index.html` for demonstration. In Phase 3 (real data), these will be populated from a database.
+> These features are **not** "unimplemented" in the product overall: events/schedule,
+> budget, tasks, and vendors are all fully implemented in the production app
+> (`production/`) backed by PostgreSQL tables and FastAPI endpoints — see
+> [`docs/ARCHITECTURE.md`](ARCHITECTURE.md). This section refers only to the limits of the
+> root static prototype.
 
 ## Persisting Changes
 

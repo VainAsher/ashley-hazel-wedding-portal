@@ -2,6 +2,11 @@
 
 Issues encountered during the real staging deployment, their root causes, fixes, and verification.
 
+> **Status summary (V1.0-rc1):** Issues 1–5 were real Agent-7 staging-bringup
+> issues and are retained as a historical record — each was resolved at the time
+> (see the per-issue notes). Issue 6 (Playwright auth-wall failures) is now
+> **RESOLVED**: the browser suite is green in CI.
+
 ---
 
 ## Issue 1 — Docker not installed on the VM
@@ -71,22 +76,30 @@ Issues encountered during the real staging deployment, their root causes, fixes,
 - **Resolution:** Self-resolved once initdb completed (DB ready 17:46:31). After the config fix the
   health gate worked as designed. All 14 tables present and queryable. No recurrence.
 
-## Issue 6 — Playwright browser E2E suite: 49/88 failing
+## Issue 6 — Playwright browser E2E suite auth-wall failures — **RESOLVED**
 
-- **Symptom:** `npx playwright test` → 37 passed / 49 failed / 2 skipped (exit 1). Fails in
-  `guest-management`, `invite-management`, `navigation` (both browser projects).
-- **Root cause:** Stale tests vs. current backend. The specs mock only some `/api/*` routes
-  (`/api/guests`, `/api/invites`); the app also makes OTHER unmocked API calls. Those fall through
-  the test Vite server's proxy (`/api → http://127.0.0.1:3001`) to the LIVE FastAPI, which now
-  returns `401 Unauthorized` due to the auth walls added in `9be1c4f`. Each spec's `beforeEach`
-  registers a console listener and the teardown asserts `expect(unexpectedErrors).toEqual([])`; the
-  401 "Failed to load resource" console errors break it, and primary assertions fail because the
-  unmocked data never loads.
-- **Status:** NOT fixed by Agent 7 — this is frontend test maintenance, out of scope for the
-  deployment task, and does not affect the (healthy) containerized stack. Logged as a production
-  blocker for the frontend/test owner.
-- **Fix direction:** add `page.route` mocks for the auth/session endpoints (e.g. `/api/auth/me`) in
-  the affected specs, OR run the suite fully hermetically with no proxy fallthrough (abort unmocked
-  `/api/*`), OR relax the console-error assertion to ignore 401s on unmocked routes.
-- **Verification of root cause:** isolated re-run of `guest-management.spec.ts:144` showed
-  `Received + ["Failed to load resource: ... 401 (Unauthorized)", ...]` against `expected []`.
+- **Status:** RESOLVED. The browser suite is now **green** in CI — 21 spec
+  files, ~216 tests passing across the `chromium-desktop` and `chromium-mobile`
+  projects. The figures below ("49/88 failing") describe the original broken
+  state and are retained only as historical context.
+- **Original symptom:** `npx playwright test` → 37 passed / 49 failed / 2 skipped
+  (exit 1). Failed in `guest-management`, `invite-management`, `navigation`
+  (both browser projects).
+- **Root cause:** The specs mocked only some `/api/*` routes (`/api/guests`,
+  `/api/invites`); the app also made OTHER unmocked API calls. Those fell
+  through the test Vite server's proxy to the LIVE FastAPI, which returned
+  `401 Unauthorized` due to the auth walls added in `9be1c4f`. Each spec's
+  teardown asserted `expect(unexpectedErrors).toEqual([])`; the 401 console
+  errors broke it, and primary assertions failed because the unmocked data
+  never loaded.
+- **Fix (applied):** Added shared auth-mock fixtures —
+  `production/frontend/tests/browser/fixtures/auth.fixture.ts` (mocks
+  `GET /api/auth/me` and `POST /api/auth/login` with seeded couple/coordinator/
+  guest users) and `page-cleanup.ts` (resets routes/cookies/storage between
+  tests and tolerates expected 401/`ERR_FAILED`/clipboard console noise). Each
+  spec additionally `page.route`-mocks the data endpoints it needs, so the suite
+  runs hermetically with no proxy fallthrough. CI also runs an unmocked
+  real-login smoke test against the backend image to cover the true auth path
+  separately (see `docs/ci/GITHUB_ACTIONS.md`).
+- **Verification:** Suite passes in the `Tests` workflow frontend job; the
+  `frontend-playwright-report` artifact shows green runs on both projects.

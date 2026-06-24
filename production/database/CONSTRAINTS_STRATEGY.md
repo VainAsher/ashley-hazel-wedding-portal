@@ -30,6 +30,20 @@ must be valid and unique within the same wedding.
 | `ck_guests_table_number_positive` | Check | Reject zero or negative table assignments. |
 | `ck_guests_seat_number_positive` | Check | Reject zero or negative seat assignments. |
 
+## Invite Constraints (Migration 005)
+
+`005_create_invites_table.sql` adds the `invites` table with its own integrity
+checks:
+
+| Constraint | Type | Purpose |
+| --- | --- | --- |
+| `ck_invites_code_not_blank` | Check | Reject blank invite codes (`length(btrim(code)) > 0`). |
+| `ck_invites_role_valid` | Check | Restrict `role` to `couple`, `coordinator`, or `guest`. |
+
+`invites.code` is also globally unique via `idx_invites_code`, and
+`invites.wedding_id` / `invites.guest_id` reference `weddings(id)` (CASCADE) and
+`guests(id)` (SET NULL).
+
 ## Existing Integrity Rules
 
 The base schema already includes these relationship and uniqueness rules:
