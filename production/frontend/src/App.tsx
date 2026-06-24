@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, NavLink, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { HomeRedirect, RequireAdmin, RequireGuest } from './components/AuthRoutes'
 import { Admin } from './pages/Admin'
@@ -64,41 +64,6 @@ function App() {
   return (
     <BrowserRouter>
       <div style={appStyle}>
-        <nav aria-label="Primary" style={navStyle}>
-          <NavLink
-            className={({ isActive }) =>
-              `nav-link ${isActive ? 'nav-link-active' : ''}`
-            }
-            to="/invite"
-          >
-            Invite
-          </NavLink>
-          <NavLink
-            className={({ isActive }) =>
-              `nav-link ${isActive ? 'nav-link-active' : ''}`
-            }
-            to="/rsvp"
-          >
-            RSVP
-          </NavLink>
-          <NavLink
-            className={({ isActive }) =>
-              `nav-link ${isActive ? 'nav-link-active' : ''}`
-            }
-            to="/admin"
-          >
-            Admin
-          </NavLink>
-          <NavLink
-            className={({ isActive }) =>
-              `nav-link ${isActive ? 'nav-link-active' : ''}`
-            }
-            to="/guests"
-          >
-            Guests
-          </NavLink>
-        </nav>
-
         <Suspense
           fallback={
             <div role="status" className="p-5 text-sm text-[#47505f]">
@@ -152,15 +117,6 @@ const appStyle = {
   color: '#1f2933',
   fontFamily: 'Arial, sans-serif',
   minHeight: '100vh',
-}
-
-const navStyle = {
-  alignItems: 'center',
-  borderBottom: '1px solid #d6d9df',
-  display: 'flex',
-  gap: '4px',
-  minHeight: '52px',
-  padding: '0 20px',
 }
 
 export default App

@@ -17,7 +17,6 @@ SQL migration files for the wedding dashboard database.
 | `005_create_invites_table.sql` | `invites` table for invite-code auth, with code/role check constraints and indexes. |
 | `006_add_rsvp_fields.sql` | Adds `meal_choice` and `dietary_notes` columns to `guests`. |
 | `007_create_tasks_table.sql` | `tasks` table (status/priority/assignment) with FKs and indexes. |
-| `008_seed_test_data.sql` | ⚠️ DESTRUCTIVE TEST SEED — see warning below. |
 | `009_create_communications_and_gallery.sql` | `communications` and `gallery_items` tables with indexes. |
 | `010_add_wedding_phase.sql` | Adds `phase` lifecycle column (`planning`/`live`/`event`/`archived`) to `weddings`. |
 | `011_create_blessings.sql` | `blessings` guestbook table (author/message/hidden) with indexes. |
@@ -45,21 +44,17 @@ There are two distinct application paths:
    per environment** even across repeated deploys. CI applies the same files via
    `psql` using an explicit ordered list rather than relying solely on the glob.
 
-> ⚠️ **`008_seed_test_data.sql` is a DESTRUCTIVE TEST SEED.**
-> It runs `DELETE FROM invites/guests/users/wedding_party WHERE wedding_id = 1`
-> and then re-inserts the `wedding_id = 1` "Ashley & Hazel" demo data (demo
-> guests + `DEMO-COUPLE`/`DEMO-COORDINATOR`/`DEMO-GUEST` invites).
+> **Note on the test seed (`008_seed_test_data.sql`).**
+> This is a DESTRUCTIVE TEST SEED — it runs
+> `DELETE FROM invites/guests/users/wedding_party WHERE wedding_id = 1` and
+> re-inserts the `wedding_id = 1` "Ashley & Hazel" demo data (demo guests +
+> `DEMO-COUPLE`/`DEMO-COORDINATOR`/`DEMO-GUEST` invites).
 >
-> **Current reality:** this file sits in the numbered-migrations directory, so
-> `deploy.sh`'s `[0-9]*.sql` glob picks it up and applies it — once per
-> environment via the `schema_migrations` ledger. That is acceptable for
-> staging and CI.
->
-> **Risk:** on a real production wedding database it will delete and overwrite
-> the `wedding_id = 1` records with demo data the first time it is applied. It
-> has **not** been fixed/fenced. Before deploying against a real production
-> wedding DB it MUST be moved out of the migrations directory, renamed off the
-> `[0-9]*.sql` pattern, or otherwise excluded from `apply_migrations`.
+> It has been **moved out of this directory to `../seeds/008_seed_test_data.sql`**
+> so it no longer matches `deploy.sh`'s `[0-9]*.sql` glob and can **never** be
+> applied to a production database by `apply_migrations`. CI applies it
+> explicitly from `production/database/seeds/` to seed the test database. Run it
+> only against disposable test/CI databases — never a real wedding DB.
 
 ## Applying a Single Migration Manually
 ```bash

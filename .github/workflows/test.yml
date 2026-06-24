@@ -73,7 +73,7 @@ jobs:
 
       - name: Seed test data
         run: |
-          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/008_seed_test_data.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/seeds/008_seed_test_data.sql
 
       - name: Run backend tests with coverage
         working-directory: production/backend
@@ -167,7 +167,7 @@ jobs:
 
       - name: Seed test data
         run: |
-          psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/008_seed_test_data.sql
+          psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/seeds/008_seed_test_data.sql
 
       - name: Smoke test real login (un-mocked, against running backend image)
         run: |
