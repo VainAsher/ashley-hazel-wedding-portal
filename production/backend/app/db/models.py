@@ -101,6 +101,8 @@ class Wedding(Base):
     budget_items: Mapped[list["BudgetItem"]] = orm_relationship(back_populates="wedding")
     events: Mapped[list["Event"]] = orm_relationship(back_populates="wedding")
     communications: Mapped[list["Communication"]] = orm_relationship(back_populates="wedding")
+    blessings: Mapped[list["Blessing"]] = orm_relationship(back_populates="wedding")
+    gallery_items: Mapped[list["GalleryItem"]] = orm_relationship(back_populates="wedding")
 
 
 class Guest(Base):
@@ -461,7 +463,7 @@ class Blessing(Base):
     __tablename__ = "blessings"
     __table_args__ = (
         Index("idx_blessings_wedding", "wedding_id"),
-        Index("idx_blessings_wedding_created", "wedding_id", text("created_at DESC")),
+        Index("idx_blessings_wedding_hidden", "wedding_id", "hidden"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -474,6 +476,8 @@ class Blessing(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
+
+    wedding: Mapped[Wedding] = orm_relationship(back_populates="blessings")
 
 
 class GalleryItem(Base):
@@ -503,3 +507,5 @@ class GalleryItem(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
+
+    wedding: Mapped[Wedding] = orm_relationship(back_populates="gallery_items")

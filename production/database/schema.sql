@@ -42,6 +42,9 @@ CREATE TABLE wedding_party (
   UNIQUE(wedding_id, name, role)
 );
 
+-- FUTURE EXPANSION: not yet wired to the backend (no ORM model / API). Auth
+-- currently runs on `invites` + `guests`; this table is reserved for a future
+-- dedicated accounts/roles system. Kept intentionally — see docs/ARCHITECTURE.md.
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
   wedding_id INTEGER NOT NULL REFERENCES weddings(id) ON DELETE CASCADE,
@@ -176,7 +179,9 @@ CREATE TABLE tasks (
 );
 
 -- ============================================================================
--- SEATING ARRANGEMENTS (for future use)
+-- SEATING ARRANGEMENTS  (FUTURE EXPANSION — reserved, not yet wired to the
+-- backend ORM/API. Seating currently lives denormalized on guests.table_number
+-- / guests.seat_number. Kept intentionally; see docs/ARCHITECTURE.md.)
 -- ============================================================================
 
 CREATE TABLE tables (
@@ -199,7 +204,8 @@ CREATE TABLE seating_arrangements (
 );
 
 -- ============================================================================
--- GIFTS & REGISTRY
+-- GIFTS & REGISTRY  (FUTURE EXPANSION — reserved, not yet wired to the backend
+-- ORM/API. Kept intentionally; see docs/ARCHITECTURE.md.)
 -- ============================================================================
 
 CREATE TABLE gifts (
@@ -218,7 +224,8 @@ CREATE TABLE gifts (
 );
 
 -- ============================================================================
--- ATTIRE TRACKING
+-- ATTIRE TRACKING  (FUTURE EXPANSION — reserved, not yet wired to the backend
+-- ORM/API. Kept intentionally; see docs/ARCHITECTURE.md.)
 -- ============================================================================
 
 CREATE TABLE attire (

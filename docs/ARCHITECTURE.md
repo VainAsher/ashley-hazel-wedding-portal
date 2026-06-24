@@ -47,11 +47,13 @@ Schema is created by `production/database/schema.sql` on first boot; incremental
 changes are numbered SQL migrations in `production/database/migrations/` (applied by
 `deploy.sh` via a `schema_migrations` ledger, and listed explicitly in CI `test.yml`).
 
-> Note: `schema.sql` also defines five tables the backend does **not** model or use —
-> `users`, `tables`, `seating_arrangements`, `gifts`, and `attire`. Auth is driven by
+> Note: `schema.sql` also defines five tables **reserved for future expansion** —
+> `users`, `tables`, `seating_arrangements`, `gifts`, and `attire`. These are
+> intentional, labelled placeholders (see the `FUTURE EXPANSION` comments in
+> `schema.sql`): they have no ORM model or API yet. In V1, auth is driven by
 > `invites` + `guests` (not `users`), and seating is denormalized onto
 > `guests.table_number` / `guests.seat_number` rather than the `tables` /
-> `seating_arrangements` tables.
+> `seating_arrangements` tables. They will be wired up when those features are built.
 
 ## API surface (by area)
 
