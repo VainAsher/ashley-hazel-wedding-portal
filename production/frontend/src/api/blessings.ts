@@ -12,6 +12,14 @@ export interface BlessingCreate {
   message: string
 }
 
+export interface BlessingAdmin {
+  id: number
+  author_name: string
+  message: string
+  hidden: boolean
+  created_at: string
+}
+
 export class BlessingsApiError extends Error {
   readonly status: number | null
 
@@ -68,4 +76,60 @@ export async function createBlessing(
   }
 
   return response.json() as Promise<Blessing>
+}
+
+export async function fetchAllBlessings(apiBaseUrl = API_BASE_URL): Promise<BlessingAdmin[]> {
+  const response = await fetch(`${apiBaseUrl}/api/blessings/all`, {
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    throw new BlessingsApiError(
+      await readErrorMessage(response, 'Unable to load blessings.'),
+      response.status,
+    )
+  }
+
+  return response.json() as Promise<BlessingAdmin[]>
+}
+
+export async function moderateBlessing(
+  id: number,
+  hidden: boolean,
+  apiBaseUrl = API_BASE_URL,
+): Promise<BlessingAdmin> {
+  const response = await fetch(`${apiBaseUrl}/api/blessings/${id}`, {
+    body: JSON.stringify({ hidden }),
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    method: 'PATCH',
+  })
+
+  if (!response.ok) {
+    throw new BlessingsApiError(
+      await readErrorMessage(response, 'Unable to update this blessing.'),
+      response.status,
+    )
+  }
+
+  return response.json() as Promise<BlessingAdmin>
+}
+
+export async function deleteBlessing(
+  id: number,
+  apiBaseUrl = API_BASE_URL,
+): Promise<{ status: string; id: number }> {
+  const response = await fetch(`${apiBaseUrl}/api/blessings/${id}`, {
+    credentials: 'include',
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    throw new BlessingsApiError(
+      await readErrorMessage(response, 'Unable to delete this blessing.'),
+      response.status,
+    )
+  }
+
+  return response.json() as Promise<{ status: string; id: number }>
 }

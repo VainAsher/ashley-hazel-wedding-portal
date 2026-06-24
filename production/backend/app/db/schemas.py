@@ -690,6 +690,20 @@ class BlessingResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class BlessingAdminResponse(BaseModel):
+    id: int
+    author_name: str
+    message: str
+    hidden: bool
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BlessingModerate(BaseModel):
+    hidden: bool
+
+
 # ---------------------------------------------------------------------------
 # Guest portal (read-only wedding info for guests)
 # ---------------------------------------------------------------------------

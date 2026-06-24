@@ -2,12 +2,26 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.auth import require_guest
+from app.api.auth import require_coordinator, require_guest
 from app.api.schemas_auth import UserResponse
 from app.db.database import get_db
 from app.db.models import Blessing
-from app.db.schemas import BlessingCreate, BlessingResponse
+from app.db.schemas import (
+    BlessingAdminResponse,
+    BlessingCreate,
+    BlessingModerate,
+    BlessingResponse,
+)
 from app.logging import get_logger
+
+
+def get_blessing_or_404(db: Session, blessing_id: int, wedding_id: int) -> Blessing:
+    blessing = db.get(Blessing, blessing_id)
+    if blessing is None or blessing.wedding_id != wedding_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Blessing not found"
+        )
+    return blessing
 
 
 router = APIRouter(prefix="/api/blessings", tags=["blessings"])
@@ -60,3 +74,48 @@ async def create_blessing(
     db.refresh(db_blessing)
     logger.info("blessing_created", extra={"blessing_id": db_blessing.id})
     return db_blessing
+
+
+@router.get("/all", response_model=list[BlessingAdminResponse])
+async def list_all_blessings(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_coordinator),
+) -> list[Blessing]:
+    """Admin moderation view — every blessing for the wedding, including hidden."""
+    return (
+        db.query(Blessing)
+        .filter(Blessing.wedding_id == current_user.wedding_id)
+        .order_by(Blessing.created_at.desc(), Blessing.id.desc())
+        .all()
+    )
+
+
+@router.patch("/{blessing_id}", response_model=BlessingAdminResponse)
+async def moderate_blessing(
+    blessing_id: int,
+    payload: BlessingModerate,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_coordinator),
+) -> Blessing:
+    blessing = get_blessing_or_404(db, blessing_id, current_user.wedding_id)
+    blessing.hidden = payload.hidden
+    db.commit()
+    db.refresh(blessing)
+    logger.info(
+        "blessing_moderated",
+        extra={"blessing_id": blessing.id, "hidden": blessing.hidden},
+    )
+    return blessing
+
+
+@router.delete("/{blessing_id}")
+async def delete_blessing(
+    blessing_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_coordinator),
+) -> dict[str, object]:
+    blessing = get_blessing_or_404(db, blessing_id, current_user.wedding_id)
+    db.delete(blessing)
+    db.commit()
+    logger.info("blessing_deleted", extra={"blessing_id": blessing_id})
+    return {"status": "deleted", "id": blessing_id}

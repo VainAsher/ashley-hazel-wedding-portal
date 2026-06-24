@@ -24,6 +24,7 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
     { label: 'Communications', href: '/admin/communications', icon: '💬' },
     { label: 'Vendors', href: '/admin/vendors', icon: '🏪' },
     { label: 'Gallery', href: '/admin/gallery', icon: '🖼️' },
+    { label: 'Blessings', href: '/admin/blessings', icon: '💌' },
     { label: 'Settings', href: '/admin/settings', icon: '⚙️' },
   ]
 

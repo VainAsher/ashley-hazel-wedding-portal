@@ -48,6 +48,9 @@ const Schedule = lazy(() =>
 const Blessings = lazy(() =>
   import('./pages/Blessings').then((m) => ({ default: m.Blessings })),
 )
+const AdminBlessings = lazy(() =>
+  import('./pages/admin/Blessings').then((m) => ({ default: m.Blessings })),
+)
 
 function guestRoute(element: React.ReactNode) {
   return <RequireGuest>{element}</RequireGuest>
@@ -125,6 +128,7 @@ function App() {
             <Route element={guestRoute(<Dashboard />)} path="/dashboard" />
             <Route element={guestRoute(<Schedule />)} path="/schedule" />
             <Route element={guestRoute(<Blessings />)} path="/blessings" />
+            <Route element={adminRoute(<AdminBlessings />)} path="/admin/blessings" />
             <Route element={adminRoute(<Admin />)} path="/admin" />
             <Route element={adminRoute(<Guests />)} path="/guests" />
             <Route element={adminRoute(<Invitations />)} path="/admin/invitations" />
