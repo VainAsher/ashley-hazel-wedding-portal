@@ -97,6 +97,7 @@ class Wedding(Base):
     vendors: Mapped[list["Vendor"]] = orm_relationship(back_populates="wedding")
     budget_items: Mapped[list["BudgetItem"]] = orm_relationship(back_populates="wedding")
     events: Mapped[list["Event"]] = orm_relationship(back_populates="wedding")
+    communications: Mapped[list["Communication"]] = orm_relationship(back_populates="wedding")
 
 
 class Guest(Base):
@@ -401,3 +402,53 @@ class Event(Base):
     )
 
     wedding: Mapped[Wedding] = orm_relationship(back_populates="events")
+
+
+class Communication(Base):
+    __tablename__ = "communications"
+    __table_args__ = (
+        CheckConstraint(
+            "channel IN ('email', 'whatsapp', 'sms', 'announcement')",
+            name="ck_communications_channel",
+        ),
+        CheckConstraint(
+            "audience IN ('all', 'attending', 'pending', 'declined')",
+            name="ck_communications_audience",
+        ),
+        CheckConstraint(
+            "status IN ('draft', 'scheduled', 'sent')",
+            name="ck_communications_status",
+        ),
+        CheckConstraint(
+            "length(btrim(subject)) > 0",
+            name="ck_communications_subject_not_blank",
+        ),
+        Index("idx_communications_wedding", "wedding_id"),
+        Index("idx_communications_wedding_status", "wedding_id", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), nullable=False
+    )
+    subject: Mapped[str] = mapped_column(String(255), nullable=False)
+    body: Mapped[str | None] = mapped_column(Text)
+    channel: Mapped[str] = mapped_column(
+        String(50), nullable=False, server_default=text("'email'")
+    )
+    audience: Mapped[str] = mapped_column(
+        String(50), nullable=False, server_default=text("'all'")
+    )
+    status: Mapped[str] = mapped_column(
+        String(50), nullable=False, server_default=text("'draft'")
+    )
+    scheduled_for: Mapped[datetime | None] = mapped_column(DateTime)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    wedding: Mapped[Wedding] = orm_relationship(back_populates="communications")

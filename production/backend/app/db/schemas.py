@@ -463,3 +463,131 @@ class EventResponse(BaseModel):
     created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Communications
+# ---------------------------------------------------------------------------
+
+
+COMMUNICATION_CHANNELS = {"email", "whatsapp", "sms", "announcement"}
+COMMUNICATION_AUDIENCES = {"all", "attending", "pending", "declined"}
+COMMUNICATION_STATUSES = {"draft", "scheduled", "sent"}
+
+
+class CommunicationBase(BaseModel):
+    wedding_id: int = Field(gt=0)
+    subject: str = Field(min_length=1, max_length=255)
+    body: str | None = None
+    channel: str = Field(default="email", max_length=50)
+    audience: str = Field(default="all", max_length=50)
+    status: str = Field(default="draft", max_length=50)
+    scheduled_for: datetime | None = None
+
+    @field_validator("subject")
+    @classmethod
+    def subject_must_not_be_blank(cls, value: str) -> str:
+        subject = value.strip()
+        if not subject:
+            raise ValueError("Communication subject is required")
+        return subject
+
+    @field_validator("channel")
+    @classmethod
+    def channel_must_be_valid(cls, value: str) -> str:
+        channel = value.strip().lower()
+        if channel not in COMMUNICATION_CHANNELS:
+            allowed = ", ".join(sorted(COMMUNICATION_CHANNELS))
+            raise ValueError(f"Channel must be one of: {allowed}")
+        return channel
+
+    @field_validator("audience")
+    @classmethod
+    def audience_must_be_valid(cls, value: str) -> str:
+        audience = value.strip().lower()
+        if audience not in COMMUNICATION_AUDIENCES:
+            allowed = ", ".join(sorted(COMMUNICATION_AUDIENCES))
+            raise ValueError(f"Audience must be one of: {allowed}")
+        return audience
+
+    @field_validator("status")
+    @classmethod
+    def status_must_be_valid(cls, value: str) -> str:
+        status_value = value.strip().lower()
+        if status_value not in COMMUNICATION_STATUSES:
+            allowed = ", ".join(sorted(COMMUNICATION_STATUSES))
+            raise ValueError(f"Status must be one of: {allowed}")
+        return status_value
+
+
+class CommunicationCreate(CommunicationBase):
+    # Defaults to the authenticated user's wedding; clients need not send it.
+    wedding_id: int | None = Field(default=None, gt=0)
+
+
+class CommunicationUpdate(BaseModel):
+    subject: str | None = Field(default=None, min_length=1, max_length=255)
+    body: str | None = None
+    channel: str | None = Field(default=None, max_length=50)
+    audience: str | None = Field(default=None, max_length=50)
+    status: str | None = Field(default=None, max_length=50)
+    scheduled_for: datetime | None = None
+
+    @field_validator("subject")
+    @classmethod
+    def subject_must_not_be_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        subject = value.strip()
+        if not subject:
+            raise ValueError("Communication subject is required")
+        return subject
+
+    @field_validator("channel")
+    @classmethod
+    def channel_must_be_valid(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        channel = value.strip().lower()
+        if channel not in COMMUNICATION_CHANNELS:
+            allowed = ", ".join(sorted(COMMUNICATION_CHANNELS))
+            raise ValueError(f"Channel must be one of: {allowed}")
+        return channel
+
+    @field_validator("audience")
+    @classmethod
+    def audience_must_be_valid(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        audience = value.strip().lower()
+        if audience not in COMMUNICATION_AUDIENCES:
+            allowed = ", ".join(sorted(COMMUNICATION_AUDIENCES))
+            raise ValueError(f"Audience must be one of: {allowed}")
+        return audience
+
+    @field_validator("status")
+    @classmethod
+    def status_must_be_valid(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        status_value = value.strip().lower()
+        if status_value not in COMMUNICATION_STATUSES:
+            allowed = ", ".join(sorted(COMMUNICATION_STATUSES))
+            raise ValueError(f"Status must be one of: {allowed}")
+        return status_value
+
+
+class CommunicationResponse(BaseModel):
+    id: int
+    wedding_id: int
+    subject: str
+    body: str | None = None
+    channel: str
+    audience: str
+    status: str
+    scheduled_for: datetime | None = None
+    sent_at: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
