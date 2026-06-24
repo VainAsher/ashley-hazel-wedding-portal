@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.api.auth import require_coordinator
+from app.api.auth import require_coordinator, require_guest
 from app.api.schemas_auth import UserResponse
 from app.db.database import get_db
 from app.db.models import GalleryItem
@@ -37,6 +37,33 @@ def get_gallery_item_or_404(
     return item
 
 
+async def save_upload(file: UploadFile, wedding_id: int) -> tuple[str, str, int]:
+    """Validate an image upload and persist it under the uploads dir.
+
+    Returns (relative_path, content_type, file_size). Raises 400 for non-images.
+    """
+    content_type = file.content_type or ""
+    if not content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only image uploads are allowed",
+        )
+
+    ext = Path(file.filename or "").suffix
+    stored_name = f"{uuid.uuid4().hex}{ext}"
+    relative_path = f"{wedding_id}/{stored_name}"
+
+    uploads_dir = Path(get_uploads_dir())
+    wedding_dir = uploads_dir / str(wedding_id)
+    wedding_dir.mkdir(parents=True, exist_ok=True)
+
+    data = await file.read()
+    destination = wedding_dir / stored_name
+    destination.write_bytes(data)
+
+    return relative_path, content_type, len(data)
+
+
 @router.get("", response_model=list[GalleryItemResponse])
 async def list_gallery_items(
     db: Session = Depends(get_db),
@@ -58,25 +85,8 @@ async def upload_gallery_item(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_coordinator),
 ) -> GalleryItem:
-    content_type = file.content_type or ""
-    if not content_type.startswith("image/"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only image uploads are allowed",
-        )
-
     wedding_id = current_user.wedding_id
-    ext = Path(file.filename or "").suffix
-    stored_name = f"{uuid.uuid4().hex}{ext}"
-    relative_path = f"{wedding_id}/{stored_name}"
-
-    uploads_dir = Path(get_uploads_dir())
-    wedding_dir = uploads_dir / str(wedding_id)
-    wedding_dir.mkdir(parents=True, exist_ok=True)
-
-    data = await file.read()
-    destination = wedding_dir / stored_name
-    destination.write_bytes(data)
+    relative_path, content_type, file_size = await save_upload(file, wedding_id)
 
     db_item = GalleryItem(
         wedding_id=wedding_id,
@@ -84,7 +94,7 @@ async def upload_gallery_item(
         caption=caption,
         file_path=relative_path,
         content_type=content_type,
-        file_size=len(data),
+        file_size=file_size,
         uploaded_by=current_user.name,
         status="approved",
     )
@@ -93,6 +103,54 @@ async def upload_gallery_item(
     db.refresh(db_item)
     logger.info("gallery_item_uploaded", extra={"gallery_item_id": db_item.id})
     return db_item
+
+
+@router.post(
+    "/submit",
+    response_model=GalleryItemResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def submit_gallery_item(
+    file: UploadFile = File(...),
+    title: str | None = Form(None),
+    caption: str | None = Form(None),
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_guest),
+) -> GalleryItem:
+    wedding_id = current_user.wedding_id
+    relative_path, content_type, file_size = await save_upload(file, wedding_id)
+
+    db_item = GalleryItem(
+        wedding_id=wedding_id,
+        title=title,
+        caption=caption,
+        file_path=relative_path,
+        content_type=content_type,
+        file_size=file_size,
+        uploaded_by=current_user.name,
+        status="pending",
+    )
+    db.add(db_item)
+    db.commit()
+    db.refresh(db_item)
+    logger.info("gallery_item_submitted", extra={"gallery_item_id": db_item.id})
+    return db_item
+
+
+@router.get("/approved", response_model=list[GalleryItemResponse])
+async def list_approved_gallery_items(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_guest),
+) -> list[GalleryItem]:
+    return (
+        db.query(GalleryItem)
+        .filter(
+            GalleryItem.wedding_id == current_user.wedding_id,
+            GalleryItem.status == "approved",
+        )
+        .order_by(GalleryItem.created_at.desc(), GalleryItem.id.desc())
+        .all()
+    )
 
 
 @router.patch("/{item_id}", response_model=GalleryItemResponse)

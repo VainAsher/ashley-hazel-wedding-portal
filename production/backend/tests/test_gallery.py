@@ -151,3 +151,86 @@ class TestGalleryIntegration:
             ).status_code
             == 401
         )
+
+
+class TestGuestGallery:
+    def test_guest_can_submit_photo(
+        self,
+        guest_session: TestClient,
+        uploads_dir: Path,
+        cleanup_gallery: None,
+    ) -> None:
+        response = guest_session.post(
+            "/api/gallery/submit",
+            files={"file": ("t.png", TINY_PNG, "image/png")},
+            data={"title": "Our table", "caption": "Reception"},
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["status"] == "pending"
+        assert data["wedding_id"] == TEST_WEDDING_ID
+        assert data["title"] == "Our table"
+        assert data["url"] == f"/uploads/{data['file_path']}"
+
+        # File is actually persisted under the temp uploads dir.
+        on_disk = uploads_dir / data["file_path"]
+        assert on_disk.is_file()
+        assert on_disk.read_bytes() == TINY_PNG
+
+    def test_submit_non_image_rejected(
+        self,
+        guest_session: TestClient,
+        uploads_dir: Path,
+        cleanup_gallery: None,
+    ) -> None:
+        response = guest_session.post(
+            "/api/gallery/submit",
+            files={"file": ("notes.txt", b"hello", "text/plain")},
+        )
+        assert response.status_code == 400
+
+    def test_approved_returns_only_approved(
+        self,
+        guest_session: TestClient,
+        db_session: Session,
+        uploads_dir: Path,
+        cleanup_gallery: None,
+    ) -> None:
+        approved = GalleryItem(
+            wedding_id=TEST_WEDDING_ID,
+            title="Approved shot",
+            file_path=f"{TEST_WEDDING_ID}/approved.png",
+            content_type="image/png",
+            file_size=len(TINY_PNG),
+            uploaded_by="Pytest Guest",
+            status="approved",
+        )
+        pending = GalleryItem(
+            wedding_id=TEST_WEDDING_ID,
+            title="Pending shot",
+            file_path=f"{TEST_WEDDING_ID}/pending.png",
+            content_type="image/png",
+            file_size=len(TINY_PNG),
+            uploaded_by="Pytest Guest",
+            status="pending",
+        )
+        db_session.add_all([approved, pending])
+        db_session.commit()
+        db_session.refresh(approved)
+        db_session.refresh(pending)
+
+        response = guest_session.get("/api/gallery/approved")
+        assert response.status_code == 200
+        returned = {item["id"]: item for item in response.json()}
+        assert approved.id in returned
+        assert pending.id not in returned
+        assert all(item["status"] == "approved" for item in returned.values())
+
+    def test_submit_requires_authentication(self, client: TestClient) -> None:
+        assert (
+            client.post(
+                "/api/gallery/submit",
+                files={"file": ("t.png", TINY_PNG, "image/png")},
+            ).status_code
+            == 401
+        )
