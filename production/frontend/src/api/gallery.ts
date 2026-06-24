@@ -102,6 +102,36 @@ export function fetchGallery(): Promise<GalleryItem[]> {
   return request<GalleryItem[]>('/api/gallery', { method: 'GET' }, 'Failed to load gallery')
 }
 
+export function fetchApprovedGallery(): Promise<GalleryItem[]> {
+  return request<GalleryItem[]>(
+    '/api/gallery/approved',
+    { method: 'GET' },
+    'Failed to load gallery',
+  )
+}
+
+export function submitGalleryItem(input: GalleryUploadInput): Promise<GalleryItem> {
+  const formData = new FormData()
+  formData.append('file', input.file)
+
+  const title = input.title?.trim()
+  if (title) {
+    formData.append('title', title)
+  }
+
+  const caption = input.caption?.trim()
+  if (caption) {
+    formData.append('caption', caption)
+  }
+
+  // Do NOT set Content-Type — the browser sets the multipart boundary.
+  return request<GalleryItem>(
+    '/api/gallery/submit',
+    { method: 'POST', body: formData },
+    'Failed to submit photo',
+  )
+}
+
 export function uploadGalleryItem(input: GalleryUploadInput): Promise<GalleryItem> {
   const formData = new FormData()
   formData.append('file', input.file)

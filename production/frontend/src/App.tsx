@@ -36,6 +36,9 @@ const Gallery = lazy(() =>
 const Settings = lazy(() =>
   import('./pages/admin/Settings').then((m) => ({ default: m.Settings })),
 )
+const GuestGallery = lazy(() =>
+  import('./pages/Gallery').then((m) => ({ default: m.Gallery })),
+)
 
 function adminRoute(element: React.ReactNode) {
   return <RequireAdmin>{element}</RequireAdmin>
@@ -97,6 +100,14 @@ function App() {
                 </RequireGuest>
               }
               path="/rsvp"
+            />
+            <Route
+              element={
+                <RequireGuest>
+                  <GuestGallery />
+                </RequireGuest>
+              }
+              path="/gallery"
             />
             <Route element={adminRoute(<Admin />)} path="/admin" />
             <Route element={adminRoute(<Guests />)} path="/guests" />

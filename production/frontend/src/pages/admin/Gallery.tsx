@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 
 import { ImageIcon } from 'lucide-react'
 
@@ -21,6 +21,7 @@ import {
   GalleryApiError,
   useDeleteGalleryItem,
   useGallery,
+  useUpdateGalleryItem,
   useUploadGalleryItem,
   type GalleryItem,
   type GalleryStatus,
@@ -31,6 +32,15 @@ const STATUS_VARIANT: Record<GalleryStatus, BadgeProps['variant']> = {
   pending: 'warning',
   rejected: 'danger',
 }
+
+type StatusFilter = 'all' | GalleryStatus
+
+const FILTERS: { value: StatusFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+]
 
 function StatusBadge({ status }: { status: GalleryStatus }) {
   return (
@@ -45,6 +55,7 @@ export function Gallery() {
 
   const uploadMutation = useUploadGalleryItem()
   const deleteMutation = useDeleteGalleryItem()
+  const updateMutation = useUpdateGalleryItem()
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -56,9 +67,25 @@ export function Gallery() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [moderateError, setModerateError] = useState<string | null>(null)
+  const [pendingId, setPendingId] = useState<number | null>(null)
+
+  const [filter, setFilter] = useState<StatusFilter>('all')
 
   const photoList = photos ?? []
-  const photoCount = photoList.length
+
+  const counts = useMemo(() => {
+    const base = { all: photoList.length, pending: 0, approved: 0, rejected: 0 }
+    for (const photo of photoList) {
+      base[photo.status] += 1
+    }
+    return base
+  }, [photoList])
+
+  const visiblePhotos = useMemo(
+    () => (filter === 'all' ? photoList : photoList.filter((photo) => photo.status === filter)),
+    [photoList, filter],
+  )
 
   const isUploading = uploadMutation.isPending
 
@@ -92,6 +119,25 @@ export function Gallery() {
       resetUploadForm()
     } catch (err) {
       setUploadError(err instanceof GalleryApiError ? err.message : 'Failed to upload photo')
+    }
+  }
+
+  const moderate = async (photo: GalleryItem, status: GalleryStatus) => {
+    setFeedback(null)
+    setModerateError(null)
+    setPendingId(photo.id)
+
+    try {
+      await updateMutation.mutateAsync({ id: photo.id, payload: { status } })
+      setFeedback(
+        status === 'approved'
+          ? `${photoLabel(photo)} approved.`
+          : `${photoLabel(photo)} rejected.`,
+      )
+    } catch (err) {
+      setModerateError(err instanceof GalleryApiError ? err.message : 'Failed to update photo')
+    } finally {
+      setPendingId(null)
     }
   }
 
@@ -130,8 +176,10 @@ export function Gallery() {
       <div className="grid gap-4">
         <section className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-semibold text-gray-900 m-0">Photos</h2>
-            <p className="text-sm text-gray-600 m-0 mt-1">{photoCount} photos</p>
+            <h2 className="text-xl font-semibold text-gray-900 m-0">Moderation Queue</h2>
+            <p className="text-sm text-gray-600 m-0 mt-1">
+              {counts.all} photos · {counts.pending} pending review
+            </p>
           </div>
         </section>
 
@@ -140,6 +188,8 @@ export function Gallery() {
             {feedback}
           </Alert>
         )}
+
+        {moderateError && <Alert variant="destructive">{moderateError}</Alert>}
 
         <Card className="p-4">
           <form noValidate onSubmit={handleUpload} className="grid gap-4">
@@ -192,6 +242,25 @@ export function Gallery() {
           </form>
         </Card>
 
+        <section
+          aria-label="Filter by status"
+          className="flex flex-wrap gap-2"
+          role="group"
+        >
+          {FILTERS.map((option) => (
+            <Button
+              key={option.value}
+              type="button"
+              size="sm"
+              variant={filter === option.value ? 'default' : 'outline'}
+              aria-pressed={filter === option.value}
+              onClick={() => setFilter(option.value)}
+            >
+              {option.label} ({counts[option.value]})
+            </Button>
+          ))}
+        </section>
+
         {isLoading && (
           <div role="status" className="text-sm text-gray-600 border border-gray-200 rounded-md p-4">
             Loading photos...
@@ -204,54 +273,90 @@ export function Gallery() {
           </Alert>
         )}
 
-        {!isLoading && !isError && photoCount === 0 && (
+        {!isLoading && !isError && visiblePhotos.length === 0 && (
           <Card className="flex flex-col items-center justify-center gap-3 p-10 text-center">
             <ImageIcon className="h-10 w-10 text-gray-400" aria-hidden="true" />
             <div>
-              <h3 className="text-base font-semibold text-gray-900 m-0">No photos yet</h3>
+              <h3 className="text-base font-semibold text-gray-900 m-0">
+                {filter === 'all' ? 'No photos yet' : `No ${filter} photos`}
+              </h3>
               <p className="text-sm text-gray-600 m-0 mt-1">
-                Photos uploaded for the wedding gallery will appear here.
+                {filter === 'all'
+                  ? 'Photos uploaded for the wedding gallery will appear here.'
+                  : 'Try a different status filter.'}
               </p>
             </div>
           </Card>
         )}
 
-        {!isLoading && !isError && photoCount > 0 && (
+        {!isLoading && !isError && visiblePhotos.length > 0 && (
           <section
             aria-label="Photo gallery"
             className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
           >
-            {photoList.map((photo) => (
-              <Card key={photo.id} className="flex flex-col overflow-hidden">
-                <img
-                  src={photo.url}
-                  alt={photoLabel(photo)}
-                  className="aspect-square w-full object-cover"
-                />
-                <div className="flex flex-1 flex-col gap-2 p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-gray-900 m-0">
-                      {photoLabel(photo)}
-                    </h3>
-                    <StatusBadge status={photo.status} />
+            {visiblePhotos.map((photo) => {
+              const isRowPending = pendingId === photo.id && updateMutation.isPending
+              return (
+                <Card
+                  key={photo.id}
+                  className={`flex flex-col overflow-hidden${
+                    photo.status === 'pending' ? ' ring-2 ring-amber-400' : ''
+                  }`}
+                >
+                  <img
+                    src={photo.url}
+                    alt={photoLabel(photo)}
+                    className="aspect-square w-full object-cover"
+                  />
+                  <div className="flex flex-1 flex-col gap-2 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-sm font-semibold text-gray-900 m-0">
+                        {photoLabel(photo)}
+                      </h3>
+                      <StatusBadge status={photo.status} />
+                    </div>
+                    {photo.caption && (
+                      <p className="text-sm text-gray-600 m-0">{photo.caption}</p>
+                    )}
+                    <div className="mt-auto flex flex-wrap gap-2 pt-1">
+                      {photo.status !== 'approved' && (
+                        <Button
+                          type="button"
+                          variant="default"
+                          size="sm"
+                          aria-label={`Approve ${photoLabel(photo)}`}
+                          disabled={isRowPending}
+                          onClick={() => void moderate(photo, 'approved')}
+                        >
+                          Approve
+                        </Button>
+                      )}
+                      {photo.status !== 'rejected' && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          aria-label={`Reject ${photoLabel(photo)}`}
+                          disabled={isRowPending}
+                          onClick={() => void moderate(photo, 'rejected')}
+                        >
+                          Reject
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        aria-label={`Delete ${photoLabel(photo)}`}
+                        onClick={() => requestDelete(photo)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </div>
-                  {photo.caption && (
-                    <p className="text-sm text-gray-600 m-0">{photo.caption}</p>
-                  )}
-                  <div className="mt-auto pt-1">
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      aria-label={`Delete ${photoLabel(photo)}`}
-                      onClick={() => requestDelete(photo)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              )
+            })}
           </section>
         )}
       </div>
