@@ -7,7 +7,7 @@ import {
   type WeddingSettingsPayload,
 } from '@/api/settings'
 
-export type { WeddingSettings, WeddingSettingsPayload } from '@/api/settings'
+export type { WeddingSettings, WeddingSettingsPayload, WeddingPhase } from '@/api/settings'
 export { SettingsApiError } from '@/api/settings'
 
 export const SETTINGS_QUERY_KEY = ['settings'] as const

@@ -39,6 +39,19 @@ function formDataFromGuest(guest: GuestRsvp): RsvpFormData {
   }
 }
 
+function phaseMessage(phase: string): string {
+  switch (phase) {
+    case 'planning':
+      return 'RSVP is not open yet — please check back soon.'
+    case 'event':
+      return 'RSVP responses are now closed. See you at the celebration!'
+    case 'archived':
+      return 'This wedding has been archived and RSVP is closed.'
+    default:
+      return 'RSVP is currently closed.'
+  }
+}
+
 function errorMessage(error: unknown): string {
   if (error instanceof AuthApiError) {
     if (error.status === 401) {
@@ -70,6 +83,7 @@ export function RSVP() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
+  const [closedMessage, setClosedMessage] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -83,6 +97,14 @@ export function RSVP() {
         const user = await fetchCurrentUser()
         if (!user.guest_id) {
           throw new RsvpApiError('RSVP is only available for guest invites.', 403)
+        }
+
+        const phase = user.wedding_phase ?? 'live'
+        if (phase !== 'live') {
+          if (mounted) {
+            setClosedMessage(phaseMessage(phase))
+          }
+          return
         }
 
         const loadedGuest = await fetchGuestRsvp(user.guest_id)
@@ -168,6 +190,16 @@ export function RSVP() {
           <Alert variant="destructive" className="mb-6">
             {error}
           </Alert>
+        )}
+
+        {!loading && closedMessage && (
+          <Card>
+            <CardContent className="pt-6">
+              <div role="status" className="text-gray-700 text-sm">
+                {closedMessage}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {!loading && guest && (

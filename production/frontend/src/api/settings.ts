@@ -1,5 +1,7 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
+export type WeddingPhase = 'planning' | 'live' | 'event' | 'archived'
+
 export interface WeddingSettings {
   id: number
   couple_names: string
@@ -7,6 +9,7 @@ export interface WeddingSettings {
   ceremony_time: string | null
   ceremony_location: string | null
   reception_location: string | null
+  phase: WeddingPhase
 }
 
 export interface WeddingSettingsPayload {
@@ -15,6 +18,7 @@ export interface WeddingSettingsPayload {
   ceremony_time: string | null
   ceremony_location: string | null
   reception_location: string | null
+  phase: WeddingPhase
 }
 
 export class SettingsApiError extends Error {

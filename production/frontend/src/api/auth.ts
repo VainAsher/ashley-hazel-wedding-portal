@@ -9,6 +9,7 @@ export interface AuthUser {
   wedding_id: number
   invite_id: number
   guest_id: number | null
+  wedding_phase?: string
 }
 
 export interface LoginResponse {

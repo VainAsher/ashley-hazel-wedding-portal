@@ -7,12 +7,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   SettingsApiError,
   useSettings,
   useUpdateSettings,
+  type WeddingPhase,
   type WeddingSettings,
   type WeddingSettingsPayload,
 } from '@/hooks/useSettings'
+
+const PHASE_OPTIONS: { value: WeddingPhase; label: string; description: string }[] = [
+  { value: 'planning', label: 'Planning', description: 'Guest portal dormant — RSVP not yet open.' },
+  { value: 'live', label: 'Live', description: 'Guests can log in and submit their RSVP.' },
+  { value: 'event', label: 'Event', description: 'Day-of mode — RSVP responses are frozen.' },
+  { value: 'archived', label: 'Archived', description: 'Wedding complete — everything is read-only.' },
+]
 
 interface SettingsFormState {
   couple_names: string
@@ -20,6 +35,7 @@ interface SettingsFormState {
   ceremony_time: string
   ceremony_location: string
   reception_location: string
+  phase: WeddingPhase
 }
 
 function emptyFormState(): SettingsFormState {
@@ -29,6 +45,7 @@ function emptyFormState(): SettingsFormState {
     ceremony_time: '',
     ceremony_location: '',
     reception_location: '',
+    phase: 'live',
   }
 }
 
@@ -40,6 +57,7 @@ function formStateFromSettings(settings: WeddingSettings): SettingsFormState {
     ceremony_time: settings.ceremony_time ? settings.ceremony_time.slice(0, 5) : '',
     ceremony_location: settings.ceremony_location ?? '',
     reception_location: settings.reception_location ?? '',
+    phase: settings.phase ?? 'live',
   }
 }
 
@@ -65,6 +83,7 @@ function buildPayload(form: SettingsFormState): WeddingSettingsPayload {
     ceremony_time: optionalText(form.ceremony_time),
     ceremony_location: optionalText(form.ceremony_location),
     reception_location: optionalText(form.reception_location),
+    phase: form.phase,
   }
 }
 
@@ -200,6 +219,28 @@ export function Settings() {
                     value={form.reception_location}
                     onChange={(event) => updateField('reception_location', event.target.value)}
                   />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="settings-phase">Wedding Phase</Label>
+                  <Select
+                    value={form.phase}
+                    onValueChange={(value) => updateField('phase', value as WeddingPhase)}
+                  >
+                    <SelectTrigger id="settings-phase" aria-label="Wedding Phase">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PHASE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 m-0">
+                    {PHASE_OPTIONS.find((o) => o.value === form.phase)?.description}
+                  </p>
                 </div>
 
                 <div>
