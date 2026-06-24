@@ -151,8 +151,13 @@ resolve_compose_files() {
   COMPOSE_FILES=(-f docker-compose.yml)
   if [ "$DEPLOY_ENVIRONMENT" = "production" ]; then
     COMPOSE_FILES+=(-f docker-compose.prod.yml)
+    # Isolate the production compose PROJECT from staging on the shared host, so
+    # their compose state/metadata never collide. Combined with the prod
+    # override's distinct container/volume/network names, this keeps the two
+    # stacks fully separate (and staging keeps its default project name).
+    export COMPOSE_PROJECT_NAME="wedding-prod"
   fi
-  log "Environment: $DEPLOY_ENVIRONMENT (compose files: ${COMPOSE_FILES[*]})"
+  log "Environment: $DEPLOY_ENVIRONMENT (compose files: ${COMPOSE_FILES[*]}${COMPOSE_PROJECT_NAME:+ project: $COMPOSE_PROJECT_NAME})"
 }
 
 check_prerequisites() {

@@ -5,6 +5,7 @@ deployment script. This is the canonical deploy/ops reference; for one-time
 setup see the cross-linked guides below.
 
 > **Related docs**
+> - [`PRODUCTION_RUNBOOK.md`](PRODUCTION_RUNBOOK.md) — the end-to-end **production** go-live procedure (isolated `.32` stack, Cloudflare/Traefik edge, bootstrap, backups, go-live checklist).
 > - [`production/SETUP_GITHUB_SECRETS.md`](../../production/SETUP_GITHUB_SECRETS.md) — SSH key, repo/environment secrets, GitHub Environments.
 > - [`production/GITHUB_RUNNER_SETUP.md`](../../production/GITHUB_RUNNER_SETUP.md) — installing the self-hosted runner that executes this workflow.
 

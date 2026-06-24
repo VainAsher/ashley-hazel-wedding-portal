@@ -3,36 +3,42 @@
 #
 # Layer on top of the base file:
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# (deploy.sh does this automatically when DEPLOY_ENVIRONMENT=production, and
+#  also sets COMPOSE_PROJECT_NAME=wedding-prod.)
 #
-# Compose merges these keys into the base service definitions. This override:
-#   - Closes host-published ports (db + backend reachable only inside the
-#     `wedding` network; the frontend is fronted by Traefik, not a raw port).
-#   - Tightens runtime settings (ENVIRONMENT=production, WARNING logs, secure
-#     session cookies).
-#   - Hardens restart policy.
+# This override exists so PRODUCTION can run as a fully ISOLATED stack on the
+# SAME host as staging without ever sharing data or colliding:
+#   - Distinct container names      (wedding-prod-*)   — global per host, must differ.
+#   - Distinct named volumes        (wedding-prod-*)   — the base pins FIXED volume
+#                                                        names, so prod MUST rename
+#                                                        them or it shares staging's data.
+#   - Distinct network              (wedding-prod)
+#   - Distinct database name        (POSTGRES_DB=wedding_prod, set in the prod env)
+#   - Closed db/backend host ports; the frontend publishes a DEDICATED host port
+#     (8090) reached cross-VM by Cloudflared + Traefik on infra-core (.23). TLS is
+#     terminated at the Cloudflare edge; only the subdomain is reachable publicly.
+#   - Tightened runtime (ENVIRONMENT=production, WARNING logs, secure cookies) and
+#     restart policy.
 #
-# NOTE on clearing ports: a plain `ports: []` override does NOT reliably drop
-# the base file's host mappings (Compose merges short-form port lists rather
-# than replacing them, so the host ports leak into production). We therefore
-# use the `!reset []` YAML tag (Compose v2.24+ / required here), which forces
-# the merged value to an empty list and removes every host mapping. Verified
-# with `docker compose ... config` (zero `published:` entries).
+# Requires Compose v2.24+ for the `!reset` / `!override` merge tags.
 # ===========================================================================
 
 services:
   postgresql:
-    # Do not expose the database to the host in production. Inter-service
-    # access is via the `wedding` network (postgresql:5432) only.
+    container_name: wedding-prod-postgresql
+    # Never expose the database to the host in production. Reached only by the
+    # backend over the wedding-prod network.
     ports: !reset []
     restart: always
 
   backend:
+    container_name: wedding-prod-backend
     environment:
       ENVIRONMENT: production
       # Python logging level name — must be WARNING (config rejects "WARN").
       LOG_LEVEL: ${LOG_LEVEL:-WARNING}
       DEBUG: "false"
-      # Secure cookies require HTTPS termination (handled by Traefik) in prod.
+      # Secure cookies require HTTPS, terminated at the Cloudflare edge in prod.
       SESSION_COOKIE_SECURE: "true"
       SENTRY_ENVIRONMENT: production
     # No host port: backend is reached only by the frontend over the network.
@@ -40,16 +46,27 @@ services:
     restart: always
 
   frontend:
-    # Remove the direct host port mapping; Traefik (external) terminates TLS
-    # and routes to container :8080 over the shared/edge network.
-    #
-    # When wiring Traefik, attach this service to the Traefik network and add
-    # the routing labels, e.g.:
-    #   labels:
-    #     - "traefik.enable=true"
-    #     - "traefik.http.routers.wedding.rule=Host(`ashley-hazel-wedding.example`)"
-    #     - "traefik.http.routers.wedding.entrypoints=websecure"
-    #     - "traefik.http.routers.wedding.tls.certresolver=le"
-    #     - "traefik.http.services.wedding.loadbalancer.server.port=8080"
-    ports: !reset []
+    container_name: wedding-prod-frontend
+    # Cross-VM edge: Cloudflared + Traefik on infra-core (.23) route the public
+    # subdomain to this published port on the wedding VM (.32). Defaults to 8090
+    # so prod never grabs staging's :80, even if FRONTEND_HOST_PORT is unset.
+    # `!override` REPLACES the base port list (rather than appending to it).
+    ports: !override
+      - "${FRONTEND_HOST_PORT:-8090}:8080"
     restart: always
+
+# Prod-only network — keeps prod containers off staging's `wedding` network.
+networks:
+  wedding:
+    name: wedding-prod
+
+# Prod-only volumes — the base file pins FIXED volume names (wedding-pgdata,
+# etc.). Renaming them here is what guarantees production data lands on its OWN
+# volumes and a staging deploy can never touch it.
+volumes:
+  pgdata:
+    name: wedding-prod-pgdata
+  backend_logs:
+    name: wedding-prod-backend-logs
+  uploads_data:
+    name: wedding-prod-uploads
