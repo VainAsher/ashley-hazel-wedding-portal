@@ -2,7 +2,7 @@ import re
 from datetime import date, datetime, time
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 from app.db.models import RsvpStatus, TaskStatus, TaskPriority
 
@@ -591,3 +591,48 @@ class CommunicationResponse(BaseModel):
     updated_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Gallery
+# ---------------------------------------------------------------------------
+
+
+GALLERY_STATUSES = {"pending", "approved", "rejected"}
+
+
+class GalleryItemUpdate(BaseModel):
+    title: str | None = Field(default=None, max_length=255)
+    caption: str | None = None
+    status: str | None = Field(default=None, max_length=50)
+
+    @field_validator("status")
+    @classmethod
+    def status_must_be_valid(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        status_value = value.strip().lower()
+        if status_value not in GALLERY_STATUSES:
+            allowed = ", ".join(sorted(GALLERY_STATUSES))
+            raise ValueError(f"Status must be one of: {allowed}")
+        return status_value
+
+
+class GalleryItemResponse(BaseModel):
+    id: int
+    wedding_id: int
+    title: str | None = None
+    caption: str | None = None
+    file_path: str
+    content_type: str | None = None
+    file_size: int | None = None
+    uploaded_by: str | None = None
+    status: str
+    created_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def url(self) -> str:
+        return f"/uploads/{self.file_path}"

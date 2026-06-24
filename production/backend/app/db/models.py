@@ -452,3 +452,32 @@ class Communication(Base):
     )
 
     wedding: Mapped[Wedding] = orm_relationship(back_populates="communications")
+
+
+class GalleryItem(Base):
+    __tablename__ = "gallery_items"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected')",
+            name="ck_gallery_status",
+        ),
+        Index("idx_gallery_wedding", "wedding_id"),
+        Index("idx_gallery_wedding_status", "wedding_id", "status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str | None] = mapped_column(String(255))
+    caption: Mapped[str | None] = mapped_column(Text)
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    content_type: Mapped[str | None] = mapped_column(String(100))
+    file_size: Mapped[int | None] = mapped_column(Integer)
+    uploaded_by: Mapped[str | None] = mapped_column(String(255))
+    status: Mapped[str] = mapped_column(
+        String(50), nullable=False, server_default=text("'approved'")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )

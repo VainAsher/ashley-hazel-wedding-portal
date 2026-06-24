@@ -103,6 +103,7 @@ services:
       METRICS_ENABLED: ${METRICS_ENABLED:-true}
     volumes:
       - backend_logs:/app/logs
+      - uploads_data:/app/uploads
     ports:
       - "3001:3001"  # Published for local dev/debugging; prod override sets [].
     networks:
@@ -174,3 +175,5 @@ volumes:
     name: wedding-pgdata
   backend_logs:
     name: wedding-backend-logs
+  uploads_data:
+    name: wedding-uploads

@@ -1,10 +1,13 @@
 """FastAPI main application"""
 
 import logging
+import os
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api import (
@@ -12,6 +15,7 @@ from app.api import (
     budget,
     communications,
     events,
+    gallery,
     guests,
     invites,
     settings as settings_api,
@@ -62,7 +66,15 @@ app.include_router(budget.router)
 app.include_router(vendors.router)
 app.include_router(events.router)
 app.include_router(communications.router)
+app.include_router(gallery.router)
 app.include_router(settings_api.router)
+
+# Serve uploaded gallery media. The directory lives on a Docker volume
+# (uploads_data -> /app/uploads) so files survive deploys; nginx proxies
+# /uploads/* here. Created at import time so the mount always has a target.
+UPLOADS_DIR = os.environ.get("UPLOADS_DIR", "uploads")
+Path(UPLOADS_DIR).mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 
 @app.middleware("http")
