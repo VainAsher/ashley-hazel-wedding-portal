@@ -88,8 +88,9 @@ if (LIVE_E2E) {
     await page.getByLabel('Invite Code').fill(TEST_INVITE_CODE)
     await page.getByRole('button', { name: 'Enter' }).click()
 
-    // Step 3: Wait for redirect to /rsvp after successful login
-    await expect(page).toHaveURL(/\/rsvp$/, { timeout: 10000 })
+    // Step 3: Login lands on the dashboard; go to the RSVP form to continue.
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 10000 })
+    await page.goto('/rsvp')
 
     // Step 4: Verify guest name appears in the form (in main content, not header)
     await expect(page.getByRole('main').getByText(TEST_GUEST_NAME)).toBeVisible()
@@ -219,6 +220,22 @@ if (LIVE_E2E) {
       await json(route, { detail: 'OK' })
     })
 
+    // Guests land on the dashboard after login; mock its data so the brief
+    // dashboard render is clean before we head to the RSVP form.
+    await page.route('**/api/portal/wedding', async (route) => {
+      await json(route, {
+        couple_names: TEST_GUEST_NAME,
+        wedding_date: '2027-06-19',
+        ceremony_time: '14:00:00',
+        ceremony_location: 'The Chapel',
+        reception_location: 'The Hall',
+        phase: 'live',
+      })
+    })
+    await page.route('**/api/portal/schedule', async (route) => {
+      await json(route, [])
+    })
+
     // Step 1: Navigate to root, should redirect to /invite
     await page.goto('/')
     await expect(page).toHaveURL(/\/invite$/)
@@ -227,8 +244,9 @@ if (LIVE_E2E) {
     await page.getByLabel('Invite Code').fill(TEST_INVITE_CODE)
     await page.getByRole('button', { name: 'Enter' }).click()
 
-    // Step 3: Wait for redirect to /rsvp
-    await expect(page).toHaveURL(/\/rsvp$/, { timeout: 5000 })
+    // Step 3: Login lands on the dashboard; go to the RSVP form to continue.
+    await expect(page).toHaveURL(/\/dashboard$/, { timeout: 5000 })
+    await page.goto('/rsvp')
 
     // Step 4: Verify guest name and form (in main content, not header)
     await expect(page.getByRole('main').getByText(TEST_GUEST_NAME)).toBeVisible()

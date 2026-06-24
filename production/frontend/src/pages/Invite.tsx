@@ -44,7 +44,7 @@ export function Invite() {
       // Route through AuthContext so the shared user (and the layout header
       // that reads it) updates on login — not just this page's local fetch.
       const user = await login(trimmedCode)
-      navigate(user.role === 'guest' ? '/rsvp' : '/admin')
+      navigate(user.role === 'guest' ? '/dashboard' : '/admin')
     } catch (err) {
       setError(inviteErrorMessage(err))
     } finally {

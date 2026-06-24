@@ -60,6 +60,22 @@ async function mockCurrentUser(page: Page, user: AuthUser | null) {
   })
 }
 
+async function mockPortalWedding(page: Page) {
+  await page.route('**/api/portal/wedding', async (route) => {
+    await json(route, {
+      couple_names: 'Ashley & Hazel',
+      wedding_date: '2027-06-19',
+      ceremony_time: '14:00:00',
+      ceremony_location: 'The Chapel',
+      reception_location: 'The Hall',
+      phase: 'live',
+    })
+  })
+  await page.route('**/api/portal/schedule', async (route) => {
+    await json(route, [])
+  })
+}
+
 async function mockGuestRsvp(page: Page) {
   await page.route('**/api/guests/10', async (route) => {
     await json(route, {
@@ -117,15 +133,14 @@ test('unauthenticated RSVP traffic redirects to invite form', async ({ page }) =
   await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toBeVisible()
 })
 
-test('authenticated guest root traffic lands on RSVP form', async ({ page }) => {
+test('authenticated guest root traffic lands on the dashboard', async ({ page }) => {
   await mockCurrentUser(page, guestUser)
-  await mockGuestRsvp(page)
+  await mockPortalWedding(page)
 
   await page.goto('/')
 
-  await expect(page).toHaveURL(/\/rsvp$/)
-  await expect(page.getByRole('heading', { name: 'RSVP' })).toBeVisible()
-  await expect(page.getByRole('main').getByText('Route Guest')).toBeVisible()
+  await expect(page).toHaveURL(/\/dashboard$/)
+  await expect(page.getByRole('main').getByText(/days to go/i)).toBeVisible()
 })
 
 test('authenticated couple root traffic lands on admin stub', async ({ page }) => {
@@ -179,12 +194,12 @@ test('authenticated couple root traffic lands on admin stub', async ({ page }) =
   await expect(main.getByRole('link', { name: /Budget/ })).toHaveAttribute('href', '/admin/budget')
 })
 
-test('guest admin traffic redirects to RSVP form', async ({ page }) => {
+test('guest admin traffic redirects to the dashboard', async ({ page }) => {
   await mockCurrentUser(page, guestUser)
-  await mockGuestRsvp(page)
+  await mockPortalWedding(page)
 
   await page.goto('/admin')
 
-  await expect(page).toHaveURL(/\/rsvp$/)
-  await expect(page.getByRole('heading', { name: 'RSVP' })).toBeVisible()
+  await expect(page).toHaveURL(/\/dashboard$/)
+  await expect(page.getByRole('main').getByText(/days to go/i)).toBeVisible()
 })

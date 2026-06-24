@@ -88,7 +88,7 @@ export function HomeRedirect() {
     return <Navigate replace to="/invite" />
   }
 
-  return <Navigate replace to={user.role === 'guest' ? '/rsvp' : '/admin'} />
+  return <Navigate replace to={user.role === 'guest' ? '/dashboard' : '/admin'} />
 }
 
 export function RequireGuest({ children }: { children: ReactNode }) {
@@ -129,7 +129,7 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
   }
 
   if (user.role === 'guest') {
-    return <Navigate replace to="/rsvp" />
+    return <Navigate replace to="/dashboard" />
   }
 
   return <>{children}</>

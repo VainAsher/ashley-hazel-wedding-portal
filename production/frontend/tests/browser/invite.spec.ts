@@ -85,7 +85,7 @@ test('shows network error when login request cannot complete', async ({ page }) 
   await expect(page).toHaveURL(/\/invite$/)
 })
 
-test('submits trimmed invite code and redirects to rsvp on success', async ({ page }) => {
+test('submits trimmed invite code and redirects to the dashboard on success', async ({ page }) => {
   const requests: LoginRequestRecord[] = []
   const user = {
     id: 10,
@@ -103,34 +103,25 @@ test('submits trimmed invite code and redirects to rsvp on success', async ({ pa
   await page.route('**/api/auth/me', async (route) => {
     await json(route, user)
   })
-  await page.route('**/api/guests/10', async (route) => {
+  await page.route('**/api/portal/wedding', async (route) => {
     await json(route, {
-      id: 10,
-      wedding_id: 1,
-      name: 'Demo Guest',
-      email: null,
-      phone: null,
-      relationship: null,
-      rsvp_status: 'pending',
-      meal_choice: null,
-      dietary_notes: null,
-      dietary_restrictions: null,
-      plus_one_name: null,
-      plus_one_rsvp: null,
-      plus_one_dietary: null,
-      table_number: null,
-      seat_number: null,
-      notes: null,
-      created_at: null,
-      updated_at: null,
+      couple_names: 'Ashley & Hazel',
+      wedding_date: '2027-06-19',
+      ceremony_time: '14:00:00',
+      ceremony_location: 'The Chapel',
+      reception_location: 'The Hall',
+      phase: 'live',
     })
+  })
+  await page.route('**/api/portal/schedule', async (route) => {
+    await json(route, [])
   })
 
   await page.goto('/invite')
   await page.getByLabel('Invite Code').fill('  demo-001  ')
   await page.getByRole('button', { name: 'Enter' }).click()
 
-  await expect(page).toHaveURL(/\/rsvp$/)
-  await expect(page.getByRole('heading', { name: 'RSVP' })).toBeVisible()
+  await expect(page).toHaveURL(/\/dashboard$/)
+  await expect(page.getByRole('main').getByText(/days to go/i)).toBeVisible()
   expect(requests).toEqual([{ invite_code: 'demo-001' }])
 })
