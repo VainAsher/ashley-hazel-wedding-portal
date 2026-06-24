@@ -1,5 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 
+import { formatCurrency } from '@/lib/format'
 import { AdminLayout } from '@/components/AdminLayout'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -128,10 +129,6 @@ function buildPayload(form: BudgetFormState): BudgetItemPayload {
   }
 }
 
-function formatCurrency(value: number | null | undefined): string {
-  const amount = typeof value === 'number' ? value : 0
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount)
-}
 
 function displayValue(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === '') {

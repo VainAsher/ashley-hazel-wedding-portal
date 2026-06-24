@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import {
-  Activity,
   CalendarDays,
   DollarSign,
   Mail,
@@ -11,6 +10,10 @@ import {
   Wallet,
 } from 'lucide-react'
 import { fetchCurrentUser, type AuthUser } from '../api/auth'
+import { useGuests } from '../hooks/useGuests'
+import { useBudgetSummary } from '../hooks/useBudget'
+import { useEvents } from '../hooks/useEvents'
+import { formatCurrency } from '../lib/format'
 import { AdminLayout } from '../components/AdminLayout'
 import { InviteManagement } from '../components/InviteManagement'
 import { Alert } from '../components/ui/alert'
@@ -66,47 +69,12 @@ function useAuthState(): AuthState {
   return state
 }
 
-// NOTE: All figures below are static placeholders. Real data wiring is
-// handled in a later phase once the planning-module APIs land.
 interface StatCard {
   icon: typeof Users
   label: string
   value: string
   detail: string
 }
-
-const statCards: StatCard[] = [
-  {
-    icon: Users,
-    label: 'RSVP Status',
-    value: '0 / 0',
-    detail: 'Responses received (placeholder)',
-  },
-  {
-    icon: Wallet,
-    label: 'Budget',
-    value: '$0',
-    detail: 'Spent of $0 planned (placeholder)',
-  },
-  {
-    icon: CalendarDays,
-    label: 'Timeline',
-    value: '0 events',
-    detail: 'Scheduled milestones (placeholder)',
-  },
-]
-
-interface ActivityItem {
-  id: string
-  text: string
-  time: string
-}
-
-const activityItems: ActivityItem[] = [
-  { id: 'a1', text: 'Dashboard redesigned with the new design system.', time: 'Just now' },
-  { id: 'a2', text: 'Planning modules will be wired up in a later phase.', time: 'Placeholder' },
-  { id: 'a3', text: 'Guest and RSVP data sync is coming soon.', time: 'Placeholder' },
-]
 
 interface PlanningModule {
   icon: typeof Users
@@ -129,6 +97,9 @@ const planningModules: PlanningModule[] = [
 
 export function Admin() {
   const { error, loading, user } = useAuthState()
+  const { data: guests } = useGuests()
+  const { data: budget } = useBudgetSummary()
+  const { data: events } = useEvents()
 
   if (loading) {
     return (
@@ -155,6 +126,31 @@ export function Admin() {
   if (user.role === 'guest') {
     return <Navigate replace to="/rsvp" />
   }
+
+  const guestList = guests ?? []
+  const acceptedCount = guestList.filter((g) => g.rsvp_status === 'accepted').length
+  const eventCount = (events ?? []).length
+
+  const statCards: StatCard[] = [
+    {
+      icon: Users,
+      label: 'RSVP Status',
+      value: `${acceptedCount} / ${guestList.length}`,
+      detail: 'Guests accepted',
+    },
+    {
+      icon: Wallet,
+      label: 'Budget',
+      value: formatCurrency(budget?.total_paid),
+      detail: `Spent of ${formatCurrency(budget?.total_estimated)} planned`,
+    },
+    {
+      icon: CalendarDays,
+      label: 'Events',
+      value: `${eventCount} ${eventCount === 1 ? 'event' : 'events'}`,
+      detail: 'Scheduled events',
+    },
+  ]
 
   return (
     <AdminLayout title="Admin Dashboard">
@@ -203,28 +199,6 @@ export function Admin() {
               </Link>
             ))}
           </div>
-        </section>
-
-        {/* Activity feed */}
-        <section aria-label="Recent Activity">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-          <Card>
-            <CardContent className="p-0">
-              <ul className="divide-y divide-gray-100">
-                {activityItems.map((item) => (
-                  <li key={item.id} className="flex items-start gap-3 p-4">
-                    <span className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500">
-                      <Activity className="h-4 w-4" aria-hidden="true" />
-                    </span>
-                    <div>
-                      <p className="text-sm text-gray-800">{item.text}</p>
-                      <p className="text-xs text-gray-400">{item.time}</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
         </section>
 
         {/* Invite management (existing functionality, kept accessible).

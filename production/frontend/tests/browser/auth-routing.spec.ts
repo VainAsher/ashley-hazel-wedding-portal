@@ -139,6 +139,23 @@ test('authenticated couple root traffic lands on admin stub', async ({ page }) =
     await json(route, [])
   })
 
+  // Dashboard stat cards are wired to real data.
+  await page.route('**/api/guests', async (route) => {
+    await json(route, [{ rsvp_status: 'accepted' }, { rsvp_status: 'pending' }])
+  })
+  await page.route('**/api/budget/summary', async (route) => {
+    await json(route, {
+      total_estimated: 500,
+      total_actual: 0,
+      total_paid: 100,
+      remaining: 400,
+      by_category: [],
+    })
+  })
+  await page.route('**/api/events', async (route) => {
+    await json(route, [{ id: 1 }])
+  })
+
   await page.goto('/')
 
   await expect(page).toHaveURL(/\/admin$/)
@@ -148,12 +165,14 @@ test('authenticated couple root traffic lands on admin stub', async ({ page }) =
   // violations with the AdminLayout sidebar/header navigation.
   const main = page.getByRole('main')
   await expect(main.getByRole('heading', { name: 'Planning Modules' })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Recent Activity' })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Invite Management' })).toBeVisible()
 
-  // Stat cards render placeholder figures.
+  // Stat cards render real, wired figures.
   await expect(main.getByText('RSVP Status')).toBeVisible()
-  await expect(main.getByText('Responses received (placeholder)')).toBeVisible()
+  await expect(main.getByText('1 / 2')).toBeVisible()
+  await expect(main.getByText('Guests accepted')).toBeVisible()
+  await expect(main.getByText('£100.00')).toBeVisible()
+  await expect(main.getByText('1 event')).toBeVisible()
 
   // Planning modules link out (Guests resolves to the real /guests route).
   await expect(main.getByRole('link', { name: /Guests/ })).toHaveAttribute('href', '/guests')
