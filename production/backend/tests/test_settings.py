@@ -57,6 +57,7 @@ class TestWeddingSettings:
             "ceremony_time",
             "ceremony_location",
             "reception_location",
+            "phase",
         }
 
     def test_put_updates_and_persists(

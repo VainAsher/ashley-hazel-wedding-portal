@@ -362,6 +362,9 @@ class BudgetItemResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+WEDDING_PHASES = {"planning", "live", "event", "archived"}
+
+
 class WeddingSettingsResponse(BaseModel):
     id: int
     couple_names: str
@@ -369,6 +372,7 @@ class WeddingSettingsResponse(BaseModel):
     ceremony_time: time | None = None
     ceremony_location: str | None = None
     reception_location: str | None = None
+    phase: str
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -379,6 +383,7 @@ class WeddingSettingsUpdate(BaseModel):
     ceremony_time: time | None = None
     ceremony_location: str | None = Field(default=None, max_length=255)
     reception_location: str | None = Field(default=None, max_length=255)
+    phase: str | None = None
 
     @field_validator("couple_names")
     @classmethod
@@ -389,6 +394,17 @@ class WeddingSettingsUpdate(BaseModel):
         if not couple_names:
             raise ValueError("Couple names are required")
         return couple_names
+
+    @field_validator("phase")
+    @classmethod
+    def phase_must_be_valid(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        phase = value.strip().lower()
+        if phase not in WEDDING_PHASES:
+            allowed = ", ".join(sorted(WEDDING_PHASES))
+            raise ValueError(f"Phase must be one of: {allowed}")
+        return phase
 
 
 class BudgetCategorySummary(BaseModel):

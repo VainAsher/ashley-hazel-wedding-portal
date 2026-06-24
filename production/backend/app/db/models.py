@@ -83,6 +83,9 @@ class Wedding(Base):
     ceremony_time: Mapped[time | None] = mapped_column(Time)
     ceremony_location: Mapped[str | None] = mapped_column(String(255))
     reception_location: Mapped[str | None] = mapped_column(String(255))
+    phase: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default=text("'live'")
+    )
     created_at: Mapped[datetime | None] = mapped_column(
         DateTime, server_default=text("CURRENT_TIMESTAMP")
     )

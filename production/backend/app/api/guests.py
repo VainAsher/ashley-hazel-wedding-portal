@@ -142,6 +142,11 @@ async def update_guest_rsvp(
     logger.info("guest_rsvp_update_started", extra={"guest_id": guest_id})
     db_guest = get_guest_or_404(db, guest_id, "update_guest_rsvp")
     ensure_guest_rsvp_access(current_user, guest_id)
+    if current_user.wedding_phase != "live":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="RSVP is not currently open.",
+        )
     update_data = rsvp.model_dump(exclude_unset=True)
 
     for field, value in update_data.items():

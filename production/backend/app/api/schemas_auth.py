@@ -20,6 +20,7 @@ class UserResponse(BaseModel):
     wedding_id: int
     invite_id: int
     guest_id: int | None = None
+    wedding_phase: str = "live"
 
     model_config = ConfigDict(from_attributes=True)
 

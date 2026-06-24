@@ -43,6 +43,7 @@ def invite_to_user(invite: Invite) -> UserResponse:
         wedding_id=invite.wedding_id,
         invite_id=invite.id,
         guest_id=guest.id if guest else None,
+        wedding_phase=invite.wedding.phase if invite.wedding else "live",
     )
 
 

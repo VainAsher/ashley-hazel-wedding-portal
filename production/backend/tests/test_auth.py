@@ -110,6 +110,7 @@ class TestAuthRoutes:
                 "name": guest.name,
                 "role": "guest",
                 "wedding_id": TEST_WEDDING_ID,
+                "wedding_phase": response.json()["user"]["wedding_phase"],
             },
         }
         assert "session" in client.cookies
