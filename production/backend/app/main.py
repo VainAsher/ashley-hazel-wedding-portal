@@ -12,12 +12,14 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.api import (
     auth,
+    blessings,
     budget,
     communications,
     events,
     gallery,
     guests,
     invites,
+    portal,
     settings as settings_api,
     tasks,
     vendors,
@@ -68,6 +70,8 @@ app.include_router(events.router)
 app.include_router(communications.router)
 app.include_router(gallery.router)
 app.include_router(settings_api.router)
+app.include_router(blessings.router)
+app.include_router(portal.router)
 
 # Serve uploaded gallery media. The directory lives on a Docker volume
 # (uploads_data -> /app/uploads) so files survive deploys; nginx proxies

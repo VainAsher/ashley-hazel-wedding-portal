@@ -652,3 +652,66 @@ class GalleryItemResponse(BaseModel):
     @property
     def url(self) -> str:
         return f"/uploads/{self.file_path}"
+
+
+# ---------------------------------------------------------------------------
+# Blessings (guest well-wishes / guestbook)
+# ---------------------------------------------------------------------------
+
+
+class BlessingCreate(BaseModel):
+    # Author defaults to the authenticated guest's name when omitted/blank.
+    author_name: str | None = Field(default=None, max_length=255)
+    message: str = Field(min_length=1)
+
+    @field_validator("message")
+    @classmethod
+    def message_must_not_be_blank(cls, value: str) -> str:
+        message = value.strip()
+        if not message:
+            raise ValueError("Blessing message is required")
+        return message
+
+    @field_validator("author_name")
+    @classmethod
+    def author_name_blank_to_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        author_name = value.strip()
+        return author_name or None
+
+
+class BlessingResponse(BaseModel):
+    id: int
+    author_name: str
+    message: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Guest portal (read-only wedding info for guests)
+# ---------------------------------------------------------------------------
+
+
+class WeddingInfoResponse(BaseModel):
+    couple_names: str
+    wedding_date: date
+    ceremony_time: time | None = None
+    ceremony_location: str | None = None
+    reception_location: str | None = None
+    phase: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ScheduleEventResponse(BaseModel):
+    id: int
+    event_name: str
+    event_date: date
+    event_time: time | None = None
+    location: str | None = None
+    description: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)

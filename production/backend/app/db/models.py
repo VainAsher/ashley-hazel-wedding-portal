@@ -457,6 +457,25 @@ class Communication(Base):
     wedding: Mapped[Wedding] = orm_relationship(back_populates="communications")
 
 
+class Blessing(Base):
+    __tablename__ = "blessings"
+    __table_args__ = (
+        Index("idx_blessings_wedding", "wedding_id"),
+        Index("idx_blessings_wedding_created", "wedding_id", text("created_at DESC")),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), nullable=False
+    )
+    author_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    hidden: Mapped[bool] = mapped_column(Boolean, server_default=text("FALSE"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+
 class GalleryItem(Base):
     __tablename__ = "gallery_items"
     __table_args__ = (
