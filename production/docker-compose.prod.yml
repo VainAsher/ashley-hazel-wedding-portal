@@ -41,6 +41,13 @@ services:
       # Secure cookies require HTTPS, terminated at the Cloudflare edge in prod.
       SESSION_COOKIE_SECURE: "true"
       SENTRY_ENVIRONMENT: production
+      # Public URLs baked in so production config validation passes deterministically
+      # (it requires https, non-localhost). Same-origin SPA: all three are the
+      # public subdomain. DB name comes from POSTGRES_DB=wedding_prod (set by
+      # deploy.sh), which the base DATABASE_URL interpolates.
+      API_URL: https://ashley-and.hazel-of-halifax.com
+      FRONTEND_URL: https://ashley-and.hazel-of-halifax.com
+      CORS_ORIGINS_RAW: https://ashley-and.hazel-of-halifax.com
     # No host port: backend is reached only by the frontend over the network.
     ports: !reset []
     restart: always

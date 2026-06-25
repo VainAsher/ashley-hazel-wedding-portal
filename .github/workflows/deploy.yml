@@ -93,7 +93,10 @@ jobs:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
       DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
-      DEPLOY_PATH: /home/deploy/wedding-dashboard
+      # Environment-aware checkout path: the `production` Environment sets
+      # vars.DEPLOY_PATH=/home/deploy/wedding-prod (its own isolated checkout);
+      # staging has no such var and falls back to the staging path.
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/home/deploy/wedding-dashboard' }}
 
     steps:
       # --------------------------------------------------------------------

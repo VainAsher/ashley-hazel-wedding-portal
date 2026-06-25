@@ -156,6 +156,11 @@ resolve_compose_files() {
     # override's distinct container/volume/network names, this keeps the two
     # stacks fully separate (and staging keeps its default project name).
     export COMPOSE_PROJECT_NAME="wedding-prod"
+    # Default the prod database name. Exporting it here makes EVERY consumer
+    # agree: compose interpolation (DATABASE_URL + the pg healthcheck), the
+    # password reconcile, and the migration runner all use wedding_prod — without
+    # needing it in CI vars or a host .env. (Staging keeps the wedding_dev default.)
+    export POSTGRES_DB="${POSTGRES_DB:-wedding_prod}"
   fi
   log "Environment: $DEPLOY_ENVIRONMENT (compose files: ${COMPOSE_FILES[*]}${COMPOSE_PROJECT_NAME:+ project: $COMPOSE_PROJECT_NAME})"
 }
