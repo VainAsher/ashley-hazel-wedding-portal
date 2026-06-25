@@ -28,22 +28,54 @@ wedding data** — handle with care, and complete the privacy checklist
    the prod checkout and fill `POSTGRES_PASSWORD`, `JWT_SECRET`, `API_KEY_SECRET`,
    `SESSION_SECRET_KEY` (each ≥16 chars, **unique to prod**). Keep
    `FRONTEND_HOST_PORT=8090`, `POSTGRES_DB=wedding_prod`, and the `https://` URLs.
-3. **Cloudflare:**
-   - DNS: CNAME `ashley-and.hazel-of-halifax.com` → your tunnel
-     (`<tunnel-id>.cfargotunnel.com`), proxied.
-   - Tunnel ingress (cloudflared on `.23`): route
-     `ashley-and.hazel-of-halifax.com → http://192.168.0.32:8090` (directly, or
-     via Traefik).
-   - **Rate-limit rule** (WAF) on path `*/api/auth/login` (e.g. > 10 requests/min
-     per IP → block/managed-challenge) to blunt invite-code brute force.
-4. **GitHub `production` Environment** (for Actions-driven prod deploys):
-   - Create it (repo → Settings → Environments) and set **yourself as a required
-     reviewer**, so prod deploys pause for manual approval.
-   - Environment secrets: `POSTGRES_PASSWORD`, `JWT_SECRET`, `API_KEY_SECRET`,
-     `SESSION_SECRET_KEY`, plus `DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY` /
-     `DEPLOY_PATH` pointing at the prod checkout; optional `SENTRY_DSN`.
-     Non-secret prod config (URLs, `POSTGRES_DB`, `FRONTEND_HOST_PORT`) can live in
+3. **Cloudflare edge** — verified against the live `.23` setup (2026-06-25): every
+   hostname on the `infra-core` tunnel `f0b1403c-f9ec-4ffa-ba9c-0e4673c0444b` routes
+   to **Traefik** at `https://127.0.0.1:443` (e.g. `home.hazel-of-halifax.com`
+   already does); there is no wedding route yet. Follow the same pattern:
+   - **DNS:** CNAME `ashley-and.hazel-of-halifax.com` →
+     `f0b1403c-f9ec-4ffa-ba9c-0e4673c0444b.cfargotunnel.com` (proxied).
+   - **Tunnel ingress** (`/etc/cloudflared/config.yml` on `.23`): add an entry
+     `- hostname: ashley-and.hazel-of-halifax.com` / `service: https://127.0.0.1:443`
+     (into Traefik, like the other services — NOT directly to the app), then
+     restart cloudflared.
+   - **Traefik route** (`.23`, dynamic/file provider): a router for
+     ``Host(`ashley-and.hazel-of-halifax.com`)`` → a service pointing at
+     `http://192.168.0.32:8090` (the prod frontend on the wedding VM). Cloudflare
+     terminates TLS at the edge; Traefik terminates it at the origin.
+   - **Rate-limit rule** (Cloudflare WAF) on path `*/api/auth/login` (e.g. > 10
+     requests/min per IP → managed-challenge/block) to blunt invite-code brute force.
+4. **GitHub `production` Environment** — it **already exists**, but verification
+   (2026-06-25) found it has **no required reviewers** and **no environment-scoped
+   secrets/variables**. As-is, a prod dispatch would NOT pause for approval and
+   would inherit the **repo-level (staging) secrets** — including `DEPLOY_PATH`,
+   which would make a prod deploy run inside **staging's checkout**. Before any prod
+   deploy, on the `production` Environment (repo → Settings → Environments):
+   - Add **yourself as a required reviewer** (so prod deploys pause for approval).
+   - Add **environment-scoped** secrets that override the repo-level ones for prod:
+     `POSTGRES_PASSWORD`, `JWT_SECRET`, `API_KEY_SECRET`, `SESSION_SECRET_KEY`
+     (each unique to prod), and **`DEPLOY_PATH`** pointing at the prod checkout
+     (e.g. `/home/deploy/wedding-prod`). `DEPLOY_HOST` / `DEPLOY_USER` /
+     `DEPLOY_SSH_KEY` can stay repo-level (same `.32` host); `SENTRY_DSN` optional.
+   - Non-secret prod config (URLs, `POSTGRES_DB`, `FRONTEND_HOST_PORT`) lives in
      `production/.env` on the host.
+
+## Pre-deploy verification (confirmed 2026-06-25)
+
+Already verified against the live homelab (read-only): `.32` runs Docker Compose
+**v5.1.4** (the `!reset`/`!override` merge tags are supported); staging occupies
+`80/3001/5432` (no clash with prod's `8090`); and the merged prod compose renders
+correctly — distinct `wedding-prod-*` containers/volumes/network, `wedding_prod`
+DB, frontend published on **8090 only**, db/backend host ports closed. Re-run that
+render any time (read-only — it does not deploy):
+
+```bash
+# on .32, in the prod checkout:
+POSTGRES_PASSWORD=x JWT_SECRET=xxxxxxxxxxxxxxxx API_KEY_SECRET=xxxxxxxxxxxxxxxx \
+SESSION_SECRET_KEY=xxxxxxxxxxxxxxxx FRONTEND_HOST_PORT=8090 POSTGRES_DB=wedding_prod \
+ENVIRONMENT=production COMPOSE_PROJECT_NAME=wedding-prod \
+docker compose -f docker-compose.yml -f docker-compose.prod.yml config \
+  | grep -E 'container_name:|name: wedding|published:|POSTGRES_DB'
+```
 
 ## First deploy (manual only)
 
