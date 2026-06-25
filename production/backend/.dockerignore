@@ -14,6 +14,10 @@ venv
 docs/
 tests/
 *.md
-scripts/
+# Keep dev/seed scripts out of the image, but DO ship the production bootstrap
+# so `docker exec wedding-prod-backend python -m scripts.bootstrap_prod` works
+# without a copy-in workaround.
+scripts/*
+!scripts/bootstrap_prod.py
 .dockerignore
 Dockerfile

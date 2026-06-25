@@ -91,17 +91,24 @@ no demo data**.
 ## Bootstrap the real wedding (once, after first deploy)
 
 ```bash
-docker exec -it wedding-prod-backend python -m scripts.bootstrap_prod \
+docker exec -it -w /app wedding-prod-backend python -m scripts.bootstrap_prod \
   --couple-names "Ashley & Hazel" --date 2027-06-19 \
   --ceremony-time 14:00 \
   --ceremony-location "<ceremony venue>" \
   --reception-location "<reception venue>"
 ```
 
+> The image ships `scripts/bootstrap_prod.py` (the demo seeders stay out — see
+> `backend/.dockerignore`). If you're on an image built **before** that change,
+> copy the script in first:
+> `docker cp ~/wedding-prod/production/backend/scripts/bootstrap_prod.py wedding-prod-backend:/app/bootstrap_prod.py`
+> then run `docker exec -it -w /app wedding-prod-backend python /app/bootstrap_prod.py …`.
+
 Record the printed **couple** and **coordinator** invite codes securely. The
-wedding starts in phase **planning** (guest RSVP closed). Do your planning; when
-ready to invite, generate guest invite codes in the admin **Invitations** module
-and flip the phase to **live** in **Settings**.
+wedding starts in phase **planning** (guest RSVP closed) — the bootstrap also
+updates the schema's placeholder wedding row to your details and forces
+`planning`. Do your planning; when ready to invite, generate guest invite codes
+in the admin **Invitations** module and flip the phase to **live** in **Settings**.
 
 ## Backups
 
