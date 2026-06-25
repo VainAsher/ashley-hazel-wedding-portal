@@ -96,9 +96,24 @@ def main(argv=None) -> int:
     try:
         wedding = session.query(Wedding).filter(Wedding.id == WEDDING_ID).first()
         if wedding:
+            # A fresh prod DB ships with a placeholder wedding row from
+            # schema.sql (phase defaults to 'live'). Update it to the real
+            # details and force phase='planning' so prod starts with guest RSVP
+            # closed. Required fields are always set; optional ones only when
+            # provided (so a re-run without them doesn't wipe existing values).
+            wedding.couple_names = args.couple_names
+            wedding.wedding_date = wedding_date
+            if ceremony_time is not None:
+                wedding.ceremony_time = ceremony_time
+            if args.ceremony_location is not None:
+                wedding.ceremony_location = args.ceremony_location
+            if args.reception_location is not None:
+                wedding.reception_location = args.reception_location
+            wedding.phase = "planning"
+            session.commit()
             print(
-                f"Wedding already exists: {wedding.couple_names} "
-                f"(phase={wedding.phase}) — not recreated."
+                f"Updated the existing wedding row -> {args.couple_names} on "
+                f"{wedding_date} (phase=planning)."
             )
         else:
             wedding = Wedding(
