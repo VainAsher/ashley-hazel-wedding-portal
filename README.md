@@ -62,9 +62,11 @@ Pushing to `main` runs **Tests**; on success the **Deploy** workflow ships to st
 
 ## Documentation
 
+- `docs/guides/` — **user guides** (Guest, Coordinator, Couple, IT/Admin)
 - `docs/ARCHITECTURE.md` — system architecture, auth, data model, API surface, CI/CD
-- `docs/ci/` — deployment, environments, GitHub Actions, logging, monitoring, e2e
+- `docs/ci/` — deployment, environments, GitHub Actions, logging, monitoring, e2e; `PRODUCTION_RUNBOOK.md` for go-live
 - `docs/privacy/DATA_BOUNDARY.md` — what may/may not be stored (use synthetic data until approved)
+- `docs/FEEDBACK_BACKLOG.md` — running feedback/ideas/bugs log feeding the next update
 - `production/backend/docs/SECURITY.md`, `production/database/*_STRATEGY.md` — security & DB design
 
 ## Data boundary
