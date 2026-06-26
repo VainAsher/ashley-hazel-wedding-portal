@@ -18,12 +18,14 @@ Add a row to the right table. Keep it short. Use:
 ## 🐞 Bugs / key fixes
 | Date | Source | Area | What happens / expected | Severity | Status |
 |------|--------|------|--------------------------|----------|--------|
-| | | | | | |
+| 2026-06-26 | Couple | Timeline (tasks) | **Editing a task doesn't save** — opening a created task and pressing Save doesn't persist the edits | 🟠 major | new |
+| 2026-06-26 | Couple | Gallery / images | **Photos load very slowly** — needs lazy-loading + caching (and likely served thumbnails / responsive sizes instead of full-res for the grid) | 🟡 minor | new |
 
 ## 💡 Ideas / feature requests
 | Date | Source | Idea | Why it helps | Status |
 |------|--------|------|--------------|--------|
-| | | | | |
+| 2026-06-26 | Couple | Gallery: **slideshow view** of approved photos | A nicer way to view the album / show it off on the day | new |
+| 2026-06-26 | Couple | Gallery: **click a photo to open it full-size in a modal/lightbox** (grid currently shows small thumbnails only) | View photos properly instead of tiny tiles; pairs with the slideshow | new |
 
 ## 📝 General feedback / observations
 | Date | Source | Note |
