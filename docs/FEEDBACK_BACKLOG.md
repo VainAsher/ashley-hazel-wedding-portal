@@ -26,6 +26,9 @@ Add a row to the right table. Keep it short. Use:
 |------|--------|------|--------------|--------|
 | 2026-06-26 | Couple | Gallery: **slideshow view** of approved photos | A nicer way to view the album / show it off on the day | new |
 | 2026-06-26 | Couple | Gallery: **click a photo to open it full-size in a modal/lightbox** (grid currently shows small thumbnails only) | View photos properly instead of tiny tiles; pairs with the slideshow | new |
+| 2026-07-08 | Couple | Guest site: **use the couple's own photos as page backgrounds** — 5 photos supplied, now in `docs/assets/feedback/guest-site-backgrounds/`. Will need cropping/scaling per viewport, fixed in place (no scroll), with a tint/blur overlay so content stays readable | Makes the guest site feel personal instead of a plain app shell | new |
+| 2026-07-08 | Couple | Landing page: **warmer, more welcoming greeting** — current "Welcome to Ashley & Hazel's wedding / 346 days to go" is functional but flat; wants it to read like a heartfelt wedding welcome | First thing guests see; should feel like an invitation, not a dashboard | new |
+| 2026-07-08 | Couple | Header/brand: **replace the purple "W" avatar with a photo of the couple's cat** and change the title to **"Ashley and Hazel's Wedding Portal"** (currently generic "Wedding Portal / Guest Portal") | Personal branding across every page; ⚠️ cat photo not yet supplied — need it from the couple | new |
 
 ## 📝 General feedback / observations
 | Date | Source | Note |
