@@ -366,6 +366,22 @@ class BudgetItemResponse(BaseModel):
 
 WEDDING_PHASES = {"planning", "live", "event", "archived"}
 
+HEX_COLOR_PATTERN = r"^#[0-9a-fA-F]{6}$"
+
+
+class WeddingTheme(BaseModel):
+    """Guest-site theme dials set by the couple in admin Settings.
+
+    primary: accent/button colour (prototype sun gold)
+    secondary: deep contrast colour used for text on primary and the
+        photo-background tint (prototype deep plum)
+    tint_opacity: strength of the tint over background photos
+    """
+
+    primary: str = Field(default="#f6c445", pattern=HEX_COLOR_PATTERN)
+    secondary: str = Field(default="#2b064d", pattern=HEX_COLOR_PATTERN)
+    tint_opacity: float = Field(default=0.9, ge=0.3, le=1.0)
+
 
 class WeddingSettingsResponse(BaseModel):
     id: int
@@ -375,6 +391,7 @@ class WeddingSettingsResponse(BaseModel):
     ceremony_location: str | None = None
     reception_location: str | None = None
     phase: str
+    theme: WeddingTheme | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -386,6 +403,8 @@ class WeddingSettingsUpdate(BaseModel):
     ceremony_location: str | None = Field(default=None, max_length=255)
     reception_location: str | None = Field(default=None, max_length=255)
     phase: str | None = None
+    # Explicit null resets the guest site to the built-in defaults.
+    theme: WeddingTheme | None = None
 
     @field_validator("couple_names")
     @classmethod

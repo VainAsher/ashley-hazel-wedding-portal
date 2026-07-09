@@ -45,6 +45,13 @@
 
   /* Border Radius - soft, invitation-like */
   --radius: 1rem;
+
+  /* Named prototype colours (bg-gold, text-plum, ...). The admin theme
+     dials override these at runtime via lib/theme.ts applyTheme(). */
+  --theme-gold: 43 91% 62%;
+  --theme-plum: 271 86% 16%;
+  --theme-plum-night: 282 100% 6%;
+  --theme-cream: 43 100% 94%;
 }
 
 /* Dark Mode Theme - plum night, gold accents */

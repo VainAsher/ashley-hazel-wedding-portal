@@ -1,7 +1,9 @@
 import React from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePortalTheme } from '@/hooks/useTheme'
 import { Button } from '@/components/ui/button'
+import { buildTint } from '@/lib/theme'
 import { cn } from '@/lib/utils'
 
 interface GuestLayoutProps {
@@ -18,14 +20,13 @@ const ROUTE_BACKGROUNDS: Record<string, string> = {
   '/gallery': '/backgrounds/bg-05-evening-sky.jpg',
 }
 
-const PLUM_TINT =
-  'radial-gradient(circle at top left, rgba(43, 6, 77, 0.86), rgba(22, 0, 31, 0.92) 55%, rgba(8, 0, 13, 0.95))'
-
 export function GuestLayout({ children }: GuestLayoutProps) {
   const { user, logout } = useAuth()
   const { pathname } = useLocation()
+  const theme = usePortalTheme()
 
   const backgroundImage = ROUTE_BACKGROUNDS[pathname] ?? ROUTE_BACKGROUNDS['/dashboard']
+  const tint = buildTint(theme.secondary, theme.tint_opacity)
 
   const navigationItems = [
     { label: 'Dashboard', href: '/dashboard' },
@@ -41,7 +42,7 @@ export function GuestLayout({ children }: GuestLayoutProps) {
       <div
         aria-hidden="true"
         className="fixed inset-0 -z-10 bg-cover bg-center"
-        style={{ backgroundImage: `${PLUM_TINT}, url(${backgroundImage})` }}
+        style={{ backgroundImage: `${tint}, url(${backgroundImage})` }}
       />
 
       {/* Header */}

@@ -71,3 +71,20 @@ export function fetchPortalSchedule(apiBaseUrl = API_BASE_URL): Promise<PortalSc
     apiBaseUrl,
   )
 }
+
+export interface PortalThemeResponse {
+  theme: {
+    primary: string
+    secondary: string
+    tint_opacity: number
+  } | null
+}
+
+// Public (pre-login) — the invite page needs the couple's colours too.
+export function fetchPortalTheme(apiBaseUrl = API_BASE_URL): Promise<PortalThemeResponse> {
+  return requestJson<PortalThemeResponse>(
+    '/api/portal/theme',
+    'Unable to load the theme.',
+    apiBaseUrl,
+  )
+}

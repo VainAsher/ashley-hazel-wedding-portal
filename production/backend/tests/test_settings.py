@@ -22,6 +22,7 @@ def restore_wedding(db_session: Session) -> Iterator[None]:
         "ceremony_time": wedding.ceremony_time,
         "ceremony_location": wedding.ceremony_location,
         "reception_location": wedding.reception_location,
+        "theme": wedding.theme,
     }
     try:
         yield
@@ -58,6 +59,7 @@ class TestWeddingSettings:
             "ceremony_location",
             "reception_location",
             "phase",
+            "theme",
         }
 
     def test_put_updates_and_persists(
@@ -118,3 +120,55 @@ class TestWeddingSettings:
             json={"couple_names": "Hackers"},
         )
         assert response.status_code == 401
+
+
+class TestWeddingTheme:
+    def test_theme_round_trip(
+        self,
+        coordinator_session: TestClient,
+        client: TestClient,
+        restore_wedding: None,
+    ) -> None:
+        theme = {"primary": "#AA5500", "secondary": "#112233", "tint_opacity": 0.75}
+        response = coordinator_session.put("/api/settings/wedding", json={"theme": theme})
+        assert response.status_code == 200
+        assert response.json()["theme"] == theme
+
+        # Guests (and the pre-login invite page) read it from the public endpoint.
+        public = client.get("/api/portal/theme")
+        assert public.status_code == 200
+        assert public.json()["theme"] == theme
+
+    def test_theme_reset_with_null(
+        self,
+        coordinator_session: TestClient,
+        client: TestClient,
+        restore_wedding: None,
+    ) -> None:
+        coordinator_session.put(
+            "/api/settings/wedding",
+            json={"theme": {"primary": "#AA5500", "secondary": "#112233", "tint_opacity": 0.8}},
+        )
+        response = coordinator_session.put("/api/settings/wedding", json={"theme": None})
+        assert response.status_code == 200
+        assert response.json()["theme"] is None
+        assert client.get("/api/portal/theme").json()["theme"] is None
+
+    def test_theme_rejects_invalid_hex(self, coordinator_session: TestClient) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding",
+            json={"theme": {"primary": "not-a-colour"}},
+        )
+        assert response.status_code == 422
+
+    def test_theme_rejects_out_of_range_opacity(
+        self, coordinator_session: TestClient
+    ) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding",
+            json={"theme": {"tint_opacity": 0.1}},
+        )
+        assert response.status_code == 422
+
+    def test_public_theme_needs_no_auth(self, client: TestClient) -> None:
+        assert client.get("/api/portal/theme").status_code == 200

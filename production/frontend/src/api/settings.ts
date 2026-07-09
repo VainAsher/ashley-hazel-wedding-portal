@@ -2,6 +2,12 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export type WeddingPhase = 'planning' | 'live' | 'event' | 'archived'
 
+export interface WeddingThemeSettings {
+  primary: string
+  secondary: string
+  tint_opacity: number
+}
+
 export interface WeddingSettings {
   id: number
   couple_names: string
@@ -10,15 +16,18 @@ export interface WeddingSettings {
   ceremony_location: string | null
   reception_location: string | null
   phase: WeddingPhase
+  theme: WeddingThemeSettings | null
 }
 
 export interface WeddingSettingsPayload {
-  couple_names: string
-  wedding_date: string
-  ceremony_time: string | null
-  ceremony_location: string | null
-  reception_location: string | null
-  phase: WeddingPhase
+  couple_names?: string
+  wedding_date?: string
+  ceremony_time?: string | null
+  ceremony_location?: string | null
+  reception_location?: string | null
+  phase?: WeddingPhase
+  // Explicit null resets the guest site to the built-in theme.
+  theme?: WeddingThemeSettings | null
 }
 
 export class SettingsApiError extends Error {

@@ -1,15 +1,18 @@
 import React from 'react'
 
+import { usePortalTheme } from '@/hooks/useTheme'
+import { buildTint } from '@/lib/theme'
+
 interface AuthLayoutProps {
   children: React.ReactNode
   title?: string
   description?: string
 }
 
-const PLUM_TINT =
-  'radial-gradient(circle at top left, rgba(78, 17, 120, 0.88), rgba(22, 0, 31, 0.93) 55%, rgba(8, 0, 13, 0.96))'
-
 export function AuthLayout({ children, title, description }: AuthLayoutProps) {
+  const theme = usePortalTheme()
+  const tint = buildTint(theme.secondary, theme.tint_opacity)
+
   return (
     <div className="min-h-screen flex flex-col text-cream">
       {/* Photo backdrop under the prototype's plum night gradient */}
@@ -17,7 +20,7 @@ export function AuthLayout({ children, title, description }: AuthLayoutProps) {
         aria-hidden="true"
         className="fixed inset-0 -z-10 bg-cover bg-center"
         style={{
-          backgroundImage: `${PLUM_TINT}, url(/backgrounds/bg-06-registry-candid.jpg)`,
+          backgroundImage: `${tint}, url(/backgrounds/bg-06-registry-candid.jpg)`,
         }}
       />
 

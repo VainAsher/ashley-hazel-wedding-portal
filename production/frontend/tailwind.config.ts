@@ -25,11 +25,11 @@ const config: Config = {
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
-        // Prototype palette, for places tokens don't reach
-        plum: '#2b064d',
-        'plum-night': '#16001f',
-        gold: '#f6c445',
-        cream: '#fff6df',
+        // Prototype palette as vars so the admin theme dials can retune them
+        plum: 'hsl(var(--theme-plum))',
+        'plum-night': 'hsl(var(--theme-plum-night))',
+        gold: 'hsl(var(--theme-gold))',
+        cream: 'hsl(var(--theme-cream))',
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],

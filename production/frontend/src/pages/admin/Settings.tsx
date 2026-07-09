@@ -20,7 +20,9 @@ import {
   type WeddingPhase,
   type WeddingSettings,
   type WeddingSettingsPayload,
+  type WeddingThemeSettings,
 } from '@/hooks/useSettings'
+import { buildTint, DEFAULT_THEME } from '@/lib/theme'
 
 const PHASE_OPTIONS: { value: WeddingPhase; label: string; description: string }[] = [
   { value: 'planning', label: 'Planning', description: 'Guest portal dormant — RSVP not yet open.' },
@@ -64,6 +66,181 @@ function formStateFromSettings(settings: WeddingSettings): SettingsFormState {
 function optionalText(value: string): string | null {
   const trimmed = value.trim()
   return trimmed === '' ? null : trimmed
+}
+
+const HEX_PATTERN = /^#[0-9a-fA-F]{6}$/
+
+function isValidHex(value: string): boolean {
+  return HEX_PATTERN.test(value)
+}
+
+interface ColourDialProps {
+  id: string
+  label: string
+  hint: string
+  value: string
+  onChange: (value: string) => void
+}
+
+function ColourDial({ id, label, hint, value, onChange }: ColourDialProps) {
+  const valid = isValidHex(value)
+
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="flex items-center gap-3">
+        <input
+          type="color"
+          aria-label={`${label} picker`}
+          className="h-10 w-14 cursor-pointer rounded-md border border-input bg-white p-1"
+          value={valid ? value : '#000000'}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        <Input
+          id={id}
+          value={value}
+          onChange={(event) => onChange(event.target.value.trim())}
+          className="w-32 font-mono"
+          maxLength={7}
+          placeholder="#f6c445"
+        />
+      </div>
+      <p className="text-xs text-gray-500 m-0">{hint}</p>
+      {!valid && (
+        <p className="text-xs text-red-600 m-0">Use a six-digit hex colour, e.g. #f6c445</p>
+      )}
+    </div>
+  )
+}
+
+function ThemeCard({ settings }: { settings: WeddingSettings }) {
+  const updateMutation = useUpdateSettings()
+  const [theme, setTheme] = useState<WeddingThemeSettings>(settings.theme ?? DEFAULT_THEME)
+  const [feedback, setFeedback] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setTheme(settings.theme ?? DEFAULT_THEME)
+  }, [settings.theme])
+
+  const isSaving = updateMutation.isPending
+  const hexesValid = isValidHex(theme.primary) && isValidHex(theme.secondary)
+  const tintPercent = Math.round(theme.tint_opacity * 100)
+
+  const previewTint = hexesValid
+    ? buildTint(theme.secondary, theme.tint_opacity)
+    : buildTint(DEFAULT_THEME.secondary, theme.tint_opacity)
+
+  const save = async (payload: WeddingThemeSettings | null) => {
+    setFeedback(null)
+    setSaveError(null)
+    try {
+      await updateMutation.mutateAsync({ theme: payload })
+      setFeedback(payload ? 'Theme saved — the guest site now uses it.' : 'Theme reset to the default look.')
+      if (!payload) {
+        setTheme(DEFAULT_THEME)
+      }
+    } catch (err) {
+      setSaveError(err instanceof SettingsApiError ? err.message : 'Failed to save theme')
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Guest Site Theme</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4" aria-label="Guest site theme controls">
+          {feedback && (
+            <Alert variant="success" role="status" aria-live="polite">
+              {feedback}
+            </Alert>
+          )}
+          {saveError && <Alert variant="destructive">{saveError}</Alert>}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ColourDial
+              id="theme-primary"
+              label="Accent colour"
+              hint="Buttons, highlights, and the active menu tab."
+              value={theme.primary}
+              onChange={(value) => setTheme((t) => ({ ...t, primary: value }))}
+            />
+            <ColourDial
+              id="theme-secondary"
+              label="Deep colour"
+              hint="Headings, button text, and the photo tint."
+              value={theme.secondary}
+              onChange={(value) => setTheme((t) => ({ ...t, secondary: value }))}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="theme-tint">Photo tint strength ({tintPercent}%)</Label>
+            <input
+              id="theme-tint"
+              type="range"
+              min={30}
+              max={100}
+              step={1}
+              value={tintPercent}
+              onChange={(event) =>
+                setTheme((t) => ({ ...t, tint_opacity: Number(event.target.value) / 100 }))
+              }
+              className="w-full accent-plum"
+            />
+            <p className="text-xs text-gray-500 m-0">
+              Lower = your photos show through more; higher = calmer, easier to read.
+            </p>
+          </div>
+
+          {/* Live preview */}
+          <div className="grid gap-2">
+            <span className="text-sm font-medium">Preview</span>
+            <div
+              aria-hidden="true"
+              className="flex items-center justify-between gap-4 rounded-2xl px-5 py-6 bg-cover bg-center"
+              style={{
+                backgroundImage: `${previewTint}, url(/backgrounds/bg-02-registry-office.jpg)`,
+              }}
+            >
+              <p className="m-0 font-display text-xl" style={{ color: '#fff6df' }}>
+                Ashley &amp; Hazel
+              </p>
+              <span
+                className="rounded-full px-4 py-2 text-sm font-semibold"
+                style={{
+                  backgroundColor: hexesValid ? theme.primary : DEFAULT_THEME.primary,
+                  color: hexesValid ? theme.secondary : DEFAULT_THEME.secondary,
+                }}
+              >
+                Sample button
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <Button
+              type="button"
+              disabled={isSaving || !hexesValid}
+              onClick={() => save(theme)}
+            >
+              {isSaving ? 'Saving...' : 'Save theme'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isSaving}
+              onClick={() => save(null)}
+            >
+              Reset to default
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
 
 function validate(form: SettingsFormState): string | null {
@@ -252,6 +429,8 @@ export function Settings() {
             </CardContent>
           </Card>
         )}
+
+        {!isLoading && !isError && settings && <ThemeCard settings={settings} />}
       </div>
     </AdminLayout>
   )

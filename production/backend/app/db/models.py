@@ -86,6 +86,8 @@ class Wedding(Base):
     phase: Mapped[str] = mapped_column(
         String(20), nullable=False, server_default=text("'live'")
     )
+    # Couple-configurable guest-site theme (admin Settings dials); NULL = defaults.
+    theme: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime | None] = mapped_column(
         DateTime, server_default=text("CURRENT_TIMESTAMP")
     )

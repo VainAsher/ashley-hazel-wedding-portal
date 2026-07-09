@@ -12,6 +12,17 @@ export async function cleanupPageState(page: Page): Promise<void> {
       // Silently ignore if unroute fails
     })
 
+    // ThemeApplier requests the public theme on every page. Answer it with
+    // "use defaults" so specs don't need to mock it individually (a spec can
+    // still override — routes registered later win).
+    await page.route('**/api/portal/theme', (route) =>
+      route.fulfill({
+        body: JSON.stringify({ theme: null }),
+        contentType: 'application/json',
+        status: 200,
+      }),
+    )
+
     // Clear cookies and local storage
     await page.context().clearCookies()
     await page.evaluate(() => {

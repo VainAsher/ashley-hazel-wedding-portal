@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { HomeRedirect, RequireAdmin, RequireGuest } from './components/AuthRoutes'
+import { ThemeApplier } from './hooks/useTheme'
 import { Admin } from './pages/Admin'
 import { Guests } from './pages/Guests'
 import { Invite } from './pages/Invite'
@@ -63,6 +64,7 @@ function adminRoute(element: React.ReactNode) {
 function App() {
   return (
     <BrowserRouter>
+      <ThemeApplier />
       <div style={appStyle}>
         <Suspense
           fallback={
