@@ -75,9 +75,9 @@ test('renders the welcome, countdown and key details', async ({ page }) => {
   await installPortalApi(page, { ...wedding })
   await page.goto('/dashboard')
 
-  await expect(
-    page.getByRole('heading', { name: "Welcome to Ashley & Hazel's wedding" }),
-  ).toBeVisible()
+  // The invitation hero greets the guest by first name (mocked "Wedding Guest")
+  await expect(page.getByRole('heading', { name: 'Welcome, Wedding' })).toBeVisible()
+  await expect(mainRegion(page).getByText('You are warmly invited')).toBeVisible()
   await expect(mainRegion(page).getByText(/to go|Today is the day|has passed/)).toBeVisible()
   await expect(mainRegion(page).getByText('Rosewood Chapel')).toBeVisible()
   await expect(mainRegion(page).getByText('The Grand Hall')).toBeVisible()

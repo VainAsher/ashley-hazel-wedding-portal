@@ -1,6 +1,7 @@
 import { Calendar, Clock, Heart, Image as ImageIcon, MapPin, Send } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
+import { useAuth } from '../contexts/AuthContext'
 import { GuestLayout } from '../components/GuestLayout'
 import { Alert } from '../components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
@@ -98,12 +99,47 @@ function DetailRow({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <Icon className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" aria-hidden="true" />
+      <Icon className="h-5 w-5 text-plum mt-0.5 flex-shrink-0" aria-hidden="true" />
       <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-gray-500 m-0">{label}</p>
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground m-0">{label}</p>
         <p className="text-sm text-gray-900 m-0">{value}</p>
       </div>
     </div>
+  )
+}
+
+function InvitationHero({
+  wedding,
+  guestName,
+}: {
+  wedding: PortalWedding
+  guestName: string | null
+}) {
+  const firstName = guestName?.trim().split(/\s+/)[0]
+
+  return (
+    <section aria-label="Welcome" className="relative">
+      {/* Pattern band, straight from the prototype landing page */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-3 rounded-[34px] border-2 border-dashed border-gold/60 [background:linear-gradient(135deg,rgba(246,196,69,0.12)_25%,transparent_25%)_0_0/26px_26px]"
+      />
+      <div className="relative rounded-[28px] border-4 border-double border-plum bg-gradient-to-b from-[#fff7e9] to-[#f8e7ad] px-6 py-10 text-center shadow-xl">
+        <p className="m-0 text-xs font-extrabold uppercase tracking-[0.18em] text-[#b77900]">
+          You are warmly invited
+        </p>
+        <h1 className="font-display text-4xl sm:text-5xl text-plum my-2">
+          {firstName ? `Welcome, ${firstName}` : `Welcome to ${wedding.couple_names}'s wedding`}
+        </h1>
+        <p className="m-0 text-lg font-bold text-plum">
+          {formatDate(wedding.wedding_date)} · {countdownLabel(wedding.wedding_date)}
+        </p>
+        <p className="mx-auto mt-4 mb-0 max-w-xl text-base leading-relaxed text-plum/90">
+          Two families, two cultures, one celebration — love, blessings, music, food,
+          laughter, and the people who made us who we are.
+        </p>
+      </div>
+    </section>
   )
 }
 
@@ -133,6 +169,7 @@ function KeyDetails({ wedding }: { wedding: PortalWedding }) {
 
 export function Dashboard() {
   usePageTitle('Dashboard')
+  const { user } = useAuth()
   const { data: wedding, isLoading, isError, error } = usePortalWedding()
 
   return (
@@ -156,12 +193,7 @@ export function Dashboard() {
 
         {!isLoading && !isError && wedding && (
           <>
-            <Card>
-              <CardHeader>
-                <CardTitle>Welcome to {wedding.couple_names}'s wedding</CardTitle>
-                <CardDescription>{countdownLabel(wedding.wedding_date)}</CardDescription>
-              </CardHeader>
-            </Card>
+            <InvitationHero wedding={wedding} guestName={user?.name ?? null} />
 
             <KeyDetails wedding={wedding} />
           </>
@@ -173,7 +205,7 @@ export function Dashboard() {
               <Card className="h-full transition-shadow hover:shadow-md">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
-                    <Icon className="h-5 w-5 text-blue-600" aria-hidden="true" />
+                    <Icon className="h-5 w-5 text-plum" aria-hidden="true" />
                     {title}
                   </CardTitle>
                   <CardDescription>{description}</CardDescription>

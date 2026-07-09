@@ -183,12 +183,12 @@ export function Admin() {
               <Link
                 key={label}
                 to={href}
-                className="block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                className="block rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Card className="h-full transition-shadow hover:shadow-md">
                   <CardHeader>
                     <div className="flex items-center gap-3">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent text-plum">
                         <Icon className="h-5 w-5" aria-hidden="true" />
                       </span>
                       <CardTitle className="text-base">{label}</CardTitle>

@@ -86,7 +86,7 @@ if (LIVE_E2E) {
 
     // Step 2: Enter invite code and submit
     await page.getByLabel('Invite Code').fill(TEST_INVITE_CODE)
-    await page.getByRole('button', { name: 'Enter' }).click()
+    await page.getByRole('button', { name: 'Enter the celebration' }).click()
 
     // Step 3: Login lands on the dashboard; go to the RSVP form to continue.
     await expect(page).toHaveURL(/\/dashboard$/, { timeout: 10000 })
@@ -132,7 +132,7 @@ if (LIVE_E2E) {
 
     const invalidCode = 'INVALID-CODE-12345'
     await page.getByLabel('Invite Code').fill(invalidCode)
-    await page.getByRole('button', { name: 'Enter' }).click()
+    await page.getByRole('button', { name: 'Enter the celebration' }).click()
 
     // Should show error and stay on invite page
     await expect(page).toHaveURL(/\/invite$/)
@@ -239,7 +239,7 @@ if (LIVE_E2E) {
 
     // Step 2: Enter invite code
     await page.getByLabel('Invite Code').fill(TEST_INVITE_CODE)
-    await page.getByRole('button', { name: 'Enter' }).click()
+    await page.getByRole('button', { name: 'Enter the celebration' }).click()
 
     // Step 3: Login lands on the dashboard; go to the RSVP form to continue.
     await expect(page).toHaveURL(/\/dashboard$/, { timeout: 5000 })
@@ -296,7 +296,7 @@ if (LIVE_E2E) {
     await page.goto('/invite')
 
     await page.getByLabel('Invite Code').fill('INVALID-CODE')
-    await page.getByRole('button', { name: 'Enter' }).click()
+    await page.getByRole('button', { name: 'Enter the celebration' }).click()
 
     // Should stay on invite page and show error
     await expect(page).toHaveURL(/\/invite$/)

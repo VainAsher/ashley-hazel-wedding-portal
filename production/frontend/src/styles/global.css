@@ -41,6 +41,13 @@
     @apply font-semibold tracking-tight;
   }
 
+  /* Display serif for headline levels — the prototype is set in Georgia */
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+
   h1 {
     @apply text-4xl font-bold;
   }
@@ -70,7 +77,8 @@
   }
 
   a {
-    @apply text-primary hover:text-primary/80 transition-colors;
+    /* plum, not gold — gold text fails contrast on the cream background */
+    @apply text-secondary hover:text-secondary/80 transition-colors;
   }
 
   button {
@@ -80,7 +88,8 @@
   input,
   textarea,
   select {
-    @apply border border-input bg-background text-foreground;
+    /* white fields like the prototype, so forms stand off the cream cards */
+    @apply border border-input bg-white text-foreground;
   }
 
   input::placeholder,

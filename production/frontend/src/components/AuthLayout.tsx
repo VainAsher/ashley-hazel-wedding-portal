@@ -6,24 +6,37 @@ interface AuthLayoutProps {
   description?: string
 }
 
+const PLUM_TINT =
+  'radial-gradient(circle at top left, rgba(78, 17, 120, 0.88), rgba(22, 0, 31, 0.93) 55%, rgba(8, 0, 13, 0.96))'
+
 export function AuthLayout({ children, title, description }: AuthLayoutProps) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+    <div className="min-h-screen flex flex-col text-cream">
+      {/* Photo backdrop under the prototype's plum night gradient */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 -z-10 bg-cover bg-center"
+        style={{
+          backgroundImage: `${PLUM_TINT}, url(/backgrounds/bg-06-registry-candid.jpg)`,
+        }}
+      />
+
       {/* Header */}
-      <header className="border-b border-white/20 bg-white/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-full px-4 py-4">
+      <header className="border-b border-gold/40 bg-plum-night/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-full px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center">
-                <span className="text-white font-bold text-lg">W</span>
-              </div>
-              <h1 className="text-xl font-bold text-gray-900">Wedding Portal</h1>
+            <div className="flex items-center gap-3">
+              <img
+                src="/backgrounds/cat-seal.jpg"
+                alt=""
+                className="w-10 h-10 rounded-full object-cover ring-2 ring-gold"
+              />
+              <h1 className="font-display text-xl font-bold text-cream m-0">
+                Ashley &amp; Hazel
+              </h1>
             </div>
             <nav className="flex items-center gap-4">
-              <a
-                href="/"
-                className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
-              >
+              <a href="/" className="text-sm text-cream/80 hover:text-gold transition-colors">
                 Back
               </a>
             </nav>
@@ -33,31 +46,45 @@ export function AuthLayout({ children, title, description }: AuthLayoutProps) {
 
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12">
-        <div className="w-full max-w-[420px]">
-          {title && (
-            <div className="mb-8 text-center">
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">{title}</h2>
-              {description && (
-                <p className="text-gray-600">{description}</p>
-              )}
-            </div>
-          )}
+        <div className="relative w-full max-w-[560px]">
+          {/* Pattern band framing the invitation */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -inset-4 rounded-[34px] border-2 border-dashed border-gold/50 [background:linear-gradient(135deg,rgba(246,196,69,0.1)_25%,transparent_25%)_0_0/26px_26px]"
+          />
 
-          {/* Content Card */}
-          <div className="bg-white rounded-lg shadow-lg p-6 sm:p-8">
-            {children}
+          <div className="relative rounded-[28px] border-4 border-double border-plum bg-gradient-to-b from-[#fff7e9] to-[#f8e7ad] p-6 sm:p-10 text-center text-plum shadow-2xl">
+            <p className="m-0 text-xs font-extrabold uppercase tracking-[0.18em] text-[#b77900]">
+              You are warmly invited
+            </p>
+            <p className="font-display text-5xl sm:text-6xl font-bold my-2 leading-none">
+              Ashley <span className="text-[#9b6b00]">&amp;</span> Hazel
+            </p>
+            <p className="m-0 text-lg font-bold">Saturday 19 June 2027 · Halifax</p>
+
+            {title && (
+              <div className="mt-6 mb-2">
+                <h2 className="text-2xl font-bold m-0">{title}</h2>
+                {description && <p className="text-plum/80 m-0 mt-1">{description}</p>}
+              </div>
+            )}
+
+            {/* Content (invite form) */}
+            <div className="mt-6 rounded-3xl bg-plum p-5 text-left text-cream shadow-inner [&_h2]:text-cream [&_h3]:text-cream [&_label]:text-cream">
+              {children}
+            </div>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/20 bg-white/50 backdrop-blur-sm">
+      <footer className="border-t border-gold/40 bg-plum-night/80 backdrop-blur-sm">
         <div className="max-w-full px-4 py-4 text-center">
-          <p className="text-xs sm:text-sm text-gray-600">
+          <p className="text-xs sm:text-sm text-cream/90 m-0">
             Your privacy is important to us.{' '}
             <a
               href="/privacy"
-              className="text-blue-600 hover:text-blue-700 underline transition-colors"
+              className="text-gold hover:text-gold/80 underline transition-colors"
             >
               Privacy Policy
             </a>

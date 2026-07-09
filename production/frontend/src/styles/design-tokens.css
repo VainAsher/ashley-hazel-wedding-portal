@@ -1,64 +1,76 @@
 /* Design Tokens - Color Variables (HSL Format)
- * Based on template defaults: purple primary, gold accent
- * Light mode: default theme
- * Dark mode: `.dark` selector variant
+ *
+ * Palette ported from the original prototype (repo-root styles.css):
+ * deep plum #2b064d · plum-black #16001f · sun gold #f6c445 ·
+ * cream #fff6df · warm card #fffaf0 · ink #201727 · mauve #806c88
+ *
+ * Primary actions are sun gold with plum text (~9:1 contrast);
+ * plum is the secondary/inverse pairing, exactly like the prototype's
+ * default and .primary buttons.
  */
 
 :root {
-  /* Primary Colors - Purple */
-  --primary: 270 100% 50%;
-  --primary-foreground: 0 0% 100%;
+  /* Primary - sun gold button with deep plum text */
+  --primary: 43 91% 62%;
+  --primary-foreground: 271 86% 16%;
 
-  /* Secondary Colors - Dark Gray */
-  --secondary: 260 30% 25%;
-  --secondary-foreground: 0 0% 100%;
+  /* Secondary - deep plum with gold text (inverse pairing) */
+  --secondary: 271 86% 16%;
+  --secondary-foreground: 43 91% 62%;
 
-  /* Accent Colors - Gold/Yellow */
-  --accent: 45 100% 50%;
-  --accent-foreground: 260 15% 20%;
+  /* Accent - pale gold for hovers/selection */
+  --accent: 44 89% 90%;
+  --accent-foreground: 271 86% 16%;
 
-  /* Base Colors - Light/Dark */
-  --background: 0 0% 100%;
-  --foreground: 260 15% 20%;
+  /* Base - cream page, ink text */
+  --background: 43 100% 94%;
+  --foreground: 274 26% 12%;
 
-  /* Border & Muted - Grays */
-  --border: 260 20% 92%;
-  --input: 260 20% 92%;
-  --muted: 260 14% 89%;
-  --muted-foreground: 260 8% 52%;
+  /* Cards - warm off-white */
+  --card: 40 100% 97%;
+  --card-foreground: 274 26% 12%;
+
+  /* Border & Muted - soft golds and mauve */
+  --border: 44 55% 72%;
+  --input: 44 55% 72%;
+  --muted: 44 60% 88%;
+  --muted-foreground: 283 12% 42%;
 
   /* Destructive - Red */
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
 
-  /* Ring - Focus state (matches primary) */
-  --ring: 270 100% 50%;
+  /* Ring - plum focus state, visible on cream and gold */
+  --ring: 271 86% 30%;
 
-  /* Border Radius */
-  --radius: 0.75rem;
+  /* Border Radius - soft, invitation-like */
+  --radius: 1rem;
 }
 
-/* Dark Mode Theme */
+/* Dark Mode Theme - plum night, gold accents */
 .dark {
-  --primary: 270 100% 50%;
-  --primary-foreground: 0 0% 100%;
+  --primary: 43 91% 62%;
+  --primary-foreground: 271 86% 16%;
 
-  --secondary: 260 30% 25%;
-  --secondary-foreground: 0 0% 100%;
+  --secondary: 43 91% 62%;
+  --secondary-foreground: 271 86% 16%;
 
-  --accent: 45 100% 50%;
-  --accent-foreground: 260 15% 20%;
+  --accent: 277 71% 18%;
+  --accent-foreground: 43 100% 94%;
 
-  --background: 260 15% 10%;
-  --foreground: 0 0% 98%;
+  --background: 282 100% 6%;
+  --foreground: 43 100% 94%;
 
-  --border: 260 20% 20%;
-  --input: 260 20% 20%;
-  --muted: 260 14% 25%;
-  --muted-foreground: 260 8% 68%;
+  --card: 277 71% 12%;
+  --card-foreground: 43 100% 94%;
+
+  --border: 44 55% 35%;
+  --input: 44 55% 35%;
+  --muted: 277 40% 20%;
+  --muted-foreground: 44 40% 75%;
 
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
 
-  --ring: 270 100% 50%;
+  --ring: 43 91% 62%;
 }

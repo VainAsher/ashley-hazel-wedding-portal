@@ -48,12 +48,12 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
         key={item.href}
         to={item.href}
         onClick={opts.onNavigate}
-        className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-800 transition-colors group"
+        className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-200 hover:text-gold hover:bg-gray-800 transition-colors group"
         title={!opts.showLabels ? item.label : undefined}
       >
         <span className="text-lg flex-shrink-0">{item.icon}</span>
         {opts.showLabels && (
-          <span className="text-sm font-medium group-hover:text-blue-300 transition-colors">
+          <span className="text-sm font-medium group-hover:text-gold transition-colors">
             {item.label}
           </span>
         )}
@@ -91,10 +91,12 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
         {/* Logo */}
         <div className="h-16 border-b border-gray-800 flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-400 flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-xs">W</span>
-            </div>
-            {sidebarOpen && <span className="font-bold text-sm">Wedding</span>}
+            <img
+              src="/backgrounds/cat-seal.jpg"
+              alt=""
+              className="w-8 h-8 rounded-full object-cover ring-2 ring-gold flex-shrink-0"
+            />
+            {sidebarOpen && <span className="font-bold text-sm">Ashley &amp; Hazel</span>}
           </div>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -175,7 +177,7 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
                     {item.href ? (
                       <Link
                         to={item.href}
-                        className="text-blue-600 hover:text-blue-700 underline"
+                        className="text-plum hover:text-plum/80 underline"
                       >
                         {item.label}
                       </Link>
