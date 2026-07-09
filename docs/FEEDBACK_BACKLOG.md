@@ -49,6 +49,7 @@ Add a row to the right table. Keep it short. Use:
 | 2026-07-08 | IT/Admin | Mobile-width pass not completed (browser window wouldn't resize during review) — do a phone check before the v1.1 cut. |
 | 2026-07-09 | Couple | Cat photo supplied (`docs/assets/feedback/cat-header.jpeg`) for the header rebrand, plus a sixth background candidate (`bg-06-registry-candid.jpeg`). |
 | 2026-07-09 | IT/Admin | Admin sidebar labels are low-contrast (purple on near-black) — fold into the design-pass button/contrast work. *2026-07-09: fixed in the design pass (explicit light link text, gold hover).* |
+| 2026-07-09 | Couple | Add envelope opening trnanisition or animation to Save The Date maybe a little confetti sprinkle too for the shits n giggs of it all
 
 ---
 
