@@ -179,6 +179,39 @@ class TestTasksAPI:
         assert data["title"] == "New title"
         assert data["description"] == "Original description"  # Unchanged
 
+    def test_update_task_with_due_date(self, coordinator_session):
+        """Editing a task with a YYYY-MM-DD due date must not 422.
+
+        Regression: TaskUpdate.due_date was typed datetime while the edit
+        form (and TaskCreate) send a plain date string, so every edit of a
+        task that had a due date was rejected.
+        """
+        create_payload = {
+            "wedding_id": 1,
+            "title": "Book florist",
+            "status": "not_started",
+            "priority": "medium",
+            "due_date": "2026-08-21",
+        }
+        create_response = coordinator_session.post("/api/tasks", json=create_payload)
+        assert create_response.status_code == status.HTTP_201_CREATED
+        task_id = create_response.json()["id"]
+
+        # The edit dialog sends the full form, due date included.
+        update_payload = {
+            "title": "Book florist",
+            "description": "Deposit paid",
+            "status": "in_progress",
+            "priority": "medium",
+            "due_date": "2026-08-15",
+            "assigned_to": None,
+        }
+        response = coordinator_session.patch(f"/api/tasks/{task_id}", json=update_payload)
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["due_date"] == "2026-08-15"
+        assert data["description"] == "Deposit paid"
+
     def test_delete_task_requires_coordinator(self, coordinator_session):
         """Coordinators can delete tasks."""
         # Create a task via API first

@@ -97,19 +97,17 @@ if (LIVE_E2E) {
     await expect(page.getByRole('heading', { name: 'RSVP' })).toBeVisible()
 
     // Step 5: Fill out the RSVP form
-    const mealChoice = 'fish'
     const dietaryNotes = 'Gluten-free'
     const plusOneName = 'Live Test Plus One'
 
-    // Accept to show meal preferences
+    // Accept to show the dietary section
     await page.getByLabel('Accept').check()
 
-    // Meal preferences should now be visible
-    await expect(page.getByLabel('Meal Choice')).toBeVisible()
+    // Dietary section should now be visible
+    await expect(page.getByLabel('Dietary requirements')).toBeVisible()
 
     // Fill out preferences
-    await page.getByLabel('Meal Choice').selectOption(mealChoice)
-    await page.getByLabel('Dietary Notes').fill(dietaryNotes)
+    await page.getByLabel('Dietary requirements').fill(dietaryNotes)
     await page.getByLabel('Plus One Name').fill(plusOneName)
 
     // Step 6: Submit the form
@@ -125,8 +123,7 @@ if (LIVE_E2E) {
 
     // Step 9: Verify form shows saved state after reload
     await expect(page.getByLabel('Accept')).toBeChecked()
-    await expect(page.getByLabel('Meal Choice')).toHaveValue(mealChoice)
-    await expect(page.getByLabel('Dietary Notes')).toHaveValue(dietaryNotes)
+    await expect(page.getByLabel('Dietary requirements')).toHaveValue(dietaryNotes)
     await expect(page.getByLabel('Plus One Name')).toHaveValue(plusOneName)
   })
 
@@ -255,12 +252,11 @@ if (LIVE_E2E) {
     // Step 5: Fill out form
     await page.getByLabel('Accept').check()
 
-    // Meal preferences should now be visible
-    await expect(page.getByLabel('Meal Choice')).toBeVisible()
+    // Dietary section should now be visible
+    await expect(page.getByLabel('Dietary requirements')).toBeVisible()
 
     // Fill out preferences
-    await page.getByLabel('Meal Choice').selectOption('fish')
-    await page.getByLabel('Dietary Notes').fill('Gluten-free')
+    await page.getByLabel('Dietary requirements').fill('Gluten-free')
     await page.getByLabel('Plus One Name').fill('Mocked Plus One')
 
     // Step 6: Submit
@@ -270,11 +266,11 @@ if (LIVE_E2E) {
     await expect(page.locator('[role="alert"]').filter({ hasText: 'RSVP saved.' })).toBeVisible({ timeout: 5000 })
     await expect(page.getByRole('button', { name: 'Saved' })).toBeDisabled()
 
-    // Verify PATCH was called
+    // Verify PATCH was called — meal_choice intentionally absent while
+    // menu selection is closed.
     expect(patchRequests).toHaveLength(1)
     expect(patchRequests[0]).toEqual({
       rsvp_status: 'accepted',
-      meal_choice: 'fish',
       dietary_notes: 'Gluten-free',
       plus_one_name: 'Mocked Plus One',
     })
@@ -283,8 +279,7 @@ if (LIVE_E2E) {
     await page.reload()
     await expect(page).toHaveURL(/\/rsvp$/)
     await expect(page.getByLabel('Accept')).toBeChecked()
-    await expect(page.getByLabel('Meal Choice')).toHaveValue('fish')
-    await expect(page.getByLabel('Dietary Notes')).toHaveValue('Gluten-free')
+    await expect(page.getByLabel('Dietary requirements')).toHaveValue('Gluten-free')
     await expect(page.getByLabel('Plus One Name')).toHaveValue('Mocked Plus One')
   })
 

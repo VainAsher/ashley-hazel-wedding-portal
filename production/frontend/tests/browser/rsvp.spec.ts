@@ -147,9 +147,8 @@ test('renders current guest RSVP state', async ({ page }) => {
   // Check attendance status
   await expect(page.getByLabel('Accept')).toBeChecked()
 
-  // Check meal preferences (should be visible when accepted)
-  await expect(page.getByLabel('Meal Choice')).toHaveValue('vegetarian')
-  await expect(page.getByLabel('Dietary Notes')).toHaveValue('No nuts')
+  // Check dietary details (visible when accepted; meal choice opens later)
+  await expect(page.getByLabel('Dietary requirements')).toHaveValue('No nuts')
   await expect(page.getByLabel('Plus One Name')).toHaveValue('Demo Plus One')
 })
 
@@ -168,12 +167,10 @@ test('submits RSVP changes and locks the saved form', async ({ page }) => {
 
   await page.goto('/rsvp')
 
-  // Change to accepted first to show meal preferences
+  // Change to accepted first to show the dietary section
   await page.getByLabel('Accept').check()
 
-  // Fill meal preferences
-  await page.getByLabel('Meal Choice').selectOption('fish')
-  await page.getByLabel('Dietary Notes').fill('Dairy-free')
+  await page.getByLabel('Dietary requirements').fill('Dairy-free')
   await page.getByLabel('Plus One Name').fill('Taylor Guest')
 
   // Submit the form
@@ -184,11 +181,11 @@ test('submits RSVP changes and locks the saved form', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Saved' })).toBeDisabled()
   await expect(page.getByLabel('Accept')).toBeDisabled()
 
-  // Verify API received correct data
+  // Verify API received correct data — meal_choice is intentionally absent
+  // while menu selection is closed, so any stored choice is preserved.
   expect(requests).toEqual([
     {
       rsvp_status: 'accepted',
-      meal_choice: 'fish',
       dietary_notes: 'Dairy-free',
       plus_one_name: 'Taylor Guest',
     },
@@ -217,22 +214,19 @@ test('shows API errors without leaving the form', async ({ page }) => {
   await expect(page.getByLabel('Decline')).toBeEnabled()
 })
 
-test('hides meal preferences when not accepting invitation', async ({ page }) => {
+test('hides dietary section when not accepting invitation', async ({ page }) => {
   await installRsvpApi(page)
 
   await page.goto('/rsvp')
 
-  // Initially, guest is accepted so meal preferences are visible
-  await expect(page.getByLabel('Meal Choice')).toBeVisible()
-  await expect(page.getByLabel('Dietary Notes')).toBeVisible()
+  // Initially, guest is accepted so the dietary section is visible
+  await expect(page.getByLabel('Dietary requirements')).toBeVisible()
 
-  // Change to declined - meal preferences should disappear
+  // Change to declined - the dietary section should disappear
   await page.getByLabel('Decline').check()
-  await expect(page.getByLabel('Meal Choice')).not.toBeVisible()
-  await expect(page.getByLabel('Dietary Notes')).not.toBeVisible()
+  await expect(page.getByLabel('Dietary requirements')).not.toBeVisible()
 
-  // Change back to accepted - meal preferences should reappear
+  // Change back to accepted - the dietary section should reappear
   await page.getByLabel('Accept').check()
-  await expect(page.getByLabel('Meal Choice')).toBeVisible()
-  await expect(page.getByLabel('Dietary Notes')).toBeVisible()
+  await expect(page.getByLabel('Dietary requirements')).toBeVisible()
 })

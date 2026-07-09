@@ -26,7 +26,9 @@ export interface GuestRsvp {
 
 export interface GuestRsvpUpdate {
   rsvp_status: RsvpStatus
-  meal_choice: MealChoice | null
+  // Omitted while menu selection is closed — the backend PATCH uses
+  // exclude_unset, so leaving it out preserves any stored choice.
+  meal_choice?: MealChoice | null
   dietary_notes: string | null
   plus_one_name: string | null
 }

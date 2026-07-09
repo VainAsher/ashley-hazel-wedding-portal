@@ -151,7 +151,9 @@ class TaskUpdate(BaseModel):
     description: str | None = None
     status: TaskStatus | None = None
     priority: TaskPriority | None = None
-    due_date: datetime | None = None
+    # date, not datetime — the edit form sends "YYYY-MM-DD" exactly like
+    # TaskCreate; datetime here rejected every edit of a task with a due date.
+    due_date: date | None = None
     assigned_to: int | None = None
     category: str | None = Field(default=None, max_length=100)
 

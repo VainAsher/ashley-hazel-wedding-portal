@@ -7,7 +7,6 @@ import {
   saveGuestRsvp,
   type GuestRsvp,
   type GuestRsvpUpdate,
-  type MealChoice,
   type RsvpStatus,
 } from '../api/rsvp'
 import { Button } from '../components/ui/button'
@@ -19,14 +18,12 @@ import { usePageTitle } from '../hooks/usePageTitle'
 
 interface RsvpFormData {
   rsvpStatus: RsvpStatus
-  mealChoice: '' | MealChoice
   dietaryNotes: string
   plusOneName: string
 }
 
 const defaultFormData: RsvpFormData = {
   rsvpStatus: 'pending',
-  mealChoice: '',
   dietaryNotes: '',
   plusOneName: '',
 }
@@ -34,7 +31,6 @@ const defaultFormData: RsvpFormData = {
 function formDataFromGuest(guest: GuestRsvp): RsvpFormData {
   return {
     rsvpStatus: guest.rsvp_status,
-    mealChoice: guest.meal_choice ?? '',
     dietaryNotes: guest.dietary_notes ?? '',
     plusOneName: guest.plus_one_name ?? '',
   }
@@ -151,7 +147,6 @@ export function RSVP() {
 
     const payload: GuestRsvpUpdate = {
       rsvp_status: formData.rsvpStatus,
-      meal_choice: formData.mealChoice || null,
       dietary_notes: optionalText(formData.dietaryNotes),
       plus_one_name: optionalText(formData.plusOneName),
     }
@@ -258,37 +253,22 @@ export function RSVP() {
                 </CardContent>
               </Card>
 
-              {/* Meal & Preferences Card - Only show if attending */}
+              {/* Dietary & plus one - Only show if attending */}
               {formData.rsvpStatus === 'accepted' && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Meal & Preferences</CardTitle>
+                    <CardTitle className="text-lg">Dietary requirements</CardTitle>
+                    <CardDescription>
+                      Menu choices open nearer the day, once the menu is finalised. For now,
+                      tell us about any allergies or dietary requirements.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <fieldset disabled={formDisabled} className="border-0 space-y-4 m-0 p-0">
-                      {/* Meal Choice */}
-                      <div className="space-y-2">
-                        <label htmlFor="meal-choice" className="text-sm font-medium text-gray-700">
-                          Meal Choice
-                        </label>
-                        <select
-                          id="meal-choice"
-                          name="mealChoice"
-                          onChange={updateField('mealChoice')}
-                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          value={formData.mealChoice}
-                        >
-                          <option value="">Select meal</option>
-                          <option value="chicken">Chicken</option>
-                          <option value="fish">Fish</option>
-                          <option value="vegetarian">Vegetarian</option>
-                        </select>
-                      </div>
-
                       {/* Dietary Notes */}
                       <div className="space-y-2">
                         <label htmlFor="dietary-notes" className="text-sm font-medium text-gray-700">
-                          Dietary Notes
+                          Dietary requirements
                         </label>
                         <textarea
                           id="dietary-notes"
