@@ -105,6 +105,7 @@ class Wedding(Base):
     communications: Mapped[list["Communication"]] = orm_relationship(back_populates="wedding")
     blessings: Mapped[list["Blessing"]] = orm_relationship(back_populates="wedding")
     gallery_items: Mapped[list["GalleryItem"]] = orm_relationship(back_populates="wedding")
+    song_requests: Mapped[list["SongRequest"]] = orm_relationship(back_populates="wedding")
 
 
 class Guest(Base):
@@ -511,3 +512,41 @@ class GalleryItem(Base):
     )
 
     wedding: Mapped[Wedding] = orm_relationship(back_populates="gallery_items")
+
+
+class SongRequest(Base):
+    __tablename__ = "song_requests"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'approved', 'rejected', 'blocked')",
+            name="ck_song_requests_status",
+        ),
+        Index("idx_song_requests_wedding_status", "wedding_id", "status"),
+        Index("idx_song_requests_wedding_created", "wedding_id", text("created_at DESC")),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    artist: Mapped[str | None] = mapped_column(String(255))
+    source_url: Mapped[str | None] = mapped_column(String(500))
+    dedication: Mapped[str | None] = mapped_column(String(500))
+    requested_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default=text("'pending'")
+    )
+    pinned: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("FALSE")
+    )
+    position: Mapped[int | None] = mapped_column(Integer)
+    resolved_title: Mapped[str | None] = mapped_column(String(255))
+    resolved_artist: Mapped[str | None] = mapped_column(String(255))
+    artwork_url: Mapped[str | None] = mapped_column(String(500))
+    spotify_track_id: Mapped[str | None] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    wedding: Mapped[Wedding] = orm_relationship(back_populates="song_requests")

@@ -726,6 +726,91 @@ class BlessingModerate(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Music (Dancefloor song requests)
+# ---------------------------------------------------------------------------
+
+
+SONG_REQUEST_STATUSES = {"pending", "approved", "rejected", "blocked"}
+
+
+class SongRequestCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=255)
+    artist: str | None = Field(default=None, max_length=255)
+    source_url: str | None = Field(default=None, max_length=500)
+    dedication: str | None = Field(default=None, max_length=500)
+
+    @field_validator("title")
+    @classmethod
+    def title_must_not_be_blank(cls, value: str) -> str:
+        title = value.strip()
+        if not title:
+            raise ValueError("Song title is required")
+        return title
+
+    @field_validator("artist", "source_url", "dedication")
+    @classmethod
+    def blank_optional_text_to_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+
+class SongRequestUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    artist: str | None = Field(default=None, max_length=255)
+    dedication: str | None = Field(default=None, max_length=500)
+    status: str | None = Field(default=None, max_length=20)
+    pinned: bool | None = None
+    position: int | None = None
+
+    @field_validator("title")
+    @classmethod
+    def title_must_not_be_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        title = value.strip()
+        if not title:
+            raise ValueError("Song title is required")
+        return title
+
+    @field_validator("status")
+    @classmethod
+    def status_must_be_valid(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        status_value = value.strip().lower()
+        if status_value not in SONG_REQUEST_STATUSES:
+            allowed = ", ".join(sorted(SONG_REQUEST_STATUSES))
+            raise ValueError(f"Status must be one of: {allowed}")
+        return status_value
+
+
+class SongRequestMerge(BaseModel):
+    duplicate_ids: list[int] = Field(min_length=1)
+
+
+class SongRequestResponse(BaseModel):
+    id: int
+    wedding_id: int
+    title: str
+    artist: str | None = None
+    source_url: str | None = None
+    dedication: str | None = None
+    requested_by: str
+    status: str
+    pinned: bool
+    position: int | None = None
+    resolved_title: str | None = None
+    resolved_artist: str | None = None
+    artwork_url: str | None = None
+    spotify_track_id: str | None = None
+    created_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
 # Guest portal (read-only wedding info for guests)
 # ---------------------------------------------------------------------------
 

@@ -17,6 +17,7 @@ const ROUTE_BACKGROUNDS: Record<string, string> = {
   '/rsvp': '/backgrounds/bg-03-waterfall.jpg',
   '/schedule': '/backgrounds/bg-04-woodland-walk.jpg',
   '/blessings': '/backgrounds/bg-01-winter-selfie.jpg',
+  '/music': '/backgrounds/bg-05-evening-sky.jpg',
   '/gallery': '/backgrounds/bg-05-evening-sky.jpg',
 }
 
@@ -33,6 +34,7 @@ export function GuestLayout({ children }: GuestLayoutProps) {
     { label: 'RSVP', href: '/rsvp' },
     { label: 'Schedule', href: '/schedule' },
     { label: 'Blessings', href: '/blessings' },
+    { label: 'Dancefloor', href: '/music' },
     { label: 'Gallery', href: '/gallery' },
   ]
 

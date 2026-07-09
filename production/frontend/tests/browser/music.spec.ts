@@ -1,0 +1,245 @@
+import { expect, test, type Page, type Route } from '@playwright/test'
+import {
+  cleanupPageState,
+  initializeErrorTracking,
+  filterIgnorableErrors,
+  getBrowserErrors,
+} from './fixtures/page-cleanup'
+
+interface SongRequest {
+  id: number
+  wedding_id: number
+  title: string
+  artist: string | null
+  source_url: string | null
+  dedication: string | null
+  requested_by: string
+  status: string
+  pinned: boolean
+  position: number | null
+  resolved_title: string | null
+  resolved_artist: string | null
+  artwork_url: string | null
+  spotify_track_id: string | null
+  created_at: string
+}
+
+function songRequest(overrides: Partial<SongRequest>): SongRequest {
+  return {
+    id: 1,
+    wedding_id: 1,
+    title: 'Untitled',
+    artist: null,
+    source_url: null,
+    dedication: null,
+    requested_by: 'Guest',
+    status: 'approved',
+    pinned: false,
+    position: null,
+    resolved_title: null,
+    resolved_artist: null,
+    artwork_url: null,
+    spotify_track_id: null,
+    created_at: '2026-06-01T10:00:00Z',
+    ...overrides,
+  }
+}
+
+const wallEntries: SongRequest[] = [
+  songRequest({
+    id: 1,
+    title: 'Dancing Queen',
+    artist: 'ABBA',
+    dedication: 'For the happy couple',
+    requested_by: 'Aunt May',
+    pinned: true,
+    position: 1,
+  }),
+  songRequest({
+    id: 2,
+    title: 'Mr. Brightside',
+    requested_by: 'Uncle Bob',
+    position: 2,
+  }),
+]
+
+function json(route: Route, body: unknown, status = 200) {
+  return route.fulfill({
+    body: JSON.stringify(body),
+    contentType: 'application/json',
+    status,
+  })
+}
+
+interface MusicApiState {
+  posts: unknown[]
+}
+
+async function installMusicApi(page: Page, wall: SongRequest[]): Promise<MusicApiState> {
+  const state: MusicApiState = { posts: [] }
+  let nextId = 1000
+
+  await page.route('**/api/music/requests/wall', async (route) => {
+    await json(route, wall)
+  })
+
+  await page.route('**/api/music/requests', async (route) => {
+    if (route.request().method() !== 'POST') {
+      await json(route, { detail: 'Not found' }, 404)
+      return
+    }
+
+    const payload = route.request().postDataJSON() as {
+      title: string
+      artist: string | null
+      source_url: string | null
+      dedication: string | null
+    }
+    state.posts.push(payload)
+    nextId += 1
+    await json(
+      route,
+      songRequest({
+        id: nextId,
+        title: payload.title,
+        artist: payload.artist,
+        source_url: payload.source_url,
+        dedication: payload.dedication,
+        requested_by: 'Wedding Guest',
+        status: 'pending',
+      }),
+      201,
+    )
+  })
+
+  return state
+}
+
+async function installAuthMe(page: Page, weddingPhase: string) {
+  await page.route('**/api/auth/me', async (route) => {
+    await json(route, {
+      id: 9,
+      name: 'Wedding Guest',
+      role: 'guest',
+      wedding_id: 1,
+      invite_id: 3,
+      guest_id: 42,
+      wedding_phase: weddingPhase,
+    })
+  })
+}
+
+test.beforeEach(async ({ page }) => {
+  await cleanupPageState(page)
+  await initializeErrorTracking(page)
+  await installAuthMe(page, 'live')
+})
+
+test.afterEach(async ({ page }) => {
+  const browserErrors = getBrowserErrors(page)
+  const unexpectedErrors = filterIgnorableErrors(browserErrors)
+  expect(unexpectedErrors).toEqual([])
+})
+
+function songWall(page: Page) {
+  return page.getByRole('region', { name: 'Song wall' })
+}
+
+test('renders the song wall entries', async ({ page }) => {
+  await installMusicApi(page, wallEntries)
+  await page.goto('/music')
+
+  await expect(songWall(page).getByText('Dancing Queen — ABBA')).toBeVisible()
+  await expect(songWall(page).getByText('Requested by Aunt May')).toBeVisible()
+  await expect(songWall(page).getByText('For the happy couple')).toBeVisible()
+  await expect(songWall(page).getByTitle('Pinned')).toHaveCount(1)
+
+  await expect(songWall(page).getByText('Mr. Brightside')).toBeVisible()
+  await expect(songWall(page).getByText('Requested by Uncle Bob')).toBeVisible()
+})
+
+test('shows the empty state when the wall has no songs', async ({ page }) => {
+  await installMusicApi(page, [])
+  await page.goto('/music')
+
+  await expect(
+    page.getByText('No songs yet — be the first to get the dancefloor going!'),
+  ).toBeVisible()
+})
+
+test('submitting a request posts the payload, shows the success alert, and resets the form', async ({
+  page,
+}) => {
+  const api = await installMusicApi(page, wallEntries)
+  await page.goto('/music')
+
+  await page.getByLabel('Song title').fill('September')
+  await page.getByLabel('Artist').fill('Earth, Wind & Fire')
+  await page.getByLabel('Link').fill('https://open.spotify.com/track/abc123')
+  await page.getByLabel('Dedication').fill('First dance, please!')
+  await page.getByRole('button', { name: 'Request song' }).click()
+
+  await expect(page.getByRole('status')).toHaveText(
+    'Thanks! Your song request is with Ashley & Hazel.',
+  )
+  expect(api.posts).toEqual([
+    {
+      title: 'September',
+      artist: 'Earth, Wind & Fire',
+      source_url: 'https://open.spotify.com/track/abc123',
+      dedication: 'First dance, please!',
+    },
+  ])
+
+  await expect(page.getByLabel('Song title')).toHaveValue('')
+  await expect(page.getByLabel('Artist')).toHaveValue('')
+  await expect(page.getByLabel('Link')).toHaveValue('')
+  await expect(page.getByLabel('Dedication')).toHaveValue('')
+})
+
+test('optional fields are sent as null when left blank', async ({ page }) => {
+  const api = await installMusicApi(page, [])
+  await page.goto('/music')
+
+  await page.getByLabel('Song title').fill('Come On Eileen')
+  await page.getByRole('button', { name: 'Request song' }).click()
+
+  await expect(page.getByRole('status')).toHaveText(
+    'Thanks! Your song request is with Ashley & Hazel.',
+  )
+  expect(api.posts).toEqual([
+    {
+      title: 'Come On Eileen',
+      artist: null,
+      source_url: null,
+      dedication: null,
+    },
+  ])
+})
+
+test('a blank title shows an inline error and does not post', async ({ page }) => {
+  const api = await installMusicApi(page, wallEntries)
+  await page.goto('/music')
+
+  await page.getByLabel('Song title').fill('   ')
+  await page.getByRole('button', { name: 'Request song' }).click()
+
+  await expect(page.getByText('Please enter a song title.')).toBeVisible()
+  expect(api.posts).toEqual([])
+})
+
+test('hides the form and shows the closed message outside the live phase', async ({ page }) => {
+  await page.unroute('**/api/auth/me')
+  await installAuthMe(page, 'planning')
+  await installMusicApi(page, wallEntries)
+  await page.goto('/music')
+
+  await expect(
+    page.getByText("Song requests aren't open yet — check back soon."),
+  ).toBeVisible()
+  await expect(page.getByLabel('Song title')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Request song' })).toHaveCount(0)
+
+  // The wall still shows even while requests are closed.
+  await expect(songWall(page).getByText('Dancing Queen — ABBA')).toBeVisible()
+})
