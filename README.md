@@ -2,13 +2,16 @@
 
 [![Tests](https://github.com/VainAsher/ashley-hazel-wedding-portal/actions/workflows/test.yml/badge.svg)](https://github.com/VainAsher/ashley-hazel-wedding-portal/actions/workflows/test.yml)
 
-A full-stack wedding portal: a guest-facing site (RSVP, schedule, blessings, photo
-gallery) and an admin planning dashboard (guests, budget, vendors, events, timeline,
-communications, invitations, settings). **Status: V1.0 release candidate.**
+A full-stack wedding portal: a guest-facing site (RSVP, schedule, blessings,
+Dancefloor song requests, photo gallery) and an admin planning dashboard (guests,
+budget, vendors, events, timeline, communications, music curation, invitations,
+theme, settings). **Status: live in production since v1.0.0 (2026-06-26); current
+version `1.1.0-rc1`.**
 
-> The original static design concept lives at the repo root (`index.html`, `app.js`,
-> `styles.css`, `data/fixture.js`) and is kept only as a visual reference. The real
-> application is under `production/`.
+> The original static prototype at the repo root (`index.html`, `app.js`,
+> `styles.css`, `data/fixture.js`) is the **canonical visual identity** — its
+> plum/gold/cream invitation look (and its Dancefloor concept) have been ported into
+> the real application, which lives under `production/`.
 
 ## Stack
 
@@ -21,13 +24,19 @@ communications, invitations, settings). **Status: V1.0 release candidate.**
 
 ## Features
 
-**Guest portal** (invite-code login): Dashboard (countdown + key details), RSVP (meal/dietary/plus-one),
-Schedule, Blessings guestbook, and a Gallery to view approved photos and submit their own.
+**Guest portal** (invite-code login, themed with the couple's photos): Dashboard
+(personal welcome, countdown + key details), RSVP (dietary requirements + plus-one;
+meal selection opens when the menu is finalised), Schedule (ceremony + events),
+Blessings guestbook, **Dancefloor** (song requests with dedications + the approved
+song wall), and a Gallery with lightbox/slideshow viewing and guest photo submission.
 
-**Admin dashboard** (coordinator/couple): Budget (line items + summary), Vendors, Events, Timeline
-(task board), RSVP overview, Invitations (invite-code generation), Communications, Gallery moderation
-(approve/reject submissions), Blessings moderation, and Settings — including a **wedding phase
-lifecycle** (Planning → Live → Event → Archived) that gates guest RSVP.
+**Admin dashboard** (coordinator/couple): Budget (line items + summary), Vendors, Events,
+Timeline (task board), RSVP overview, Invitations (invite-code generation, couple-only),
+Communications, Gallery moderation, **Music curation** (approve/reject/block song
+requests, merge duplicates, pin/reorder the playlist, export a **DJ pack** as CSV or
+text), Blessings moderation, and Settings — the **wedding phase lifecycle**
+(Planning → Live → Event → Archived) that gates guest responses, plus **Guest Site
+Theme** dials (colours + photo-tint strength, applied live, no deploy).
 
 ## Running locally
 
@@ -50,9 +59,11 @@ npm run build        # production build
 
 ## Testing
 
-- **Backend**: `cd production/backend && python -m pytest tests` (needs a test PostgreSQL).
+- **Backend**: `cd production/backend && python -m pytest tests` (needs a test PostgreSQL
+  with the schema + migrations applied).
 - **Frontend e2e** (Playwright, mocked + against the real backend): `cd production/frontend && npm test`.
-- CI runs both on every push to `main`.
+- CI runs both on every push to `main`. **New migrations must also be added to the two
+  explicit psql lists in `.github/workflows/test.yml`.**
 
 ## Deployment
 

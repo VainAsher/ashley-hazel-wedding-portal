@@ -36,13 +36,17 @@ Volumes: pgdata (DB), backend_logs, uploads_data (/app/uploads gallery files)
 
 `weddings.phase` ∈ `planning | live | event | archived` (default `live`), editable in
 Settings and surfaced to guests via `UserResponse.wedding_phase`. Guest RSVP submission
-is gated to the `live` phase (backend 403 + a phase-specific message on the RSVP page).
+and Dancefloor song requests are gated to the `live` phase (backend 403 + a
+phase-specific message on the guest pages).
 
 ## Data model (PostgreSQL)
 
-Core: `weddings`, `users`, `guests`, `invites`. Planning: `budget_categories`,
+Core: `weddings` (incl. `theme` JSONB — the couple-configurable guest-site theme;
+NULL = defaults), `users`, `guests`, `invites`. Planning: `budget_categories`,
 `budget_items`, `vendors`, `events`, `tasks`. Guest engagement: `gallery_items`
-(status `pending|approved|rejected`), `blessings` (`hidden` flag), `communications`.
+(status `pending|approved|rejected`), `blessings` (`hidden` flag), `song_requests`
+(status `pending|approved|rejected|blocked`, plus `pinned`/`position` for playlist
+curation and oEmbed-resolved metadata columns), `communications`.
 Schema is created by `production/database/schema.sql` on first boot; incremental
 changes are numbered SQL migrations in `production/database/migrations/` (applied by
 `deploy.sh` via a `schema_migrations` ledger, and listed explicitly in CI `test.yml`).
@@ -73,15 +77,19 @@ Access column uses the route-guard names: `require_guest` (any authenticated rol
 | `/api/gallery` — `POST /submit`, `GET /approved` | guest submit / view approved | require_guest |
 | `/api/blessings` — `GET ""`, `POST ""` | guest list/post | require_guest |
 | `/api/blessings` — `GET /all`, `PATCH /{id}`, `DELETE /{id}` | admin moderation | require_coordinator |
+| `/api/music` — `POST /requests`, `GET /requests/wall` | guest song requests + approved song wall | require_guest |
+| `/api/music` — `GET /requests`, `PATCH`/`DELETE /requests/{id}`, `POST /requests/{id}/merge`, `GET /export` | curation, duplicate merge, DJ-pack export (csv/text) | require_coordinator |
 | `/api/portal/wedding`, `/api/portal/schedule` | guest-readable wedding info + events | require_guest |
+| `/api/portal/theme` | guest-site theme (colours + tint) | **public** (pre-login invite page) |
 | `/api/settings/wedding` — `GET`/`PUT` | wedding details + phase | require_coordinator |
 | `/health`, `/health/ready` | liveness / DB-readiness | public |
 
 ## Frontend structure
 
-- `src/pages/` — guest pages (Dashboard, RSVP, Schedule, Blessings, Gallery, Invite) and
-  `src/pages/admin/` — admin modules (Budget, Vendors, Events, Timeline, RsvpAdmin,
-  Communications, Gallery, Blessings, Settings, Invitations) + the Admin dashboard.
+- `src/pages/` — guest pages (Dashboard, RSVP, Schedule, Blessings, Music ("Dancefloor"),
+  Gallery, Invite) and `src/pages/admin/` — admin modules (Budget, Vendors, Events,
+  Timeline, RsvpAdmin, Communications, Gallery, Music, Blessings, Settings, Invitations)
+  + the Admin dashboard.
 - `GuestLayout` / `AdminLayout` shells; routes + lazy-loading + guards in `App.tsx`.
 - `src/api/*` typed fetch modules; `src/hooks/*` React Query (queries + mutations with
   invalidation); shared UI in `src/components/ui/*`; shared helpers in `src/lib/`
@@ -97,6 +105,25 @@ Access column uses the route-guard names: `require_guest` (any authenticated rol
   build → up → apply migrations → **reconcile the DB role password to the secret** →
   health + **`/health/ready` (DB-touching) gate** → record rollback tags. Production is a
   manual `workflow_dispatch`. Details and runbooks in `docs/ci/`.
+
+## Theming
+
+The visual identity comes from the couple's original prototype (repo-root
+`index.html`/`styles.css`): deep plum, sun gold, cream, Georgia display type. It's
+implemented as CSS custom properties (`src/styles/design-tokens.css`) consumed by
+Tailwind. The couple can retune it live from **Settings → Guest Site Theme** (accent
+colour, deep colour, photo-tint strength): values persist in `weddings.theme` (JSONB),
+are served by the public `GET /api/portal/theme`, and `ThemeApplier`
+(`src/hooks/useTheme.ts` + `src/lib/theme.ts`) rewrites the CSS variables at runtime —
+including the pre-login invite page. Guest pages render one of the couple's photos
+(`public/backgrounds/`) behind the content under a theme-derived radial tint.
+
+## Music metadata (oEmbed)
+
+Pasted Spotify/YouTube links on song requests are resolved best-effort at submission
+time via the providers' **public oEmbed endpoints** (`app/utils/music_metadata.py`) —
+no API keys, 3s timeout, failure never blocks a submission. There are deliberately no
+other external integrations and no background workers.
 
 ## Gallery uploads
 

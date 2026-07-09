@@ -9,8 +9,9 @@ Site: **https://ashley-and.hazel-of-halifax.com** · You log in with your **coup
 
 ## Everything the coordinator can do
 Guests, RSVP overview, Budget, Vendors, Events, Timeline, Communications, Gallery
-moderation, Blessings moderation, and Settings — all covered in the Coordinator guide.
-Below is what's **extra/yours**.
+moderation, **Music (Dancefloor curation + DJ export)**, Blessings moderation, and
+Settings (including the **Guest Site Theme** dials) — all covered in the Coordinator
+guide. Below is what's **extra/yours**.
 
 ## Invitations — *issuing codes (couple-only)*
 This is how people get in. In **Admin → Invitations** you can **generate invite codes**
@@ -23,12 +24,14 @@ You can link a code to a specific guest record (so their RSVP attaches to them) 
 household. Hand codes out however you like (message, card insert, etc.).
 
 ## The go-live flow — planning → inviting → RSVP open
-You're currently in **`planning`** (guest RSVP is closed). The natural sequence:
+You're currently **`live`** — guests can log in, RSVP, and request songs. The full
+lifecycle, in case you ever step back or forward:
 
 1. **Plan privately.** Add your guest list, build the schedule (Events), set the budget,
    fill venues in **Settings** — all while in `planning`, so no guest can RSVP yet.
 2. **Issue invite codes** in **Invitations** for the people you're inviting.
-3. **Open RSVP:** in **Settings**, change **phase → `live`**. Now guests can respond.
+3. **Open responses:** in **Settings**, change **phase → `live`**. Now guests can
+   RSVP and request songs on the Dancefloor.
 4. **Closer to the day:** switch **phase → `event`** to freeze responses (day-of mode).
 5. **After:** **phase → `archived`** makes everything read-only.
 
@@ -45,6 +48,8 @@ safe (it's the key to everything).
 - **Communications don't actually send** yet — drafting/tracking only. Send real messages
   through your usual channel for now.
 - **Gallery is photos only** (no video).
+- **Guest meal selection is deferred** — guests give dietary requirements now; the
+  menu-builder (you define options, then open selection ~12 weeks out) is planned.
 - **Backups:** your hosting (IT) handles these — see the IT Admin guide. There are
   full-VM snapshots; a database backup script exists to be scheduled.
 

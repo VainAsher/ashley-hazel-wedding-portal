@@ -4,7 +4,7 @@
 (2026-06-26 → ~2026-07-24) so it can be triaged into **v1.1**. Drop entries in
 as they come up — rough is fine; we'll prioritise at the review.
 
-- **Live:** https://ashley-and.hazel-of-halifax.com · **Released:** v1.0.0 (2026-06-26)
+- **Live:** https://ashley-and.hazel-of-halifax.com · **Released:** v1.0.0 (2026-06-26) · **Current:** v1.1.0-rc1 (2026-07-10)
 - **Next review:** ~2026-07-24 → cut a prioritised v1.1 scope (bugs first).
 
 ## How to log an entry

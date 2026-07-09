@@ -65,10 +65,14 @@ have reviewed these and ticked the sign-off checklist below.
 - [ ] The retention rule above is understood and agreed by the couple.
 - [ ] Couple sign-off: ____________________  Date: __________
 
-## Current status (v1.0.0-rc1)
+## Current status (v1.1.0-rc1)
 
-**Staging** holds synthetic/demo data only (seeded by `008_seed_test_data.sql`:
-"Demo Guest", "Alice Anderson", … and the `DEMO-*` invite codes). The new **isolated
-production stack starts empty of demo data** (008 is fenced out of the prod migration
-glob; the real wedding is created by `bootstrap_prod.py`). The five models above are
-now defined; **real PII may be entered only after the sign-off checklist is ticked.**
+**Production is live and holds real wedding data** (guests, RSVPs/dietary
+requirements, photos, blessings, and Dancefloor song requests + dedications) in the
+isolated `wedding-prod` stack. **Staging holds synthetic/demo data only** (seeded by
+`008_seed_test_data.sql`: "Demo Guest", "Alice Anderson", … and the `DEMO-*` invite
+codes; 008 is fenced out of prod). The rule above still governs everything outside
+production: development, testing, screenshots, and docs use staging + synthetic data
+only. New guest-visible fields since v1.0: song-request **dedications and requester
+names appear publicly** to logged-in guests on the song wall (same class as
+blessings).

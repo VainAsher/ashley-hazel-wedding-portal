@@ -1,5 +1,10 @@
 # Production Runbook — Ashley & Hazel Wedding Portal
 
+> **Status (2026-07-10):** production has been live since 2026-06-26 (v1.0.0; now
+> v1.1.0-rc1, phase `live`). The one-time setup/go-live sections below are kept as the
+> record and for rebuild scenarios; day-to-day ops live in
+> `docs/guides/IT_ADMIN_GUIDE.md`.
+
 Production is an **isolated Docker stack on the wedding VM (`192.168.0.32`)**,
 running alongside staging, fronted by **Cloudflare Tunnel + Traefik on infra-core
 (`.23`)**, serving **https://ashley-and.hazel-of-halifax.com**. It holds **real

@@ -6,7 +6,7 @@ Operating, deploying, and maintaining the portal. Pairs with
 
 ## At a glance
 - **App:** React + Vite SPA (served by nginx) → FastAPI (Python) → PostgreSQL 16, all in Docker.
-- **Repo:** `github.com/VainAsher/ashley-hazel-wedding-portal` (branch `main`). Released **v1.0.0**.
+- **Repo:** `github.com/VainAsher/ashley-hazel-wedding-portal` (branch `main`). Live since **v1.0.0** (2026-06-26); current **v1.1.0-rc1**.
 - **Public URL:** `https://ashley-and.hazel-of-halifax.com` (TLS at the Cloudflare edge).
 
 ## Homelab topology
@@ -96,9 +96,13 @@ There's no CSV import in the app, so bulk guest/photo loads are done directly:
   DB/backend host ports, security headers, `restart: always`.
 
 ## Phase note (data state)
-The wedding starts in **`phase=planning`** (guest RSVP closed). The couple flip it to
-`live` in Settings when ready. Migration `008` (demo seed) is fenced out of prod, so
-production never carries demo data.
+The wedding lifecycle is `planning → live → event → archived` (Settings). Production is
+currently **`live`** (guest RSVP + Dancefloor song requests open). Migration `008`
+(demo seed) is fenced out of prod, so production never carries demo data.
+
+**Adding a migration?** Numbered SQL in `production/database/migrations/` is applied
+automatically by `deploy.sh`, but CI initialises its test DBs from an **explicit list**
+— add the new file to BOTH psql lists in `.github/workflows/test.yml` or CI fails.
 
 ## Troubleshooting
 - **Backend crash-loops / frontend down:** check `docker logs wedding-prod-backend` —

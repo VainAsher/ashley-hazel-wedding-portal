@@ -26,6 +26,9 @@ table & seat numbers, and free-text notes.
 ### RSVP (overview)
 A read-only summary of responses — totals for **accepted / declined / pending /
 tentative**, a **meal-choice breakdown** (for catering numbers), and a filter by status.
+> Note: guests currently submit **dietary requirements only** — meal selection opens
+> for guests once the menu is finalised (the meal column/breakdown fills up then;
+> admins can still record meals per guest in the Guests module meanwhile).
 
 ### Budget
 Line items with **estimated vs actual cost**, **paid** status, payment date, category,
@@ -52,6 +55,15 @@ Sent). You can mark a message **Sent**.
 > actually deliver email/WhatsApp/SMS yet (that's planned for a later update). Treat it
 > as a drafting/tracking tool for now and send real messages through your normal channel.
 
+### Music (Dancefloor curation)
+Guest **song requests** arrive as *Pending* — each shows the song, who asked, their
+dedication, and any resolved link metadata. For each request: **Approve** (onto the
+playlist), **Reject**, or **Block** (adds it to the **do-not-play list** for the DJ).
+Duplicate requests are grouped automatically with a one-click **Merge**. In the
+**Approved playlist** you can **pin** favourites and **reorder** the final running
+order. **Export** produces the **DJ pack** — a CSV or printable text file of the
+playlist plus the do-not-play list.
+
 ### Gallery (moderation)
 The photo **moderation queue**. Guest-submitted photos arrive as **Pending**; you
 **Approve** or **Reject** them. You can also **upload** photos directly (those are
@@ -65,10 +77,14 @@ wall) or **delete** it. Filter by Visible / Hidden.
 Edit the core wedding details — **couple names, date, ceremony time, venues** — and the
 **phase** (see below). Changing these updates what guests see on their dashboard/RSVP.
 
+Settings also has the **Guest Site Theme** dials: the accent colour, deep colour, and
+photo-tint strength used across the guest site (with a live preview and a
+reset-to-default). Saving applies immediately — no deploy needed.
+
 ## The wedding "phase" — what it controls
-| Phase | What it means | Guest RSVP |
+| Phase | What it means | Guest RSVP & song requests |
 |-------|----------------|------------|
-| **planning** | Setting up; guests can log in but not RSVP | **closed** |
+| **planning** | Setting up; guests can log in but not respond | **closed** |
 | **live** | Open for responses | **open** |
 | **event** | Day-of mode; responses frozen | closed |
 | **archived** | After the wedding; read-only | closed |

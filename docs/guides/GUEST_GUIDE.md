@@ -15,24 +15,26 @@ in the top bar to sign out. If your code ever doesn't work, ask the couple to re
 
 ## What you'll see
 
-The top navigation has: **Dashboard · RSVP · Schedule · Blessings · Gallery**.
+The top navigation has: **Dashboard · RSVP · Schedule · Blessings · Dancefloor · Gallery**.
 
 ### Dashboard
-Your home page: a welcome, a **countdown** to the big day, and the **key details** —
-date, ceremony time, and the ceremony & reception venues — plus quick links to
-everything below.
+Your home page: a personal welcome (it greets you by name), a **countdown** to the
+big day, and the **key details** — date, ceremony time, and the ceremony & reception
+venues — plus quick links to everything below.
 
 ### RSVP — *let them know if you're coming*
 - Choose your response: **Accept**, **Decline**, or **Tentative**.
-- If you're coming, you can add: **meal choice** (Chicken, Fish, or Vegetarian),
-  **dietary notes** (allergies/requirements), and a **plus-one name** if you have one.
+- If you're coming, tell them your **dietary requirements** (allergies etc.) and add a
+  **plus-one name** if you have one.
+- **Menu choices open nearer the day**, once the menu is finalised — you'll pick your
+  meal here when that happens.
 - Press **Save**. You can come back and **change it** any time while RSVP is open.
 - **If RSVP isn't open yet**, you'll see a friendly message instead of the form — the
   couple haven't opened responses (the wedding is still in "planning"). Check back later.
 
 ### Schedule
-The plan for the day(s) — each event with its date, time, location, and any notes,
-in order. Read-only.
+The plan for the day(s) — the ceremony plus each event, with dates, times, locations,
+and any notes, in order. Read-only.
 
 ### Blessings — *leave a message for the couple*
 - Write a short well-wish and submit it. Your name is filled in for you.
@@ -40,15 +42,23 @@ in order. Read-only.
 - Note: the couple can moderate messages, so there may be a brief delay or a message
   may be hidden if needed.
 
+### Dancefloor — *help build the wedding soundtrack*
+- **Request a song**: title, artist, an optional Spotify/YouTube link, and an optional
+  **dedication** (a line about why — dedications appear publicly on the song wall).
+- Requests go to Ashley & Hazel for approval; approved songs appear on the **song wall**
+  for everyone to see.
+
 ### Gallery — *photos*
-- Browse the **approved photos** the couple have shared.
+- Browse the **approved photos** — click any photo to view it **full size**, use the
+  arrow keys to move through, or press play for a **slideshow**.
 - You can **submit your own photo** (e.g. from the day) — it goes to the couple for
-  approval before it appears for everyone. Photos only (no video).
+  approval before it appears for everyone. Photos only, up to 25 MB (no video yet).
 
 ## Your privacy
-The details you enter (name, RSVP, dietary notes, plus-one) are visible only to
-**Ashley & Hazel and their coordinators** — not to other guests. Other guests only
-ever see your name on a blessing if you post one, and approved gallery photos.
+The details you enter (name, RSVP, dietary requirements, plus-one) are visible only to
+**Ashley & Hazel and their coordinators** — not to other guests. Other guests only ever
+see: your name on a blessing if you post one, your name and dedication on an approved
+song request, and approved gallery photos.
 
 ## Quick FAQ
 - **I can't see the RSVP form.** RSVP isn't open yet — the couple will open it closer
@@ -56,4 +66,8 @@ ever see your name on a blessing if you post one, and approved gallery photos.
 - **Can I bring a plus-one?** Only if your invite allows it; add their name in the RSVP
   form's plus-one field.
 - **I made a mistake on my RSVP.** Just open RSVP again and re-save — it updates.
+- **Where do I pick my meal?** Menu choices aren't open yet — the couple will enable
+  meal selection once the caterer's menu is confirmed (around 12 weeks before the day).
+- **My song hasn't appeared on the wall.** Requests show up once Ashley & Hazel
+  approve them.
 - **On my phone?** It works the same; the menu is along the top.
