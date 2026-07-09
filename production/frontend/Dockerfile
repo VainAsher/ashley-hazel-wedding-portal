@@ -55,10 +55,15 @@ RUN chmod 644 /etc/nginx/nginx.conf && chown nginx:nginx /etc/nginx/nginx.conf
 # `nginx` user; /tmp is world-writable, so this just guarantees the parent.
 RUN mkdir -p /tmp/nginx \
     && chown -R nginx:nginx /tmp/nginx
-USER nginx
 
-# Copy ONLY the compiled static assets from the build stage.
+# Copy ONLY the compiled static assets from the build stage, then normalize
+# permissions: COPY preserves build-context modes, so files checked out under
+# a restrictive umask (e.g. 600 on the deploy host) would 403 for the
+# unprivileged nginx user.
 COPY --from=build /app/dist /usr/share/nginx/html
+RUN chmod -R a+rX /usr/share/nginx/html
+
+USER nginx
 
 # Non-privileged HTTP port (compose maps host 80 -> container 8080).
 EXPOSE 8080
