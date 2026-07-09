@@ -8,6 +8,12 @@ const proxyConfig = isTestEnv ? {} : {
   '/api': {
     target: 'http://127.0.0.1:3001',
     changeOrigin: true
+  },
+  // The backend serves uploaded gallery photos itself (nginx does this in
+  // prod), so proxy them too or images 404 in local dev.
+  '/uploads': {
+    target: 'http://127.0.0.1:3001',
+    changeOrigin: true
   }
 }
 

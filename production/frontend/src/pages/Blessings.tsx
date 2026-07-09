@@ -4,6 +4,7 @@ import { Heart } from 'lucide-react'
 
 import { fetchCurrentUser } from '../api/auth'
 import { GuestLayout } from '../components/GuestLayout'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { Alert } from '../components/ui/alert'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
@@ -43,6 +44,7 @@ function BlessingCard({ blessing }: { blessing: Blessing }) {
 }
 
 export function Blessings() {
+  usePageTitle('Blessings')
   const { data: blessings, isLoading, isError, error } = useBlessings()
   const createMutation = useCreateBlessing()
 

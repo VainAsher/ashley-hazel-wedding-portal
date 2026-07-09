@@ -125,8 +125,26 @@ test('shows approved photos in the guest gallery', async ({ page }) => {
   await installGuestGalleryApi(page, [{ ...approvedItem }])
   await page.goto('/gallery')
 
-  await expect(gallery(page).getByRole('heading', { name: 'Sunset Toast' })).toBeVisible()
+  // Photo labels render as figure captions, not headings.
+  await expect(gallery(page).getByText('Sunset Toast')).toBeVisible()
   await expect(gallery(page).getByText('Golden hour')).toBeVisible()
+})
+
+test('opens a photo in the lightbox and closes with Escape', async ({ page }) => {
+  await installGuestGalleryApi(page, [{ ...approvedItem }])
+  await page.goto('/gallery')
+
+  await gallery(page)
+    .getByRole('button', { name: 'View photo full size: Sunset Toast' })
+    .click()
+
+  const lightbox = page.getByRole('dialog')
+  await expect(lightbox).toBeVisible()
+  await expect(lightbox.getByRole('img', { name: 'Sunset Toast' })).toBeVisible()
+  await expect(lightbox.getByText('1 of 1')).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await expect(lightbox).toBeHidden()
 })
 
 test('shows empty state when there are no approved photos', async ({ page }) => {

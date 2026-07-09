@@ -1,6 +1,8 @@
 import React from 'react'
+import { NavLink } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 interface GuestLayoutProps {
   children: React.ReactNode
@@ -59,13 +61,20 @@ export function GuestLayout({ children }: GuestLayoutProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex space-x-8 overflow-x-auto">
             {navigationItems.map((item) => (
-              <a
+              <NavLink
                 key={item.href}
-                href={item.href}
-                className="px-1 py-4 text-sm font-medium text-gray-600 hover:text-gray-900 hover:border-b-2 hover:border-blue-600 transition-colors border-b-2 border-transparent whitespace-nowrap"
+                to={item.href}
+                className={({ isActive }) =>
+                  cn(
+                    'px-1 py-4 text-sm font-medium transition-colors border-b-2 whitespace-nowrap',
+                    isActive
+                      ? 'text-gray-900 border-blue-600'
+                      : 'text-gray-600 border-transparent hover:text-gray-900 hover:border-blue-600',
+                  )
+                }
               >
                 {item.label}
-              </a>
+              </NavLink>
             ))}
           </div>
         </div>
@@ -82,10 +91,10 @@ export function GuestLayout({ children }: GuestLayoutProps) {
           <p className="text-center text-sm text-gray-600">
             Questions? Contact us at{' '}
             <a
-              href="mailto:support@wedding.example.com"
+              href="mailto:Ajandrews210888@aol.com"
               className="text-blue-600 hover:text-blue-700 underline"
             >
-              support@wedding.example.com
+              Ajandrews210888@aol.com
             </a>
           </p>
         </div>

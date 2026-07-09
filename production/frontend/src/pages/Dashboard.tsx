@@ -1,8 +1,10 @@
 import { Calendar, Clock, Heart, Image as ImageIcon, MapPin, Send } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 import { GuestLayout } from '../components/GuestLayout'
 import { Alert } from '../components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { usePortalWedding, type PortalWedding } from '../hooks/usePortal'
 
 function formatDate(value: string): string {
@@ -130,6 +132,7 @@ function KeyDetails({ wedding }: { wedding: PortalWedding }) {
 }
 
 export function Dashboard() {
+  usePageTitle('Dashboard')
   const { data: wedding, isLoading, isError, error } = usePortalWedding()
 
   return (
@@ -166,7 +169,7 @@ export function Dashboard() {
 
         <section aria-label="Quick links" className="grid gap-4 sm:grid-cols-2">
           {quickLinks.map(({ href, title, description, icon: Icon }) => (
-            <a key={href} href={href} className="block no-underline">
+            <Link key={href} to={href} className="block no-underline">
               <Card className="h-full transition-shadow hover:shadow-md">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-lg">
@@ -176,7 +179,7 @@ export function Dashboard() {
                   <CardDescription>{description}</CardDescription>
                 </CardHeader>
               </Card>
-            </a>
+            </Link>
           ))}
         </section>
       </div>

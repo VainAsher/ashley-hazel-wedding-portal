@@ -15,6 +15,7 @@ import { Input } from '../components/ui/input'
 import { Alert } from '../components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { GuestLayout } from '../components/GuestLayout'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface RsvpFormData {
   rsvpStatus: RsvpStatus
@@ -76,6 +77,7 @@ function optionalText(value: string): string | null {
 }
 
 export function RSVP() {
+  usePageTitle('RSVP')
   const [guest, setGuest] = useState<GuestRsvp | null>(null)
   const [formData, setFormData] = useState<RsvpFormData>(defaultFormData)
   const [loading, setLoading] = useState(true)

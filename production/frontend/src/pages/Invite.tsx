@@ -9,6 +9,7 @@ import { Label } from '../components/ui/label'
 import { Alert } from '../components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { AuthLayout } from '../components/AuthLayout'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 function inviteErrorMessage(error: unknown): string {
   if (error instanceof AuthApiError && error.status === 401) {
@@ -23,6 +24,7 @@ function inviteErrorMessage(error: unknown): string {
 }
 
 export function Invite() {
+  usePageTitle('Welcome')
   const navigate = useNavigate()
   const { login } = useAuth()
   const [inviteCode, setInviteCode] = useState('')

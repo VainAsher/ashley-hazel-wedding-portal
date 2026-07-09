@@ -52,6 +52,21 @@ async function installScheduleApi(page: Page, body: ScheduleEvent[]) {
   })
 }
 
+// The schedule page also loads the wedding record so it can synthesize a
+// ceremony entry when the events list doesn't include one.
+async function installWeddingApi(page: Page) {
+  await page.route('**/api/portal/wedding', async (route) => {
+    await json(route, {
+      couple_names: 'Avery & Blake',
+      wedding_date: '2026-09-12',
+      ceremony_time: '15:30',
+      ceremony_location: 'Rosewood Chapel',
+      reception_location: 'The Grand Hall',
+      phase: 'live',
+    })
+  })
+}
+
 test.beforeEach(async ({ page }) => {
   await cleanupPageState(page)
   await initializeErrorTracking(page)
@@ -80,18 +95,33 @@ function scheduleRegion(page: Page) {
 }
 
 test('renders schedule events ordered by time', async ({ page }) => {
+  await installWeddingApi(page)
   await installScheduleApi(page, events.map((event) => ({ ...event })))
   await page.goto('/schedule')
 
   const headings = scheduleRegion(page).getByRole('heading')
   await expect(headings.first()).toHaveText('Ceremony')
   await expect(headings.nth(1)).toHaveText('Reception')
+  // The couple already listed a ceremony, so no synthesized duplicate.
+  await expect(headings).toHaveCount(2)
 
   await expect(scheduleRegion(page).getByText('Rosewood Chapel')).toBeVisible()
   await expect(scheduleRegion(page).getByText('The vows.')).toBeVisible()
 })
 
+test('synthesizes the ceremony from wedding details when events omit it', async ({ page }) => {
+  await installWeddingApi(page)
+  await installScheduleApi(page, [events[0]]) // Reception only
+  await page.goto('/schedule')
+
+  const headings = scheduleRegion(page).getByRole('heading')
+  await expect(headings.first()).toHaveText('Wedding Ceremony')
+  await expect(headings.nth(1)).toHaveText('Reception')
+  await expect(scheduleRegion(page).getByText('Rosewood Chapel')).toBeVisible()
+})
+
 test('shows the empty state when there are no events', async ({ page }) => {
+  await page.route('**/api/portal/wedding', (route) => route.abort())
   await installScheduleApi(page, [])
   await page.goto('/schedule')
 

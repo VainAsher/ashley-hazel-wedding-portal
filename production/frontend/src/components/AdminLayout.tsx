@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
+import { usePageTitle } from '@/hooks/usePageTitle'
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -25,6 +26,7 @@ const adminMenuItems = [
 ]
 
 export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
+  usePageTitle(title)
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
