@@ -9,6 +9,12 @@ import {
 
 interface AuthContextType {
   user: AuthUser | null
+  /**
+   * Wedding lifecycle phase from the single shared /api/auth/me query.
+   * `null` until the user is known (still loading, or not logged in);
+   * defaults to 'live' when the API omits it, matching the backend fallback.
+   */
+  weddingPhase: string | null
   loading: boolean
   error: string | null
   login: (code: string) => Promise<AuthUser>
@@ -90,8 +96,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  const weddingPhase = user ? user.wedding_phase ?? 'live' : null
+
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, logout }}>
+    <AuthContext.Provider value={{ user, weddingPhase, loading, error, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

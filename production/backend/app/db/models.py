@@ -266,6 +266,15 @@ class GuestAudit(Base):
         String(255), server_default=text("CURRENT_USER")
     )
 
+    # guest_audit.wedding_id intentionally carries no FK (migration 004): audit
+    # rows must survive guest/wedding deletion. This is a viewonly convenience
+    # join only — hence the explicit primaryjoin and no back-ref on Wedding.
+    wedding: Mapped["Wedding | None"] = orm_relationship(
+        "Wedding",
+        primaryjoin="foreign(GuestAudit.wedding_id) == Wedding.id",
+        viewonly=True,
+    )
+
 
 class Task(Base):
     __tablename__ = "tasks"

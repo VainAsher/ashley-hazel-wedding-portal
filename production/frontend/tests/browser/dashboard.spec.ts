@@ -103,6 +103,23 @@ test('shows quick links to the other portal pages', async ({ page }) => {
   )
 })
 
+test('shows a skeleton while the wedding details load', async ({ page }) => {
+  await page.route('**/api/portal/wedding', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 700))
+    await json(route, { ...wedding })
+  })
+  await page.goto('/dashboard')
+
+  // While loading, the dashboard renders a shimmer skeleton (not plain text)
+  const status = mainRegion(page).getByRole('status')
+  await expect(status).toBeVisible()
+  await expect(status.locator('.animate-pulse').first()).toBeVisible()
+
+  // ...which resolves into the real hero once the wedding arrives
+  await expect(page.getByRole('heading', { name: 'Welcome, Wedding' })).toBeVisible()
+  await expect(status).not.toBeVisible()
+})
+
 test('shows an error state when the wedding fails to load', async ({ page }) => {
   await installPortalApi(page, { detail: 'Boom' }, 500)
   await page.goto('/dashboard')

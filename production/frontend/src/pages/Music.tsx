@@ -1,8 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 
 import { Music2 } from 'lucide-react'
 
-import { fetchCurrentUser } from '../api/auth'
+import { useAuth } from '../contexts/AuthContext'
 import { GuestLayout } from '../components/GuestLayout'
 import { Jukebox } from '../components/Jukebox'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -59,27 +59,13 @@ export function Music() {
   const [dedication, setDedication] = useState('')
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<string | null>(null)
-  const [phase, setPhase] = useState<string | null>(null)
 
-  useEffect(() => {
-    let mounted = true
-    fetchCurrentUser()
-      .then((user) => {
-        if (mounted) {
-          setPhase(user.wedding_phase ?? 'live')
-        }
-      })
-      .catch(() => {
-        // If we cannot read the phase, keep the form available — the backend
-        // still enforces the phase gate on submission.
-        if (mounted) {
-          setPhase('live')
-        }
-      })
-    return () => {
-      mounted = false
-    }
-  }, [])
+  // Wedding phase comes from the shared auth context (single /api/auth/me
+  // query) instead of a page-level fetch. If we cannot read the phase, keep
+  // the form available — the backend still enforces the phase gate on
+  // submission.
+  const { weddingPhase, loading: authLoading } = useAuth()
+  const phase = authLoading ? null : weddingPhase ?? 'live'
 
   const songList = songs ?? []
   const requestsOpen = phase === 'live'

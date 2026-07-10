@@ -66,10 +66,11 @@ create:
 | `idx_blessings_wedding` | 011 | Blessings wall per wedding. |
 | `idx_blessings_wedding_hidden` | 011 | Visible/hidden blessings filter. |
 
-> **Known drift:** migration 011 creates `idx_blessings_wedding_hidden`
-> (`wedding_id, hidden`), but the SQLAlchemy `Blessing` model declares
+> **Drift resolved:** the SQLAlchemy `Blessing` model briefly declared
 > `idx_blessings_wedding_created` (`wedding_id, created_at DESC`) for its second
-> index. The model and the migration disagree on the second blessings index;
+> index while migration 011 created `idx_blessings_wedding_hidden`
+> (`wedding_id, hidden`). The model has since been aligned to the migration —
+> both now declare `idx_blessings_wedding_hidden`. If they ever disagree again,
 > the migration is the source of truth for what actually exists in the database.
 
 ## Write Cost

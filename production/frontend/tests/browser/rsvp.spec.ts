@@ -135,6 +135,28 @@ test.afterEach(async ({ page }) => {
   expect(unexpectedErrors).toEqual([])
 })
 
+test('does not fetch /api/auth/me from the page itself', async ({ page }) => {
+  await installRsvpApi(page)
+
+  let authMeRequests = 0
+  page.on('request', (request) => {
+    if (request.url().includes('/api/auth/me')) {
+      authMeRequests += 1
+    }
+  })
+
+  await page.goto('/rsvp')
+  await expect(page.getByRole('heading', { name: 'RSVP' })).toBeVisible()
+  await expect(page.getByLabel('Accept')).toBeChecked()
+
+  // Exactly two callers remain on a page load: the app-wide AuthProvider and
+  // the RequireGuest route guard. The RSVP page reads the shared auth context
+  // instead of issuing a third, duplicate fetch. React StrictMode double-fires
+  // mount effects on the dev server Playwright runs against, so each caller
+  // counts twice (2 callers x 2 = 4). A page-level fetch would push this to 6.
+  expect(authMeRequests).toBe(4)
+})
+
 test('renders current guest RSVP state', async ({ page }) => {
   await installRsvpApi(page)
 
