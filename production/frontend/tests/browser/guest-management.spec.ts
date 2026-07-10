@@ -1,4 +1,6 @@
-import { expect, test, type Page, type Route } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+
+import { expect, test, type Download, type Page, type Route } from '@playwright/test'
 import { cleanupPageState, initializeErrorTracking, filterIgnorableErrors, getBrowserErrors } from './fixtures/page-cleanup'
 
 type RsvpStatus = 'pending' | 'accepted' | 'declined' | 'tentative'
@@ -319,6 +321,99 @@ test('completes add, edit, and delete guest flow', async ({ page }) => {
 
   await expect(page.getByRole('status')).toHaveText('Guest deleted successfully.')
   await expect(page.getByRole('cell', { name: 'E2E Taylor', exact: true })).not.toBeVisible()
+})
+
+async function readDownloadedCsv(download: Download): Promise<string> {
+  const filePath = await download.path()
+  if (!filePath) {
+    throw new Error('Download did not produce a file path')
+  }
+  return readFileSync(filePath, 'utf-8')
+}
+
+test('exports a single guest row as CSV', async ({ page }) => {
+  await page.goto('/guests')
+  await expect(page.getByRole('cell', { name: 'Existing Guest', exact: true })).toBeVisible()
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Export Existing Guest' }).click()
+  const download = await downloadPromise
+
+  expect(download.suggestedFilename()).toBe('guest-existing-guest.csv')
+  const content = await readDownloadedCsv(download)
+  const lines = content.split('\r\n')
+  expect(lines).toHaveLength(2)
+  expect(lines[0]).toBe(
+    'id,wedding_id,name,email,phone,relationship,rsvp_status,meal_choice,dietary_restrictions,plus_one_name,plus_one_rsvp,plus_one_dietary,table_number,seat_number,notes',
+  )
+  expect(lines[1]).toBe(
+    '2001,1,Existing Guest,existing@example.com,555-0100,friend,accepted,chicken,Gluten free,,,,1,2,Already invited',
+  )
+})
+
+test('exports all guests as CSV with proper escaping', async ({ page }) => {
+  const trickyGuest: Guest = {
+    ...initialGuest,
+    id: 2002,
+    name: 'Comma, "Quoted" Guest',
+    email: null,
+    phone: null,
+    relationship: null,
+    meal_choice: null,
+    dietary_restrictions: 'No nuts, "especially peanuts"\nsevere allergy',
+    table_number: null,
+    seat_number: null,
+    notes: null,
+  }
+
+  await page.route(/\/api\/guests$/, async (route) => {
+    if (route.request().method() === 'GET') {
+      await json(route, [initialGuest, trickyGuest])
+      return
+    }
+    await route.fallback()
+  })
+
+  await page.goto('/guests')
+  await expect(mainRegion(page).getByText('2 guests')).toBeVisible()
+
+  const downloadPromise = page.waitForEvent('download')
+  await mainRegion(page).getByRole('button', { name: 'Export all guests (CSV)' }).click()
+  const download = await downloadPromise
+
+  expect(download.suggestedFilename()).toBe('guests.csv')
+  const content = await readDownloadedCsv(download)
+  const lines = content.split('\r\n')
+  expect(lines[0]).toBe(
+    'id,wedding_id,name,email,phone,relationship,rsvp_status,meal_choice,dietary_restrictions,plus_one_name,plus_one_rsvp,plus_one_dietary,table_number,seat_number,notes',
+  )
+  expect(lines[1]).toBe(
+    '2001,1,Existing Guest,existing@example.com,555-0100,friend,accepted,chicken,Gluten free,,,,1,2,Already invited',
+  )
+  // Name and dietary notes contain commas, quotes, and a newline: they must be
+  // quoted, with inner quotes doubled. Rows are joined with CRLF, so the
+  // embedded LF stays inside the quoted dietary field on a single CRLF line.
+  expect(lines[2]).toBe(
+    '2002,1,"Comma, ""Quoted"" Guest",,,,accepted,,"No nuts, ""especially peanuts""\nsevere allergy",,,,,,',
+  )
+  expect(lines).toHaveLength(3)
+})
+
+test('export all button is disabled while the list is empty', async ({ page }) => {
+  await page.route(/\/api\/guests$/, async (route) => {
+    if (route.request().method() === 'GET') {
+      await json(route, [])
+      return
+    }
+    await route.fallback()
+  })
+
+  await page.goto('/guests')
+
+  await expect(mainRegion(page).getByText('No guests found.')).toBeVisible()
+  await expect(
+    mainRegion(page).getByRole('button', { name: 'Export all guests (CSV)' }),
+  ).toBeDisabled()
 })
 
 test('shows validation and API errors, then clears them after success', async ({ page }) => {

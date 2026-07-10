@@ -39,6 +39,7 @@ import {
   type MealChoice,
   type RsvpStatus,
 } from '@/hooks/useGuests'
+import { downloadCsv, guestCsvFilename, guestsToCsv } from '@/lib/guestCsv'
 
 const RSVP_OPTIONS: { value: RsvpStatus; label: string }[] = [
   { value: 'pending', label: 'Pending' },
@@ -259,6 +260,14 @@ export function Guests() {
     setDeleteError(null)
   }
 
+  const exportGuest = (guest: Guest) => {
+    downloadCsv(guestCsvFilename(guest), guestsToCsv([guest]))
+  }
+
+  const exportAllGuests = () => {
+    downloadCsv('guests.csv', guestsToCsv(guestList))
+  }
+
   const confirmDelete = async () => {
     if (!guestToDelete) {
       return
@@ -281,9 +290,19 @@ export function Guests() {
             <h2 className="text-xl font-semibold text-gray-900 m-0">Guests</h2>
             <p className="text-sm text-gray-600 m-0 mt-1">{guestCount} guests</p>
           </div>
-          <Button type="button" onClick={openCreateDialog}>
-            Add Guest
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={exportAllGuests}
+              disabled={guestCount === 0}
+            >
+              Export all guests (CSV)
+            </Button>
+            <Button type="button" onClick={openCreateDialog}>
+              Add Guest
+            </Button>
+          </div>
         </section>
 
         {feedback && (
@@ -339,6 +358,15 @@ export function Guests() {
                           onClick={() => openEditDialog(guest)}
                         >
                           Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          aria-label={`Export ${guest.name}`}
+                          onClick={() => exportGuest(guest)}
+                        >
+                          Export
                         </Button>
                         <Button
                           type="button"
