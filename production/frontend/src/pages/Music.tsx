@@ -4,6 +4,7 @@ import { Music2 } from 'lucide-react'
 
 import { fetchCurrentUser } from '../api/auth'
 import { GuestLayout } from '../components/GuestLayout'
+import { Jukebox } from '../components/Jukebox'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { Alert } from '../components/ui/alert'
 import { Button } from '../components/ui/button'
@@ -128,6 +129,8 @@ export function Music() {
             </CardDescription>
           </CardHeader>
         </Card>
+
+        {songs && songs.length > 0 && <Jukebox songs={songs} />}
 
         {feedback && (
           <Alert variant="success" role="status" aria-live="polite">

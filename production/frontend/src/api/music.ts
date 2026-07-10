@@ -17,6 +17,7 @@ export interface SongRequest {
   resolved_artist: string | null
   artwork_url: string | null
   spotify_track_id: string | null
+  preview_url: string | null
   created_at: string
 }
 
@@ -34,6 +35,13 @@ export interface SongRequestUpdate {
   status?: SongRequestStatus
   pinned?: boolean
   position?: number | null
+  // Explicit null clears a mismatched jukebox preview.
+  preview_url?: string | null
+}
+
+export interface PreviewBackfillResult {
+  matched: number
+  missed: number
 }
 
 export type MusicExportFormat = 'csv' | 'text'
@@ -170,6 +178,43 @@ export async function mergeSongRequests(
   }
 
   return response.json() as Promise<SongRequest>
+}
+
+export async function matchPreview(
+  id: number,
+  apiBaseUrl = API_BASE_URL,
+): Promise<SongRequest> {
+  const response = await fetch(`${apiBaseUrl}/api/music/requests/${id}/match-preview`, {
+    credentials: 'include',
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new MusicApiError(
+      await readErrorMessage(response, 'Unable to match a preview for this song.'),
+      response.status,
+    )
+  }
+
+  return response.json() as Promise<SongRequest>
+}
+
+export async function backfillPreviews(
+  apiBaseUrl = API_BASE_URL,
+): Promise<PreviewBackfillResult> {
+  const response = await fetch(`${apiBaseUrl}/api/music/previews/backfill`, {
+    credentials: 'include',
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new MusicApiError(
+      await readErrorMessage(response, 'Unable to match previews.'),
+      response.status,
+    )
+  }
+
+  return response.json() as Promise<PreviewBackfillResult>
 }
 
 export async function downloadExport(

@@ -545,6 +545,8 @@ class SongRequest(Base):
     resolved_artist: Mapped[str | None] = mapped_column(String(255))
     artwork_url: Mapped[str | None] = mapped_column(String(500))
     spotify_track_id: Mapped[str | None] = mapped_column(String(64))
+    # 30s audio preview for the guest jukebox (iTunes match); NULL = none yet.
+    preview_url: Mapped[str | None] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )

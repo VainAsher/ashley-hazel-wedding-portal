@@ -763,6 +763,8 @@ class SongRequestUpdate(BaseModel):
     status: str | None = Field(default=None, max_length=20)
     pinned: bool | None = None
     position: int | None = None
+    # Explicit null clears a mismatched jukebox preview.
+    preview_url: str | None = Field(default=None, max_length=500)
 
     @field_validator("title")
     @classmethod
@@ -805,6 +807,7 @@ class SongRequestResponse(BaseModel):
     resolved_artist: str | None = None
     artwork_url: str | None = None
     spotify_track_id: str | None = None
+    preview_url: str | None = None
     created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -21,6 +21,7 @@ interface SongRequest {
   resolved_artist: string | null
   artwork_url: string | null
   spotify_track_id: string | null
+  preview_url: string | null
   created_at: string
 }
 
@@ -43,6 +44,7 @@ function songRequest(overrides: Partial<SongRequest>): SongRequest {
     resolved_artist: null,
     artwork_url: null,
     spotify_track_id: null,
+    preview_url: null,
     created_at: '2026-06-01T10:00:00Z',
     ...overrides,
   }
@@ -92,6 +94,7 @@ const initialRequests: SongRequest[] = [
     artist: 'Earth, Wind & Fire',
     requested_by: 'Ashley',
     status: 'approved',
+    preview_url: 'https://audio.example/september.m4a',
     created_at: '2026-05-21T10:00:00Z',
   }),
   // Do-not-play list.
@@ -116,13 +119,21 @@ interface AdminMusicApiState {
   patches: { id: number; payload: Record<string, unknown> }[]
   merges: { id: number; payload: Record<string, unknown> }[]
   exports: string[]
+  previewMatches: number[]
+  backfills: number
 }
 
 async function installAdminMusicApi(
   page: Page,
   initial: SongRequest[],
 ): Promise<AdminMusicApiState> {
-  const state: AdminMusicApiState = { patches: [], merges: [], exports: [] }
+  const state: AdminMusicApiState = {
+    patches: [],
+    merges: [],
+    exports: [],
+    previewMatches: [],
+    backfills: 0,
+  }
   let requests = initial.map((request) => ({ ...request }))
 
   await page.route('**/api/music/requests', async (route) => {
@@ -190,6 +201,33 @@ async function installAdminMusicApi(
       .filter((row) => !payload.duplicate_ids.includes(row.id))
       .map((row) => (row.id === primaryId ? merged : row))
     await json(route, merged)
+  })
+
+  await page.route(/\/api\/music\/requests\/(\d+)\/match-preview$/, async (route) => {
+    const match = new URL(route.request().url()).pathname.match(/\/(\d+)\/match-preview$/)
+    const requestId = Number(match?.[1])
+    state.previewMatches.push(requestId)
+    const existing = requests.find((row) => row.id === requestId)
+    if (!existing) {
+      await json(route, { detail: 'Song request not found' }, 404)
+      return
+    }
+    const updated = { ...existing, preview_url: 'https://audio.example/matched.m4a' }
+    requests = requests.map((row) => (row.id === requestId ? updated : row))
+    await json(route, updated)
+  })
+
+  await page.route('**/api/music/previews/backfill', async (route) => {
+    state.backfills += 1
+    let matched = 0
+    requests = requests.map((row) => {
+      if (row.status === 'approved' && !row.preview_url) {
+        matched += 1
+        return { ...row, preview_url: 'https://audio.example/backfilled.m4a' }
+      }
+      return row
+    })
+    await json(route, { matched, missed: 0 })
   })
 
   await page.route(/\/api\/music\/export\?format=(csv|text)$/, async (route) => {
@@ -394,4 +432,50 @@ test('shows empty states when there are no requests', async ({ page }) => {
   await expect(pendingRegion(page).getByText('No pending requests.')).toBeVisible()
   await expect(approvedRegion(page).getByText('No approved songs yet.')).toBeVisible()
   await expect(blockedRegion(page).getByText('No blocked songs.')).toBeVisible()
+})
+
+test('preview badges, find preview, and match-all send the right requests', async ({
+  page,
+}) => {
+  const state = await installAdminMusicApi(
+    page,
+    initialRequests.map((request) => ({ ...request })),
+  )
+  await page.goto('/admin/music')
+
+  const approved = approvedRegion(page)
+  // 202 has a preview; 201 does not.
+  await expect(approved.getByText('preview ready')).toHaveCount(1)
+  await expect(approved.getByText('no preview', { exact: true })).toHaveCount(1)
+
+  await approved
+    .getByRole('button', { name: 'Find preview for Perfect (Nan)' })
+    .click()
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Preview matched for Perfect.' }),
+  ).toBeVisible()
+  expect(state.previewMatches).toEqual([201])
+  await expect(approved.getByText('preview ready')).toHaveCount(2)
+
+  await approved
+    .getByRole('button', { name: 'Clear preview for September (Ashley)' })
+    .click()
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Preview cleared for September.' }),
+  ).toBeVisible()
+  expect(state.patches.at(-1)).toEqual({ id: 202, payload: { preview_url: null } })
+})
+
+test('match all previews posts the backfill and reports the count', async ({ page }) => {
+  const state = await installAdminMusicApi(
+    page,
+    initialRequests.map((request) => ({ ...request })),
+  )
+  await page.goto('/admin/music')
+
+  await page.getByRole('button', { name: 'Match all previews' }).click()
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Matched 1 preview.' }),
+  ).toBeVisible()
+  expect(state.backfills).toBe(1)
 })

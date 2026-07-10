@@ -21,6 +21,7 @@ interface SongRequest {
   resolved_artist: string | null
   artwork_url: string | null
   spotify_track_id: string | null
+  preview_url: string | null
   created_at: string
 }
 
@@ -40,6 +41,7 @@ function songRequest(overrides: Partial<SongRequest>): SongRequest {
     resolved_artist: null,
     artwork_url: null,
     spotify_track_id: null,
+    preview_url: null,
     created_at: '2026-06-01T10:00:00Z',
     ...overrides,
   }
@@ -242,4 +244,108 @@ test('hides the form and shows the closed message outside the live phase', async
 
   // The wall still shows even while requests are closed.
   await expect(songWall(page).getByText('Dancing Queen — ABBA')).toBeVisible()
+})
+
+// ---------------------------------------------------------------------------
+// Jukebox (30-second preview player)
+// ---------------------------------------------------------------------------
+
+const jukeboxEntries: SongRequest[] = [
+  songRequest({
+    id: 11,
+    title: 'September',
+    artist: 'Earth, Wind & Fire',
+    requested_by: 'Aunt May',
+    dedication: 'Aunties assemble',
+    preview_url: 'https://audio.example/september.m4a',
+    position: 1,
+  }),
+  songRequest({
+    id: 12,
+    title: 'No Preview Song',
+    requested_by: 'Uncle Bob',
+    position: 2,
+  }),
+  songRequest({
+    id: 13,
+    title: 'Could You Be Loved',
+    artist: 'Bob Marley',
+    requested_by: 'Cousin T',
+    preview_url: 'https://audio.example/loved.m4a',
+    position: 3,
+  }),
+]
+
+// Stub out real media playback so the jukebox can "play" in headless CI.
+async function stubAudioPlayback(page: Page) {
+  await page.addInitScript(() => {
+    HTMLMediaElement.prototype.play = function play() {
+      this.dispatchEvent(new Event('play'))
+      return Promise.resolve()
+    }
+    HTMLMediaElement.prototype.pause = function pause() {
+      this.dispatchEvent(new Event('pause'))
+    }
+  })
+}
+
+function jukebox(page: Page) {
+  return page.getByRole('region', { name: 'Jukebox' })
+}
+
+test('jukebox plays the previewable songs and skips those without previews', async ({
+  page,
+}) => {
+  await stubAudioPlayback(page)
+  await installMusicApi(page, jukeboxEntries.map((entry) => ({ ...entry })))
+  await page.goto('/music')
+
+  // Queue only contains songs with previews: 2 of the 3 wall entries.
+  await expect(jukebox(page).getByText('1 of 2', { exact: false })).toBeVisible()
+  await expect(jukebox(page).getByTestId('jukebox-title')).toHaveText(
+    'September — Earth, Wind & Fire',
+  )
+  await expect(jukebox(page).getByText('Requested by Aunt May')).toBeVisible()
+
+  await jukebox(page).getByRole('button', { name: 'Play the jukebox' }).click()
+  await expect(
+    jukebox(page).getByRole('button', { name: 'Pause the jukebox' }),
+  ).toBeVisible()
+
+  // Next skips straight to the other previewable song (id 13, not 12).
+  await jukebox(page).getByRole('button', { name: 'Next song' }).click()
+  await expect(jukebox(page).getByTestId('jukebox-title')).toHaveText(
+    'Could You Be Loved — Bob Marley',
+  )
+})
+
+test('jukebox advances on track end and loops back to the start', async ({ page }) => {
+  await stubAudioPlayback(page)
+  await installMusicApi(page, jukeboxEntries.map((entry) => ({ ...entry })))
+  await page.goto('/music')
+
+  const audio = page.getByTestId('jukebox-audio')
+  await expect(jukebox(page).getByTestId('jukebox-title')).toHaveText(
+    'September — Earth, Wind & Fire',
+  )
+
+  // Track 1 ends -> advance to track 2.
+  await audio.evaluate((element) => element.dispatchEvent(new Event('ended')))
+  await expect(jukebox(page).getByTestId('jukebox-title')).toHaveText(
+    'Could You Be Loved — Bob Marley',
+  )
+
+  // Track 2 ends -> loop back to track 1.
+  await audio.evaluate((element) => element.dispatchEvent(new Event('ended')))
+  await expect(jukebox(page).getByTestId('jukebox-title')).toHaveText(
+    'September — Earth, Wind & Fire',
+  )
+})
+
+test('no jukebox renders when no wall songs have previews', async ({ page }) => {
+  await installMusicApi(page, wallEntries.map((entry) => ({ ...entry })))
+  await page.goto('/music')
+
+  await expect(songWall(page).getByText('Dancing Queen — ABBA')).toBeVisible()
+  await expect(jukebox(page)).toHaveCount(0)
 })

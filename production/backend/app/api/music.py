@@ -3,6 +3,7 @@ import io
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Query as OrmQuery, Session
 
 from app.api.auth import ROLE_GUEST, require_coordinator, require_guest
@@ -16,7 +17,7 @@ from app.db.schemas import (
     SongRequestUpdate,
 )
 from app.logging import get_logger
-from app.utils import music_metadata
+from app.utils import music_metadata, music_previews
 
 
 router = APIRouter(prefix="/api/music", tags=["music"])
@@ -56,6 +57,25 @@ def wall_query(db: Session, wedding_id: int) -> OrmQuery[SongRequest]:
     )
 
 
+def apply_preview_match(db_request: SongRequest) -> bool:
+    """Best-effort 30s preview match for the jukebox. Returns True on match.
+
+    Fills preview_url plus (only where the row has none) artwork and resolved
+    title/artist. Never raises — find_preview is best-effort by contract.
+    """
+    match = music_previews.find_preview(db_request.title, db_request.artist)
+    if match is None:
+        return False
+    db_request.preview_url = match.preview_url
+    if not db_request.artwork_url:
+        db_request.artwork_url = match.artwork_url
+    if not db_request.resolved_title:
+        db_request.resolved_title = match.matched_title
+    if not db_request.resolved_artist:
+        db_request.resolved_artist = match.matched_artist
+    return True
+
+
 @router.post(
     "/requests",
     response_model=SongRequestResponse,
@@ -93,6 +113,11 @@ async def create_song_request(
             db_request.resolved_artist = metadata.resolved_artist
             db_request.artwork_url = metadata.artwork_url
             db_request.spotify_track_id = metadata.spotify_track_id
+
+    if request_status == "approved":
+        # Coordinator-created songs go straight onto the playlist, so match a
+        # jukebox preview immediately (guests' requests match on approval).
+        apply_preview_match(db_request)
 
     db.add(db_request)
     db.commit()
@@ -136,8 +161,14 @@ async def update_song_request(
         db, request_id, current_user.wedding_id, "update_song_request"
     )
     update_data = payload.model_dump(exclude_unset=True)
+    became_approved = (
+        update_data.get("status") == "approved" and db_request.status != "approved"
+    )
     for field, value in update_data.items():
         setattr(db_request, field, value)
+
+    if became_approved and not db_request.preview_url:
+        apply_preview_match(db_request)
 
     db.commit()
     db.refresh(db_request)
@@ -219,6 +250,60 @@ async def merge_song_requests(
         },
     )
     return primary
+
+
+@router.post("/requests/{request_id}/match-preview", response_model=SongRequestResponse)
+async def match_song_preview(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_coordinator),
+) -> SongRequest:
+    """(Re-)match a song's 30s jukebox preview against iTunes."""
+    db_request = get_song_request_or_404(
+        db, request_id, current_user.wedding_id, "match_song_preview"
+    )
+    matched = apply_preview_match(db_request)
+    db.commit()
+    db.refresh(db_request)
+    logger.info(
+        "song_preview_matched",
+        extra={"song_request_id": request_id, "matched": matched},
+    )
+    return db_request
+
+
+class PreviewBackfillResponse(BaseModel):
+    matched: int
+    missed: int
+
+
+@router.post("/previews/backfill", response_model=PreviewBackfillResponse)
+async def backfill_previews(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_coordinator),
+) -> PreviewBackfillResponse:
+    """Match previews for every approved song that doesn't have one yet.
+
+    Sequential and synchronous — the playlist is wedding-sized, and the
+    matcher's 3s timeout bounds the worst case.
+    """
+    rows = (
+        db.query(SongRequest)
+        .filter(
+            SongRequest.wedding_id == current_user.wedding_id,
+            SongRequest.status == "approved",
+            SongRequest.preview_url.is_(None),
+        )
+        .order_by(SongRequest.id.asc())
+        .all()
+    )
+    matched = sum(1 for row in rows if apply_preview_match(row))
+    db.commit()
+    logger.info(
+        "song_previews_backfilled",
+        extra={"matched": matched, "missed": len(rows) - matched},
+    )
+    return PreviewBackfillResponse(matched=matched, missed=len(rows) - matched)
 
 
 @router.get("/export")

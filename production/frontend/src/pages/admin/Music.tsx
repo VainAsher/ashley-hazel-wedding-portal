@@ -9,6 +9,8 @@ import {
   downloadExport,
   MusicApiError,
   useAllSongRequests,
+  useBackfillPreviews,
+  useMatchPreview,
   useMergeSongRequests,
   useUpdateSongRequest,
   type MusicExportFormat,
@@ -101,6 +103,8 @@ export function Music() {
 
   const updateMutation = useUpdateSongRequest()
   const mergeMutation = useMergeSongRequests()
+  const matchMutation = useMatchPreview()
+  const backfillMutation = useBackfillPreviews()
 
   const [feedback, setFeedback] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -134,7 +138,11 @@ export function Music() {
     [requestList],
   )
 
-  const isMutating = updateMutation.isPending || mergeMutation.isPending
+  const isMutating =
+    updateMutation.isPending ||
+    mergeMutation.isPending ||
+    matchMutation.isPending ||
+    backfillMutation.isPending
 
   const resetAlerts = () => {
     setFeedback(null)
@@ -212,6 +220,46 @@ export function Music() {
       setFeedback('Playlist order updated.')
     } catch (err) {
       reportError(err, 'Failed to reorder the playlist')
+    }
+  }
+
+  const findPreview = async (request: SongRequest) => {
+    resetAlerts()
+
+    try {
+      const updated = await matchMutation.mutateAsync(request.id)
+      setFeedback(
+        updated.preview_url
+          ? `Preview matched for ${request.title.trim()}.`
+          : `No preview found for ${request.title.trim()} — try refining the title/artist.`,
+      )
+    } catch (err) {
+      reportError(err, 'Failed to match a preview')
+    }
+  }
+
+  const clearPreview = async (request: SongRequest) => {
+    resetAlerts()
+
+    try {
+      await updateMutation.mutateAsync({ id: request.id, payload: { preview_url: null } })
+      setFeedback(`Preview cleared for ${request.title.trim()}.`)
+    } catch (err) {
+      reportError(err, 'Failed to clear the preview')
+    }
+  }
+
+  const matchAllPreviews = async () => {
+    resetAlerts()
+
+    try {
+      const result = await backfillMutation.mutateAsync()
+      setFeedback(
+        `Matched ${result.matched} preview${result.matched === 1 ? '' : 's'}` +
+          (result.missed > 0 ? ` (${result.missed} not found).` : '.'),
+      )
+    } catch (err) {
+      reportError(err, 'Failed to match previews')
     }
   }
 
@@ -343,7 +391,15 @@ export function Music() {
                   key={request.id}
                   className="flex flex-wrap items-start justify-between gap-3 p-4"
                 >
-                  <RequestSummary request={request} />
+                  <div className="grid gap-1.5">
+                    <RequestSummary request={request} />
+                    <Badge
+                      variant={request.preview_url ? 'info' : 'neutral'}
+                      className="justify-self-start"
+                    >
+                      {request.preview_url ? '▶ preview ready' : 'no preview'}
+                    </Badge>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     <Button
                       type="button"
@@ -375,6 +431,28 @@ export function Music() {
                     >
                       Move down
                     </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label={`Find preview for ${requestLabel(request)}`}
+                      disabled={isMutating}
+                      onClick={() => void findPreview(request)}
+                    >
+                      Find preview
+                    </Button>
+                    {request.preview_url && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        aria-label={`Clear preview for ${requestLabel(request)}`}
+                        disabled={isMutating}
+                        onClick={() => void clearPreview(request)}
+                      >
+                        Clear preview
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       variant="destructive"
@@ -430,6 +508,14 @@ export function Music() {
                 </Button>
                 <Button type="button" variant="outline" onClick={() => void handleExport('text')}>
                   Download DJ pack (text)
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isMutating}
+                  onClick={() => void matchAllPreviews()}
+                >
+                  Match all previews
                 </Button>
               </div>
             </section>

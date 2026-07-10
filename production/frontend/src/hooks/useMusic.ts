@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  backfillPreviews,
   deleteSongRequest,
   fetchAllSongRequests,
   fetchSongWall,
+  matchPreview,
   mergeSongRequests,
   submitSongRequest,
   updateSongRequest,
@@ -14,6 +16,7 @@ import {
 
 export type {
   MusicExportFormat,
+  PreviewBackfillResult,
   SongRequest,
   SongRequestCreate,
   SongRequestStatus,
@@ -84,6 +87,24 @@ export function useMergeSongRequests() {
   return useMutation({
     mutationFn: ({ id, duplicateIds }: { id: number; duplicateIds: number[] }) =>
       mergeSongRequests(id, duplicateIds),
+    onSuccess: invalidate,
+  })
+}
+
+export function useMatchPreview() {
+  const invalidate = useInvalidateSongRequests()
+
+  return useMutation({
+    mutationFn: (id: number) => matchPreview(id),
+    onSuccess: invalidate,
+  })
+}
+
+export function useBackfillPreviews() {
+  const invalidate = useInvalidateSongRequests()
+
+  return useMutation({
+    mutationFn: () => backfillPreviews(),
     onSuccess: invalidate,
   })
 }

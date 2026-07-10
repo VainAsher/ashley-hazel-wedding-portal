@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.db.models import SongRequest, Wedding
-from app.utils import music_metadata
+from app.utils import music_metadata, music_previews
 from tests.fixtures.guests import TEST_WEDDING_ID
 
 
@@ -567,3 +567,266 @@ class TestResolveMusicUrl:
             )
             is None
         )
+
+
+@pytest.fixture()
+def stub_preview(monkeypatch: pytest.MonkeyPatch) -> music_previews.PreviewMatch:
+    """Replace the iTunes matcher so no test ever performs a network call."""
+    match = music_previews.PreviewMatch(
+        preview_url="https://audio.example/preview.m4a",
+        artwork_url="https://images.example/artwork.jpg",
+        matched_title="September",
+        matched_artist="Earth, Wind & Fire",
+    )
+    monkeypatch.setattr(music_previews, "find_preview", lambda title, artist: match)
+    return match
+
+
+@pytest.fixture()
+def stub_preview_miss(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(music_previews, "find_preview", lambda title, artist: None)
+
+
+class TestPreviewMatching:
+    def test_approving_a_request_matches_a_preview(
+        self,
+        coordinator_session: TestClient,
+        db_session: Session,
+        cleanup_song_requests: None,
+        stub_preview: music_previews.PreviewMatch,
+    ) -> None:
+        song = make_song_request(status="pending", requested_by="Pytest Guest")
+        db_session.add(song)
+        db_session.commit()
+        db_session.refresh(song)
+
+        response = coordinator_session.patch(
+            f"/api/music/requests/{song.id}", json={"status": "approved"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["preview_url"] == stub_preview.preview_url
+        # Artwork backfills from the match when the row had none.
+        assert data["artwork_url"] == stub_preview.artwork_url
+
+    def test_approving_keeps_existing_artwork_and_survives_no_match(
+        self,
+        coordinator_session: TestClient,
+        db_session: Session,
+        cleanup_song_requests: None,
+        stub_preview_miss: None,
+    ) -> None:
+        song = make_song_request(
+            status="pending",
+            requested_by="Pytest Guest",
+            artwork_url="https://images.example/original.jpg",
+        )
+        db_session.add(song)
+        db_session.commit()
+        db_session.refresh(song)
+
+        response = coordinator_session.patch(
+            f"/api/music/requests/{song.id}", json={"status": "approved"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["preview_url"] is None
+        assert data["artwork_url"] == "https://images.example/original.jpg"
+
+    def test_coordinator_created_request_matches_immediately(
+        self,
+        coordinator_session: TestClient,
+        cleanup_song_requests: None,
+        stub_preview: music_previews.PreviewMatch,
+    ) -> None:
+        response = coordinator_session.post(
+            "/api/music/requests", json={"title": "September"}
+        )
+        assert response.status_code == 201
+        assert response.json()["status"] == "approved"
+        assert response.json()["preview_url"] == stub_preview.preview_url
+
+    def test_match_preview_endpoint_rematches(
+        self,
+        coordinator_session: TestClient,
+        db_session: Session,
+        cleanup_song_requests: None,
+        stub_preview: music_previews.PreviewMatch,
+    ) -> None:
+        song = make_song_request(preview_url="https://audio.example/stale.m4a")
+        db_session.add(song)
+        db_session.commit()
+        db_session.refresh(song)
+
+        response = coordinator_session.post(
+            f"/api/music/requests/{song.id}/match-preview"
+        )
+        assert response.status_code == 200
+        assert response.json()["preview_url"] == stub_preview.preview_url
+
+    def test_match_preview_requires_coordinator(
+        self,
+        guest_session: TestClient,
+        stub_preview_miss: None,
+    ) -> None:
+        assert (
+            guest_session.post("/api/music/requests/1/match-preview").status_code == 403
+        )
+
+    def test_match_preview_unknown_id_is_404(
+        self,
+        coordinator_session: TestClient,
+        stub_preview_miss: None,
+    ) -> None:
+        assert (
+            coordinator_session.post(
+                "/api/music/requests/999999/match-preview"
+            ).status_code
+            == 404
+        )
+
+    def test_backfill_matches_only_missing_approved(
+        self,
+        coordinator_session: TestClient,
+        db_session: Session,
+        cleanup_song_requests: None,
+        stub_preview: music_previews.PreviewMatch,
+    ) -> None:
+        missing_one = make_song_request(title="Pytest Missing One")
+        missing_two = make_song_request(title="Pytest Missing Two")
+        already = make_song_request(
+            title="Pytest Already", preview_url="https://audio.example/existing.m4a"
+        )
+        pending = make_song_request(title="Pytest Pending", status="pending")
+        db_session.add_all([missing_one, missing_two, already, pending])
+        db_session.commit()
+
+        response = coordinator_session.post("/api/music/previews/backfill")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["matched"] == 2
+        assert data["missed"] == 0
+
+        db_session.expire_all()
+        already_row = db_session.get(SongRequest, already.id)
+        pending_row = db_session.get(SongRequest, pending.id)
+        matched_row = db_session.get(SongRequest, missing_one.id)
+        assert already_row is not None
+        assert already_row.preview_url == "https://audio.example/existing.m4a"
+        assert pending_row is not None
+        assert pending_row.preview_url is None
+        assert matched_row is not None
+        assert matched_row.preview_url == stub_preview.preview_url
+
+    def test_patch_can_clear_a_preview(
+        self,
+        coordinator_session: TestClient,
+        db_session: Session,
+        cleanup_song_requests: None,
+    ) -> None:
+        song = make_song_request(preview_url="https://audio.example/wrong-song.m4a")
+        db_session.add(song)
+        db_session.commit()
+        db_session.refresh(song)
+
+        response = coordinator_session.patch(
+            f"/api/music/requests/{song.id}", json={"preview_url": None}
+        )
+        assert response.status_code == 200
+        assert response.json()["preview_url"] is None
+
+    def test_wall_includes_preview_url(
+        self,
+        guest_session: TestClient,
+        db_session: Session,
+        cleanup_song_requests: None,
+    ) -> None:
+        song = make_song_request(preview_url="https://audio.example/wall.m4a")
+        db_session.add(song)
+        db_session.commit()
+
+        response = guest_session.get("/api/music/requests/wall")
+        assert response.status_code == 200
+        by_title = {row["title"]: row for row in response.json()}
+        assert by_title["Pytest Song"]["preview_url"] == "https://audio.example/wall.m4a"
+
+
+class TestFindPreviewUnit:
+    """find_preview against a stubbed httpx — never the real iTunes API."""
+
+    @staticmethod
+    def _itunes_response(results: list[dict[str, object]]) -> object:
+        class FakeResponse:
+            status_code = 200
+
+            def json(self) -> dict[str, object]:
+                return {"resultCount": len(results), "results": results}
+
+        return FakeResponse()
+
+    def test_good_match_returns_preview(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        results = [
+            {
+                "trackName": "September",
+                "artistName": "Earth, Wind & Fire",
+                "previewUrl": "https://audio.example/september.m4a",
+                "artworkUrl100": "https://images.example/september.jpg",
+            }
+        ]
+        monkeypatch.setattr(
+            music_previews.httpx, "get", lambda *a, **k: self._itunes_response(results)
+        )
+        match = music_previews.find_preview("September", "Earth, Wind & Fire")
+        assert match is not None
+        assert match.preview_url == "https://audio.example/september.m4a"
+        assert match.matched_artist == "Earth, Wind & Fire"
+
+    def test_weak_match_is_rejected(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        results = [
+            {
+                "trackName": "Completely Different Track",
+                "artistName": "Somebody Else",
+                "previewUrl": "https://audio.example/other.m4a",
+            }
+        ]
+        monkeypatch.setattr(
+            music_previews.httpx, "get", lambda *a, **k: self._itunes_response(results)
+        )
+        assert music_previews.find_preview("September", "Earth, Wind & Fire") is None
+
+    def test_best_of_multiple_results_wins(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        results = [
+            {
+                "trackName": "September (Karaoke Tribute)",
+                "artistName": "Karaoke Krew",
+                "previewUrl": "https://audio.example/karaoke.m4a",
+            },
+            {
+                "trackName": "September",
+                "artistName": "Earth, Wind & Fire",
+                "previewUrl": "https://audio.example/right.m4a",
+            },
+        ]
+        monkeypatch.setattr(
+            music_previews.httpx, "get", lambda *a, **k: self._itunes_response(results)
+        )
+        match = music_previews.find_preview("September", "Earth, Wind & Fire")
+        assert match is not None
+        assert match.preview_url == "https://audio.example/right.m4a"
+
+    def test_non_200_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        class FakeResponse:
+            status_code = 503
+
+            def json(self) -> dict[str, object]:  # pragma: no cover - not reached
+                return {}
+
+        monkeypatch.setattr(music_previews.httpx, "get", lambda *a, **k: FakeResponse())
+        assert music_previews.find_preview("September", None) is None
+
+    def test_exception_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        def boom(*args: object, **kwargs: object) -> object:
+            raise RuntimeError("network down")
+
+        monkeypatch.setattr(music_previews.httpx, "get", boom)
+        assert music_previews.find_preview("September", "Earth, Wind & Fire") is None
