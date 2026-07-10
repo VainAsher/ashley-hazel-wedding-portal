@@ -1,6 +1,7 @@
 import React from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { FeedbackWidget } from '@/components/FeedbackWidget'
 import { usePortalTheme } from '@/hooks/useTheme'
 import { Button } from '@/components/ui/button'
 import { buildTint } from '@/lib/theme'
@@ -126,6 +127,8 @@ export function GuestLayout({ children }: GuestLayoutProps) {
           </p>
         </div>
       </footer>
+
+      <FeedbackWidget />
     </div>
   )
 }

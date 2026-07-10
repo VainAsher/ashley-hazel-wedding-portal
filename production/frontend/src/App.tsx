@@ -58,6 +58,9 @@ const Music = lazy(() =>
 const AdminMusic = lazy(() =>
   import('./pages/admin/Music').then((m) => ({ default: m.Music })),
 )
+const AdminFeedback = lazy(() =>
+  import('./pages/admin/Feedback').then((m) => ({ default: m.Feedback })),
+)
 
 function guestRoute(element: React.ReactNode) {
   return <RequireGuest>{element}</RequireGuest>
@@ -104,6 +107,7 @@ function App() {
             <Route element={guestRoute(<Music />)} path="/music" />
             <Route element={adminRoute(<AdminBlessings />)} path="/admin/blessings" />
             <Route element={adminRoute(<AdminMusic />)} path="/admin/music" />
+            <Route element={adminRoute(<AdminFeedback />)} path="/admin/feedback" />
             <Route element={adminRoute(<Admin />)} path="/admin" />
             <Route element={adminRoute(<Guests />)} path="/guests" />
             <Route element={adminRoute(<Invitations />)} path="/admin/invitations" />

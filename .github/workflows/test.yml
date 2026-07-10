@@ -73,6 +73,7 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/012_add_wedding_theme.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/013_create_song_requests.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/014_add_song_preview_url.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/016_add_feedback.sql
 
       - name: Seed test data
         run: |
@@ -170,6 +171,7 @@ jobs:
           psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/012_add_wedding_theme.sql
           psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/013_create_song_requests.sql
           psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/014_add_song_preview_url.sql
+          psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/016_add_feedback.sql
 
       - name: Seed test data
         run: |

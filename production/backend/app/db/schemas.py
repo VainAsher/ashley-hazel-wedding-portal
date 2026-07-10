@@ -838,3 +838,74 @@ class ScheduleEventResponse(BaseModel):
     description: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Feedback (in-site bug/idea reports)
+# ---------------------------------------------------------------------------
+
+
+FEEDBACK_TYPES = {"bug", "idea"}
+FEEDBACK_STATUSES = {"new", "triaged", "done"}
+
+
+class FeedbackCreate(BaseModel):
+    type: str = Field(max_length=10)
+    message: str = Field(min_length=1, max_length=2000)
+    # Auto-captured context from the widget; all optional and display-only.
+    page: str | None = Field(default=None, max_length=200)
+    role: str | None = Field(default=None, max_length=30)
+    viewport: str | None = Field(default=None, max_length=30)
+
+    @field_validator("type")
+    @classmethod
+    def type_must_be_valid(cls, value: str) -> str:
+        feedback_type = value.strip().lower()
+        if feedback_type not in FEEDBACK_TYPES:
+            allowed = ", ".join(sorted(FEEDBACK_TYPES))
+            raise ValueError(f"Type must be one of: {allowed}")
+        return feedback_type
+
+    @field_validator("message")
+    @classmethod
+    def message_must_not_be_blank(cls, value: str) -> str:
+        message = value.strip()
+        if not message:
+            raise ValueError("Feedback message is required")
+        return message
+
+    @field_validator("page", "role", "viewport")
+    @classmethod
+    def blank_optional_text_to_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+
+class FeedbackUpdate(BaseModel):
+    status: str = Field(max_length=20)
+
+    @field_validator("status")
+    @classmethod
+    def status_must_be_valid(cls, value: str) -> str:
+        status_value = value.strip().lower()
+        if status_value not in FEEDBACK_STATUSES:
+            allowed = ", ".join(sorted(FEEDBACK_STATUSES))
+            raise ValueError(f"Status must be one of: {allowed}")
+        return status_value
+
+
+class FeedbackResponse(BaseModel):
+    id: int
+    wedding_id: int
+    submitted_by: str
+    type: str
+    message: str
+    page: str | None = None
+    role: str | None = None
+    viewport: str | None = None
+    status: str
+    created_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)

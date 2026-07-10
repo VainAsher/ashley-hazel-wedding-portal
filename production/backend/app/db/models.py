@@ -106,6 +106,7 @@ class Wedding(Base):
     blessings: Mapped[list["Blessing"]] = orm_relationship(back_populates="wedding")
     gallery_items: Mapped[list["GalleryItem"]] = orm_relationship(back_populates="wedding")
     song_requests: Mapped[list["SongRequest"]] = orm_relationship(back_populates="wedding")
+    feedback: Mapped[list["Feedback"]] = orm_relationship(back_populates="wedding")
 
 
 class Guest(Base):
@@ -552,3 +553,36 @@ class SongRequest(Base):
     )
 
     wedding: Mapped[Wedding] = orm_relationship(back_populates="song_requests")
+
+
+class Feedback(Base):
+    __tablename__ = "feedback"
+    __table_args__ = (
+        CheckConstraint("type IN ('bug', 'idea')", name="ck_feedback_type"),
+        CheckConstraint(
+            "status IN ('new', 'triaged', 'done')", name="ck_feedback_status"
+        ),
+        Index("idx_feedback_wedding_status", "wedding_id", "status"),
+        Index("idx_feedback_wedding_created", "wedding_id", text("created_at DESC")),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), nullable=False
+    )
+    submitted_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    type: Mapped[str] = mapped_column(String(10), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    # Auto-captured context from the widget: page path, session role, and
+    # viewport ("1280x720") — nothing more is collected.
+    page: Mapped[str | None] = mapped_column(String(200))
+    role: Mapped[str | None] = mapped_column(String(30))
+    viewport: Mapped[str | None] = mapped_column(String(30))
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default=text("'new'")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+    wedding: Mapped[Wedding] = orm_relationship(back_populates="feedback")
