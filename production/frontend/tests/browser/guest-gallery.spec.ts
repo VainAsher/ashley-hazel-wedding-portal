@@ -14,11 +14,13 @@ interface GalleryItem {
   title: string | null
   caption: string | null
   file_path: string
+  thumb_path: string | null
   content_type: string | null
   file_size: number | null
   status: GalleryStatus
   created_at: string | null
   url: string
+  thumb_url: string | null
 }
 
 const approvedItem: GalleryItem = {
@@ -27,11 +29,13 @@ const approvedItem: GalleryItem = {
   title: 'Sunset Toast',
   caption: 'Golden hour',
   file_path: '/uploads/1/sunset.jpg',
+  thumb_path: '1/thumbs/sunset.jpg',
   content_type: 'image/jpeg',
   file_size: 1024,
   status: 'approved',
   created_at: null,
   url: '/uploads/1/sunset.jpg',
+  thumb_url: '/uploads/1/thumbs/sunset.jpg',
 }
 
 const PNG_BUFFER = Buffer.from(
@@ -69,11 +73,13 @@ async function installGuestGalleryApi(page: Page, approved: GalleryItem[]) {
         title: 'Guest Upload',
         caption: null,
         file_path: `/uploads/1/guest-${submitCount}.png`,
+        thumb_path: null,
         content_type: 'image/png',
         file_size: 64,
         status: 'pending',
         created_at: null,
         url: `/uploads/1/guest-${submitCount}.png`,
+        thumb_url: null,
       }
       await json(route, item, 201)
       return
@@ -145,6 +151,33 @@ test('opens a photo in the lightbox and closes with Escape', async ({ page }) =>
 
   await page.keyboard.press('Escape')
   await expect(lightbox).toBeHidden()
+})
+
+test('grid renders the thumbnail while the lightbox keeps the original', async ({ page }) => {
+  await installGuestGalleryApi(page, [{ ...approvedItem }])
+  await page.goto('/gallery')
+
+  // The grid <img> points at the ~480px thumbnail derivative.
+  const gridImage = gallery(page).getByRole('img', { name: 'Sunset Toast' })
+  await expect(gridImage).toHaveAttribute('src', '/uploads/1/thumbs/sunset.jpg')
+
+  // The lightbox always shows the full-size original.
+  await gallery(page)
+    .getByRole('button', { name: 'View photo full size: Sunset Toast' })
+    .click()
+  const lightbox = page.getByRole('dialog')
+  await expect(lightbox.getByRole('img', { name: 'Sunset Toast' })).toHaveAttribute(
+    'src',
+    '/uploads/1/sunset.jpg',
+  )
+})
+
+test('grid falls back to the original when there is no thumbnail', async ({ page }) => {
+  await installGuestGalleryApi(page, [{ ...approvedItem, thumb_path: null, thumb_url: null }])
+  await page.goto('/gallery')
+
+  const gridImage = gallery(page).getByRole('img', { name: 'Sunset Toast' })
+  await expect(gridImage).toHaveAttribute('src', '/uploads/1/sunset.jpg')
 })
 
 test('shows empty state when there are no approved photos', async ({ page }) => {

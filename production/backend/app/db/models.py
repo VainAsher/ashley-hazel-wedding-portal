@@ -501,6 +501,7 @@ class GalleryItem(Base):
     title: Mapped[str | None] = mapped_column(String(255))
     caption: Mapped[str | None] = mapped_column(Text)
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    thumb_path: Mapped[str | None] = mapped_column(String(500))
     content_type: Mapped[str | None] = mapped_column(String(100))
     file_size: Mapped[int | None] = mapped_column(Integer)
     uploaded_by: Mapped[str | None] = mapped_column(String(255))

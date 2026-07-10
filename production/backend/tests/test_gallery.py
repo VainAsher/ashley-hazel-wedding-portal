@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import io
 import os
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlalchemy.orm import Session
 
 from app.db.models import GalleryItem
@@ -18,6 +20,26 @@ TINY_PNG = bytes.fromhex(
     "890000000a49444154789c6360000002000154a24f3b0000000049454e44ae42"
     "6082"
 )
+
+# EXIF orientation tag: 6 = rotated 90 degrees clockwise.
+EXIF_ORIENTATION = 0x0112
+
+
+def make_image_bytes(
+    image_format: str = "JPEG",
+    size: tuple[int, int] = (1200, 800),
+    orientation: int | None = None,
+) -> bytes:
+    """Generate a small in-memory test image."""
+    image = Image.new("RGB", size, "#b76e79")
+    buffer = io.BytesIO()
+    if orientation is None:
+        image.save(buffer, image_format)
+    else:
+        exif = Image.Exif()
+        exif[EXIF_ORIENTATION] = orientation
+        image.save(buffer, image_format, exif=exif)
+    return buffer.getvalue()
 
 
 @pytest.fixture()
@@ -151,6 +173,162 @@ class TestGalleryIntegration:
             ).status_code
             == 401
         )
+
+
+class TestGalleryThumbnails:
+    def test_upload_generates_thumbnail(
+        self,
+        coordinator_session: TestClient,
+        uploads_dir: Path,
+        cleanup_gallery: None,
+    ) -> None:
+        created = coordinator_session.post(
+            "/api/gallery",
+            files={"file": ("big.jpg", make_image_bytes(), "image/jpeg")},
+        )
+        assert created.status_code == 201
+        data = created.json()
+        expected_thumb = f"{TEST_WEDDING_ID}/thumbs/{Path(data['file_path']).stem}.jpg"
+        assert data["thumb_path"] == expected_thumb
+        assert data["thumb_url"] == f"/uploads/{expected_thumb}"
+
+        # A real ~480px-wide JPEG derivative lands on disk.
+        thumb_on_disk = uploads_dir / expected_thumb
+        assert thumb_on_disk.is_file()
+        with Image.open(thumb_on_disk) as thumb:
+            assert thumb.format == "JPEG"
+            assert (thumb.width, thumb.height) == (480, 320)
+
+        # Deleting the item removes the thumbnail alongside the original.
+        original_on_disk = uploads_dir / data["file_path"]
+        assert original_on_disk.is_file()
+        deleted = coordinator_session.delete(f"/api/gallery/{data['id']}")
+        assert deleted.status_code == 200
+        assert not original_on_disk.exists()
+        assert not thumb_on_disk.exists()
+
+    def test_thumbnail_respects_exif_orientation(
+        self,
+        coordinator_session: TestClient,
+        uploads_dir: Path,
+        cleanup_gallery: None,
+    ) -> None:
+        # Orientation 6 turns the 1200x800 source into a portrait image.
+        created = coordinator_session.post(
+            "/api/gallery",
+            files={
+                "file": (
+                    "rotated.jpg",
+                    make_image_bytes(orientation=6),
+                    "image/jpeg",
+                )
+            },
+        )
+        assert created.status_code == 201
+        data = created.json()
+        assert data["thumb_path"] is not None
+        with Image.open(uploads_dir / data["thumb_path"]) as thumb:
+            assert (thumb.width, thumb.height) == (480, 720)
+
+    def test_unsupported_format_uploads_without_thumbnail(
+        self,
+        coordinator_session: TestClient,
+        uploads_dir: Path,
+        cleanup_gallery: None,
+    ) -> None:
+        created = coordinator_session.post(
+            "/api/gallery",
+            files={
+                "file": (
+                    "anim.gif",
+                    make_image_bytes(image_format="GIF", size=(20, 20)),
+                    "image/gif",
+                )
+            },
+        )
+        assert created.status_code == 201
+        data = created.json()
+        assert data["thumb_path"] is None
+        assert data["thumb_url"] is None
+        assert (uploads_dir / data["file_path"]).is_file()
+
+    def test_corrupt_image_uploads_without_thumbnail(
+        self,
+        coordinator_session: TestClient,
+        uploads_dir: Path,
+        cleanup_gallery: None,
+    ) -> None:
+        created = coordinator_session.post(
+            "/api/gallery",
+            files={"file": ("broken.png", b"not-a-real-png", "image/png")},
+        )
+        assert created.status_code == 201
+        data = created.json()
+        assert data["thumb_path"] is None
+        assert data["thumb_url"] is None
+        assert (uploads_dir / data["file_path"]).is_file()
+
+    def test_backfill_generates_missing_thumbs(
+        self,
+        coordinator_session: TestClient,
+        db_session: Session,
+        uploads_dir: Path,
+        cleanup_gallery: None,
+    ) -> None:
+        wedding_dir = uploads_dir / str(TEST_WEDDING_ID)
+        wedding_dir.mkdir(parents=True, exist_ok=True)
+        (wedding_dir / "pytest-backfill.jpg").write_bytes(make_image_bytes())
+        (wedding_dir / "pytest-backfill.gif").write_bytes(
+            make_image_bytes(image_format="GIF", size=(20, 20))
+        )
+
+        on_disk = GalleryItem(
+            wedding_id=TEST_WEDDING_ID,
+            title="Needs thumb",
+            file_path=f"{TEST_WEDDING_ID}/pytest-backfill.jpg",
+            content_type="image/jpeg",
+            uploaded_by="Pytest Backfill",
+            status="approved",
+        )
+        missing_file = GalleryItem(
+            wedding_id=TEST_WEDDING_ID,
+            title="Original gone",
+            file_path=f"{TEST_WEDDING_ID}/pytest-vanished.jpg",
+            content_type="image/jpeg",
+            uploaded_by="Pytest Backfill",
+            status="approved",
+        )
+        unsupported = GalleryItem(
+            wedding_id=TEST_WEDDING_ID,
+            title="Unsupported format",
+            file_path=f"{TEST_WEDDING_ID}/pytest-backfill.gif",
+            content_type="image/gif",
+            uploaded_by="Pytest Backfill",
+            status="approved",
+        )
+        db_session.add_all([on_disk, missing_file, unsupported])
+        db_session.commit()
+
+        response = coordinator_session.post("/api/gallery/thumbnails/backfill")
+        assert response.status_code == 200
+        data = response.json()
+        # Only our on-disk JPEG is generatable; the missing original and the
+        # GIF are skipped (alongside any other thumbless rows in the shared DB).
+        assert data["generated"] == 1
+        assert data["skipped"] >= 2
+
+        db_session.expire_all()
+        assert on_disk.thumb_path == f"{TEST_WEDDING_ID}/thumbs/pytest-backfill.jpg"
+        assert (uploads_dir / on_disk.thumb_path).is_file()
+        assert missing_file.thumb_path is None
+        assert unsupported.thumb_path is None
+
+    def test_backfill_requires_coordinator(self, guest_session: TestClient) -> None:
+        response = guest_session.post("/api/gallery/thumbnails/backfill")
+        assert response.status_code == 403
+
+    def test_backfill_requires_authentication(self, client: TestClient) -> None:
+        assert client.post("/api/gallery/thumbnails/backfill").status_code == 401
 
 
 class TestGuestGallery:

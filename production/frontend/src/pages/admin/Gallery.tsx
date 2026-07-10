@@ -304,7 +304,7 @@ export function Gallery() {
                   }`}
                 >
                   <img
-                    src={photo.url}
+                    src={photo.thumb_url ?? photo.url}
                     alt={photoLabel(photo)}
                     className="aspect-square w-full object-cover"
                   />

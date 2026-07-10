@@ -1,8 +1,10 @@
 import os
 import uuid
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from PIL import Image, ImageOps
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.auth import require_coordinator, require_guest
@@ -16,10 +18,50 @@ from app.logging import get_logger
 router = APIRouter(prefix="/api/gallery", tags=["gallery"])
 logger = get_logger(__name__)
 
+# Grid thumbnails: ~480px-wide JPEG derivatives of JPEG/PNG originals.
+THUMBNAIL_WIDTH = 480
+THUMBNAIL_QUALITY = 80
+THUMBNAIL_SOURCE_TYPES = {"image/jpeg", "image/png"}
+
 
 def get_uploads_dir() -> str:
     # Read lazily so tests can override UPLOADS_DIR at runtime.
     return os.environ.get("UPLOADS_DIR", "uploads")
+
+
+def generate_thumbnail(
+    uploads_dir: Path, relative_path: str, content_type: str | None
+) -> str | None:
+    """Write a grid-sized JPEG derivative under `<wedding_id>/thumbs/`.
+
+    Returns the thumbnail's relative path, or None when the source format is
+    unsupported or Pillow fails. Thumbnails are best-effort: callers fall back
+    to the full-size original and must never fail because of one.
+    """
+    if content_type not in THUMBNAIL_SOURCE_TYPES:
+        return None
+
+    source = PurePosixPath(relative_path)
+    thumb_relative = f"{source.parent}/thumbs/{source.stem}.jpg"
+    try:
+        with Image.open(uploads_dir / relative_path) as image:
+            image = ImageOps.exif_transpose(image)
+            if image.width > THUMBNAIL_WIDTH:
+                height = max(
+                    1, round(image.height * THUMBNAIL_WIDTH / image.width)
+                )
+                image = image.resize((THUMBNAIL_WIDTH, height))
+            destination = uploads_dir / thumb_relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            image.convert("RGB").save(
+                destination, "JPEG", quality=THUMBNAIL_QUALITY
+            )
+    except Exception:  # noqa: BLE001 - any Pillow/IO failure keeps the original usable
+        logger.warning(
+            "gallery_thumbnail_failed", extra={"file_path": relative_path}
+        )
+        return None
+    return thumb_relative
 
 
 def get_gallery_item_or_404(
@@ -37,10 +79,13 @@ def get_gallery_item_or_404(
     return item
 
 
-async def save_upload(file: UploadFile, wedding_id: int) -> tuple[str, str, int]:
+async def save_upload(
+    file: UploadFile, wedding_id: int
+) -> tuple[str, str, int, str | None]:
     """Validate an image upload and persist it under the uploads dir.
 
-    Returns (relative_path, content_type, file_size). Raises 400 for non-images.
+    Returns (relative_path, content_type, file_size, thumb_path); thumb_path
+    is None when no thumbnail could be generated. Raises 400 for non-images.
     """
     content_type = file.content_type or ""
     if not content_type.startswith("image/"):
@@ -61,7 +106,8 @@ async def save_upload(file: UploadFile, wedding_id: int) -> tuple[str, str, int]
     destination = wedding_dir / stored_name
     destination.write_bytes(data)
 
-    return relative_path, content_type, len(data)
+    thumb_path = generate_thumbnail(uploads_dir, relative_path, content_type)
+    return relative_path, content_type, len(data), thumb_path
 
 
 @router.get("", response_model=list[GalleryItemResponse])
@@ -86,13 +132,16 @@ async def upload_gallery_item(
     current_user: UserResponse = Depends(require_coordinator),
 ) -> GalleryItem:
     wedding_id = current_user.wedding_id
-    relative_path, content_type, file_size = await save_upload(file, wedding_id)
+    relative_path, content_type, file_size, thumb_path = await save_upload(
+        file, wedding_id
+    )
 
     db_item = GalleryItem(
         wedding_id=wedding_id,
         title=title,
         caption=caption,
         file_path=relative_path,
+        thumb_path=thumb_path,
         content_type=content_type,
         file_size=file_size,
         uploaded_by=current_user.name,
@@ -118,13 +167,16 @@ async def submit_gallery_item(
     current_user: UserResponse = Depends(require_guest),
 ) -> GalleryItem:
     wedding_id = current_user.wedding_id
-    relative_path, content_type, file_size = await save_upload(file, wedding_id)
+    relative_path, content_type, file_size, thumb_path = await save_upload(
+        file, wedding_id
+    )
 
     db_item = GalleryItem(
         wedding_id=wedding_id,
         title=title,
         caption=caption,
         file_path=relative_path,
+        thumb_path=thumb_path,
         content_type=content_type,
         file_size=file_size,
         uploaded_by=current_user.name,
@@ -151,6 +203,48 @@ async def list_approved_gallery_items(
         .order_by(GalleryItem.created_at.desc(), GalleryItem.id.desc())
         .all()
     )
+
+
+class ThumbnailBackfillResponse(BaseModel):
+    generated: int
+    skipped: int
+
+
+@router.post("/thumbnails/backfill", response_model=ThumbnailBackfillResponse)
+async def backfill_thumbnails(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_coordinator),
+) -> ThumbnailBackfillResponse:
+    """Generate thumbnails for items that don't have one yet.
+
+    Sequential and synchronous — the gallery is wedding-sized. Items whose
+    original is missing on disk or whose format is unsupported are skipped.
+    """
+    rows = (
+        db.query(GalleryItem)
+        .filter(
+            GalleryItem.wedding_id == current_user.wedding_id,
+            GalleryItem.thumb_path.is_(None),
+        )
+        .order_by(GalleryItem.id.asc())
+        .all()
+    )
+    uploads_dir = Path(get_uploads_dir())
+    generated = 0
+    for row in rows:
+        if not (uploads_dir / row.file_path).is_file():
+            continue
+        thumb_path = generate_thumbnail(uploads_dir, row.file_path, row.content_type)
+        if thumb_path is not None:
+            row.thumb_path = thumb_path
+            generated += 1
+    db.commit()
+    skipped = len(rows) - generated
+    logger.info(
+        "gallery_thumbnails_backfilled",
+        extra={"generated": generated, "skipped": skipped},
+    )
+    return ThumbnailBackfillResponse(generated=generated, skipped=skipped)
 
 
 @router.patch("/{item_id}", response_model=GalleryItemResponse)
@@ -182,16 +276,22 @@ async def delete_gallery_item(
     db_item = get_gallery_item_or_404(
         db, item_id, current_user.wedding_id, "delete_gallery_item"
     )
-    file_path = Path(get_uploads_dir()) / db_item.file_path
+    uploads_dir = Path(get_uploads_dir())
+    file_paths = [uploads_dir / db_item.file_path]
+    if db_item.thumb_path:
+        file_paths.append(uploads_dir / db_item.thumb_path)
 
     db.delete(db_item)
     db.commit()
 
     # Best-effort file removal; a missing file should not fail the request.
-    try:
-        file_path.unlink(missing_ok=True)
-    except OSError:
-        logger.warning("gallery_item_file_unlink_failed", extra={"gallery_item_id": item_id})
+    for file_path in file_paths:
+        try:
+            file_path.unlink(missing_ok=True)
+        except OSError:
+            logger.warning(
+                "gallery_item_file_unlink_failed", extra={"gallery_item_id": item_id}
+            )
 
     logger.info("gallery_item_deleted", extra={"gallery_item_id": item_id})
     return {"status": "deleted", "id": item_id}

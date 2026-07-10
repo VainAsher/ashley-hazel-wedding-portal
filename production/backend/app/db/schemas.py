@@ -661,6 +661,7 @@ class GalleryItemResponse(BaseModel):
     title: str | None = None
     caption: str | None = None
     file_path: str
+    thumb_path: str | None = None
     content_type: str | None = None
     file_size: int | None = None
     uploaded_by: str | None = None
@@ -673,6 +674,11 @@ class GalleryItemResponse(BaseModel):
     @property
     def url(self) -> str:
         return f"/uploads/{self.file_path}"
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def thumb_url(self) -> str | None:
+        return f"/uploads/{self.thumb_path}" if self.thumb_path else None
 
 
 # ---------------------------------------------------------------------------
