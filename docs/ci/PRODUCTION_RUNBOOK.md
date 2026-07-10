@@ -89,7 +89,8 @@ GitHub Actions → **Deploy** → Run workflow → environment **production**, a
 `DEPLOY_ENVIRONMENT=production bash production/scripts/deploy.sh`.)
 
 `deploy.sh` builds SHA-tagged images, brings up the `wedding-prod` stack
-(health-gated), reconciles the DB password, and applies migrations `002–011`. The
+(health-gated), reconciles the DB password, and applies all pending numbered
+migrations in `database/migrations/` (`002` onwards). The
 demo seed `008` is fenced out of the migration glob, so **production starts with
 no demo data**.
 

@@ -11,10 +11,12 @@ this. Run ONCE against the production database, e.g. inside the prod container:
         --ceremony-location "The Chapel" \
         --reception-location "The Grapevine Estate, Hall B"
 
-Idempotent: re-running does NOT duplicate the wedding or regenerate an existing
-role's invite code. Newly generated codes are printed ONCE — record them
-securely (e.g. your password manager). Guests cannot RSVP until you switch the
-wedding phase to 'live' in Settings.
+Idempotent: re-running does NOT duplicate the wedding, regenerate an existing
+role's invite code, or reset the wedding phase once the wedding has been
+bootstrapped (so a re-run to fix e.g. a venue name never knocks a LIVE wedding
+back to 'planning' and closes guest RSVP). Newly generated codes are printed
+ONCE — record them securely (e.g. your password manager). Guests cannot RSVP
+until you switch the wedding phase to 'live' in Settings.
 """
 from __future__ import annotations
 
@@ -94,6 +96,20 @@ def main(argv=None) -> int:
 
     session = SessionLocal()
     try:
+        # First bootstrap vs re-run: bootstrap itself creates the couple /
+        # coordinator invites, so if neither exists yet this wedding has never
+        # been bootstrapped (it is the schema.sql placeholder row, whose phase
+        # defaults to 'live' via migration 010).
+        already_bootstrapped = (
+            session.query(Invite)
+            .filter(
+                Invite.wedding_id == WEDDING_ID,
+                Invite.role.in_(["couple", "coordinator"]),
+            )
+            .first()
+            is not None
+        )
+
         wedding = session.query(Wedding).filter(Wedding.id == WEDDING_ID).first()
         if wedding:
             # A fresh prod DB ships with a placeholder wedding row from
@@ -101,6 +117,9 @@ def main(argv=None) -> int:
             # details and force phase='planning' so prod starts with guest RSVP
             # closed. Required fields are always set; optional ones only when
             # provided (so a re-run without them doesn't wipe existing values).
+            # On a RE-RUN the phase is preserved: the couple manages it in
+            # Settings, and resetting it here would close RSVP on a live
+            # wedding.
             wedding.couple_names = args.couple_names
             wedding.wedding_date = wedding_date
             if ceremony_time is not None:
@@ -109,11 +128,15 @@ def main(argv=None) -> int:
                 wedding.ceremony_location = args.ceremony_location
             if args.reception_location is not None:
                 wedding.reception_location = args.reception_location
-            wedding.phase = "planning"
+            if not already_bootstrapped:
+                wedding.phase = "planning"
             session.commit()
+            phase_note = f"phase={wedding.phase}" + (
+                " preserved" if already_bootstrapped else ""
+            )
             print(
                 f"Updated the existing wedding row -> {args.couple_names} on "
-                f"{wedding_date} (phase=planning)."
+                f"{wedding_date} ({phase_note})."
             )
         else:
             wedding = Wedding(

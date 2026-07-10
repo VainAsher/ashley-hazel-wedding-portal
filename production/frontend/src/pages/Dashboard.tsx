@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { GuestLayout } from '../components/GuestLayout'
 import { Alert } from '../components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import { Skeleton } from '../components/ui/skeleton'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { usePortalWedding, type PortalWedding } from '../hooks/usePortal'
 
@@ -176,13 +177,38 @@ export function Dashboard() {
     <GuestLayout>
       <div className="max-w-4xl mx-auto w-full grid gap-6">
         {isLoading && (
-          <Card>
-            <CardContent className="pt-6">
-              <div role="status" className="text-gray-600 text-sm">
-                Loading wedding details...
+          <div role="status" className="grid gap-6">
+            <span className="sr-only">Loading wedding details...</span>
+
+            {/* Invitation hero skeleton */}
+            <div className="rounded-[28px] border-4 border-double border-plum/20 bg-cream/60 px-6 py-10">
+              <div className="mx-auto flex max-w-xl flex-col items-center gap-3">
+                <Skeleton className="h-3 w-44" />
+                <Skeleton className="h-10 w-72 max-w-full" />
+                <Skeleton className="h-5 w-64 max-w-full" />
+                <Skeleton className="mt-2 h-4 w-full max-w-md" />
+                <Skeleton className="h-4 w-3/5" />
               </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            {/* Key details skeleton */}
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-5 w-28" />
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                {[0, 1, 2, 3].map((row) => (
+                  <div key={row} className="flex items-start gap-3">
+                    <Skeleton className="h-5 w-5 rounded-full" />
+                    <div className="grid flex-1 gap-1.5">
+                      <Skeleton className="h-3 w-24" />
+                      <Skeleton className="h-4 w-40 max-w-full" />
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {isError && !isLoading && (

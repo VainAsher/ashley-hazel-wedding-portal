@@ -1,6 +1,5 @@
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 
-import { AuthApiError, fetchCurrentUser } from '../api/auth'
 import {
   RsvpApiError,
   fetchGuestRsvp,
@@ -13,6 +12,7 @@ import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Alert } from '../components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import { useAuth } from '../contexts/AuthContext'
 import { GuestLayout } from '../components/GuestLayout'
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -50,13 +50,6 @@ function phaseMessage(phase: string): string {
 }
 
 function errorMessage(error: unknown): string {
-  if (error instanceof AuthApiError) {
-    if (error.status === 401) {
-      return 'Please enter your invite code to RSVP.'
-    }
-    return error.message
-  }
-
   if (error instanceof RsvpApiError) {
     if (error.status === 401) {
       return 'Please enter your invite code to RSVP.'
@@ -74,6 +67,9 @@ function optionalText(value: string): string | null {
 
 export function RSVP() {
   usePageTitle('RSVP')
+  // Current user + wedding phase come from the shared auth context (a single
+  // /api/auth/me query for the whole app) rather than a page-level fetch.
+  const { user, weddingPhase, loading: authLoading, error: authError } = useAuth()
   const [guest, setGuest] = useState<GuestRsvp | null>(null)
   const [formData, setFormData] = useState<RsvpFormData>(defaultFormData)
   const [loading, setLoading] = useState(true)
@@ -84,6 +80,10 @@ export function RSVP() {
   const [closedMessage, setClosedMessage] = useState<string | null>(null)
 
   useEffect(() => {
+    if (authLoading) {
+      return
+    }
+
     let mounted = true
 
     async function loadRsvp() {
@@ -92,12 +92,18 @@ export function RSVP() {
       setStatusMessage(null)
 
       try {
-        const user = await fetchCurrentUser()
+        if (!user) {
+          if (mounted) {
+            setError(authError ?? 'Please enter your invite code to RSVP.')
+          }
+          return
+        }
+
         if (!user.guest_id) {
           throw new RsvpApiError('RSVP is only available for guest invites.', 403)
         }
 
-        const phase = user.wedding_phase ?? 'live'
+        const phase = weddingPhase ?? 'live'
         if (phase !== 'live') {
           if (mounted) {
             setClosedMessage(phaseMessage(phase))
@@ -128,7 +134,7 @@ export function RSVP() {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [authLoading, user, weddingPhase, authError])
 
   const updateField =
     <Key extends keyof RsvpFormData>(key: Key) =>
