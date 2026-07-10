@@ -6,6 +6,7 @@ as they come up — rough is fine; we'll prioritise at the review.
 
 - **Live:** https://ashley-and.hazel-of-halifax.com · **Released:** v1.0.0 (2026-06-26) · **Current:** v1.1.0-rc1 (2026-07-10)
 - **Next review:** ~2026-07-24 → cut a prioritised v1.1 scope (bugs first).
+- **Plans:** every outstanding item has a bounded plan + size in **[`ROADMAP.md`](ROADMAP.md)**.
 
 ## How to log an entry
 Add a row to the right table. Keep it short. Use:
@@ -18,7 +19,7 @@ Add a row to the right table. Keep it short. Use:
 ## 🐞 Bugs / key fixes
 | Date | Source | Area | What happens / expected | Severity | Status |
 |------|--------|------|--------------------------|----------|--------|
-| 2026-06-26 | Couple | Timeline (tasks) | **Editing a task doesn't save** — opening a created task and pressing Save doesn't persist the edits. *2026-07-09: root cause found — the update schema typed `due_date` as datetime while the form sends a plain date, so editing any task that has a due date was rejected (422). One-line backend fix + regression test; fix pending deploy* | 🟠 major | in-progress |
+| 2026-06-26 | Couple | Timeline (tasks) | **Editing a task doesn't save** — opening a created task and pressing Save doesn't persist the edits. *2026-07-09: root cause found — the update schema typed `due_date` as datetime while the form sends a plain date, so editing any task that has a due date was rejected (422). One-line backend fix + regression test. *2026-07-09: fixed, live in prod — verified by editing a task with a due date on the live admin* | 🟠 major | done |
 | 2026-06-26 | Couple | Gallery / images | **Photos load very slowly** — needs lazy-loading + caching (and likely served thumbnails / responsive sizes instead of full-res for the grid). *Ratified 2026-07-08: grid fires all 86 full-res originals at once; no `loading="lazy"` in `Gallery.tsx`, no thumbnail sizes in the schema (`gallery_items` stores only `file_path`)*. *2026-07-09: fixed, live in prod: lazy-loading + decoding=async + 24-per-page "Show more"; also fixed nav doing a full page reload on every click (raw `<a>` → SPA links). True thumbnails still need backend work* | 🟡 minor | in-progress |
 | 2026-07-08 | IT/Admin | Guest footer | **Placeholder support email** — `support@wedding.example.com` hardcoded in `GuestLayout.tsx:85`, shown on every guest page; the mailto goes nowhere. *2026-07-09: fixed, live in prod: now Ajandrews210888@aol.com* | 🟡 minor | done |
 | 2026-07-08 | IT/Admin | Gallery (data) | **85/86 photo titles are raw filenames** (e.g. "20260613_120148.jpg") — the bulk load set `title` = filename (verified in prod DB). Frontend fallback is "Photo {id}", so fix = null/replace the seeded titles, or friendlier frontend handling. *2026-07-09: fixed, live in prod: frontend now shows a friendly date for timestamp filenames and hides camera-style names; DB cleanup optional* | 🟡 minor | done |
@@ -49,6 +50,7 @@ Add a row to the right table. Keep it short. Use:
 | 2026-07-10 | Couple | **⚡ Real-audio looping playlist** — turn submitted/approved songs into a looping playlist with real audio on the site. Wanted *sooner rather than later*. *2026-07-10: done, live in prod — chosen solution: 30-second previews (keyless iTunes Search API, matched server-side on approval; admin Find/Clear/Match-all controls). Guest Dancefloor gains the "Now playing" jukebox: artwork, dedication, play/pause/prev/next, auto-advance, looping. Full-length audio would be the YouTube-embed path if ever wanted* | The Dancefloor becomes audible; prototype's "Currently playing" widget for real | done |
 | 2026-07-10 | Couple | **Kanban / project-management expansion** — drag-and-drop cards, dropdowns, validated design; worth getting right as the same board will power stag & hen planning | One good planning tool reused across couple + parties | new |
 | 2026-07-10 | Couple | **In-site bug/feedback tool** — super user-friendly way for ANY user to raise a bug or idea in-site, feeding a triage queue (i.e. this backlog, but self-serve) | Feedback stops depending on people finding this file | new |
+| 2026-07-09 | Couple | **Save-The-Date envelope animation** — the invite/landing page opens like an envelope (cat wax seal), with a little confetti sprinkle for the joy of it | First impression = an invitation being opened. *Planned: docs/ROADMAP.md Wave 1* | new |
 | 2026-07-10 | Couple | **Progressive onboarding + in-site user guide** — data-driven onboarding (show people what they haven't done yet: RSVP, song request, photo…) and an in-site guide | New guests learn the portal without the docs | new |
 | 2026-07-08 | IT/Admin | **Upload form should state accepted types/size limits** (images only today; guests already tried videos) | Avoids silent failures at the point of upload. *2026-07-09: fixed, live in prod: "Photos only, up to 25 MB" hint under the file input* | done |
 
@@ -60,7 +62,6 @@ Add a row to the right table. Keep it short. Use:
 | 2026-07-08 | IT/Admin | Mobile-width pass not completed (browser window wouldn't resize during review) — do a phone check before the v1.1 cut. |
 | 2026-07-09 | Couple | Cat photo supplied (`docs/assets/feedback/cat-header.jpeg`) for the header rebrand, plus a sixth background candidate (`bg-06-registry-candid.jpeg`). |
 | 2026-07-09 | IT/Admin | Admin sidebar labels are low-contrast (purple on near-black) — fold into the design-pass button/contrast work. *2026-07-09: fixed in the design pass (explicit light link text, gold hover).* |
-| 2026-07-09 | Couple | Add envelope opening trnanisition or animation to Save The Date maybe a little confetti sprinkle too for the shits n giggs of it all
 
 ---
 
