@@ -8,6 +8,7 @@ import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { Alert } from '../components/ui/alert'
 import { AuthLayout } from '../components/AuthLayout'
+import { EnvelopeReveal } from '../components/EnvelopeReveal'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 function inviteErrorMessage(error: unknown): string {
@@ -54,38 +55,40 @@ export function Invite() {
   }
 
   return (
-    <AuthLayout title="Enter Invite Code">
-      <form onSubmit={handleSubmit} className="grid gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="invite-code">
-            Invite Code
-          </Label>
-          <Input
-            autoComplete="off"
-            id="invite-code"
-            name="inviteCode"
-            onChange={(event) => setInviteCode(event.target.value)}
-            placeholder="Enter your invite code"
-            type="text"
-            value={inviteCode}
-            className="rounded-full bg-white text-foreground"
-          />
-        </div>
+    <EnvelopeReveal>
+      <AuthLayout title="Enter Invite Code">
+        <form onSubmit={handleSubmit} className="grid gap-4">
+          <div className="grid gap-2">
+            <Label htmlFor="invite-code">
+              Invite Code
+            </Label>
+            <Input
+              autoComplete="off"
+              id="invite-code"
+              name="inviteCode"
+              onChange={(event) => setInviteCode(event.target.value)}
+              placeholder="Enter your invite code"
+              type="text"
+              value={inviteCode}
+              className="rounded-full bg-white text-foreground"
+            />
+          </div>
 
-        {error && (
-          <Alert variant="destructive">
-            {error}
-          </Alert>
-        )}
+          {error && (
+            <Alert variant="destructive">
+              {error}
+            </Alert>
+          )}
 
-        <Button disabled={submitting} type="submit" className="w-full rounded-full">
-          {submitting ? 'Checking...' : 'Enter the celebration'}
-        </Button>
+          <Button disabled={submitting} type="submit" className="w-full rounded-full">
+            {submitting ? 'Checking...' : 'Enter the celebration'}
+          </Button>
 
-        <p className="m-0 text-xs text-cream/80">
-          Guest-only areas include RSVP, the schedule, photo gallery, and the blessings wall.
-        </p>
-      </form>
-    </AuthLayout>
+          <p className="m-0 text-xs text-cream/80">
+            Guest-only areas include RSVP, the schedule, photo gallery, and the blessings wall.
+          </p>
+        </form>
+      </AuthLayout>
+    </EnvelopeReveal>
   )
 }
