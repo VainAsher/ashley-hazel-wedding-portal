@@ -91,7 +91,7 @@ function GalleryGrid({
                 aria-label={`View photo full size: ${altText(photo)}`}
               >
                 <img
-                  src={photo.url}
+                  src={photo.thumb_url ?? photo.url}
                   alt={altText(photo)}
                   loading="lazy"
                   decoding="async"

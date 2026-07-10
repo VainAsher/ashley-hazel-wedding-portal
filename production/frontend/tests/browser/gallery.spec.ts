@@ -14,11 +14,13 @@ interface GalleryItem {
   title: string | null
   caption: string | null
   file_path: string
+  thumb_path: string | null
   content_type: string | null
   file_size: number | null
   status: GalleryStatus
   created_at: string | null
   url: string
+  thumb_url: string | null
 }
 
 const initialItem: GalleryItem = {
@@ -27,11 +29,13 @@ const initialItem: GalleryItem = {
   title: 'Existing Photo',
   caption: 'A lovely moment',
   file_path: '/uploads/1/existing.jpg',
+  thumb_path: '1/thumbs/existing.jpg',
   content_type: 'image/jpeg',
   file_size: 1024,
   status: 'approved',
   created_at: null,
   url: '/uploads/1/existing.jpg',
+  thumb_url: '/uploads/1/thumbs/existing.jpg',
 }
 
 const pendingItem: GalleryItem = {
@@ -40,11 +44,13 @@ const pendingItem: GalleryItem = {
   title: 'Pending Photo',
   caption: 'Awaiting review',
   file_path: '/uploads/1/pending.jpg',
+  thumb_path: null,
   content_type: 'image/jpeg',
   file_size: 2048,
   status: 'pending',
   created_at: null,
   url: '/uploads/1/pending.jpg',
+  thumb_url: null,
 }
 
 function json(route: Route, body: unknown, status = 200) {
@@ -99,11 +105,13 @@ async function installGalleryApi(page: Page) {
         title: 'Uploaded Photo',
         caption: 'Freshly added',
         file_path: `/uploads/1/${id}.png`,
+        thumb_path: `1/thumbs/${id}.jpg`,
         content_type: 'image/png',
         file_size: 64,
         status: 'pending',
         created_at: null,
         url: `/uploads/1/${id}.png`,
+        thumb_url: `/uploads/1/thumbs/${id}.jpg`,
       }
       // newest first
       items = [item, ...items]
@@ -181,6 +189,16 @@ test('renders existing gallery item and photo count', async ({ page }) => {
   await expect(mainRegion(page).getByText('2 photos · 1 pending review')).toBeVisible()
   await expect(gallery(page).getByRole('heading', { name: 'Existing Photo' })).toBeVisible()
   await expect(gallery(page).getByText('A lovely moment')).toBeVisible()
+
+  // The grid renders the thumbnail when present and the original otherwise.
+  await expect(gallery(page).getByRole('img', { name: 'Existing Photo' })).toHaveAttribute(
+    'src',
+    '/uploads/1/thumbs/existing.jpg',
+  )
+  await expect(gallery(page).getByRole('img', { name: 'Pending Photo' })).toHaveAttribute(
+    'src',
+    '/uploads/1/pending.jpg',
+  )
 })
 
 test('shows empty state when there are no photos', async ({ page }) => {

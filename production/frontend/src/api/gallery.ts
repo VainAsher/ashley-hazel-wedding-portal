@@ -8,11 +8,13 @@ export interface GalleryItem {
   title: string | null
   caption: string | null
   file_path: string
+  thumb_path: string | null
   content_type: string | null
   file_size: number | null
   status: GalleryStatus
   created_at: string | null
   url: string
+  thumb_url: string | null
 }
 
 export interface GalleryUploadInput {
