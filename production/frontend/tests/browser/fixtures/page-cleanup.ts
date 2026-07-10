@@ -32,6 +32,18 @@ export async function cleanupPageState(page: Page): Promise<void> {
       // Ignore errors if page isn't loaded yet
     })
 
+    // Pre-seed the envelope-reveal flag before every navigation so the
+    // invite page renders the open invitation card immediately. Specs that
+    // exercise the envelope itself (envelope-reveal.spec.ts) skip this
+    // helper and manage the flag themselves.
+    await page.addInitScript(() => {
+      try {
+        window.sessionStorage.setItem('ah-envelope-opened', '1')
+      } catch {
+        // Storage unavailable: the app treats this as a first visit.
+      }
+    })
+
     // Reset browserErrors tracking
     Reflect.deleteProperty(page, 'browserErrors')
   } catch (error) {
