@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
+import { FeedbackWidget } from '@/components/FeedbackWidget'
 import { usePageTitle } from '@/hooks/usePageTitle'
 
 interface AdminLayoutProps {
@@ -23,6 +24,7 @@ const adminMenuItems = [
   { label: 'Gallery', href: '/admin/gallery', icon: '🖼️' },
   { label: 'Music', href: '/admin/music', icon: '🎵' },
   { label: 'Blessings', href: '/admin/blessings', icon: '💌' },
+  { label: 'Feedback', href: '/admin/feedback', icon: '🐞' },
   { label: 'Settings', href: '/admin/settings', icon: '⚙️' },
 ]
 
@@ -200,6 +202,8 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
           {children}
         </main>
       </div>
+
+      <FeedbackWidget />
     </div>
   )
 }
