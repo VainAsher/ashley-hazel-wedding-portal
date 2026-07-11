@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.db.models import SongRequest, Wedding
+from app.db.models import Invite, SongReaction, SongRequest, Wedding
 from app.utils import music_metadata, music_previews
 from tests.fixtures.guests import TEST_WEDDING_ID
 
@@ -46,6 +47,43 @@ def cleanup_song_requests(db_session: Session) -> Iterator[None]:
         SongRequest.wedding_id == TEST_WEDDING_ID,
         SongRequest.requested_by.like("Pytest%"),
     ).delete(synchronize_session=False)
+    db_session.commit()
+
+
+@pytest.fixture()
+def cleanup_now_playing(db_session: Session) -> Iterator[None]:
+    """Reset the shared wedding's now-playing pick after the test."""
+    yield
+    db_session.expire_all()
+    wedding = db_session.get(Wedding, TEST_WEDDING_ID)
+    if wedding is not None:
+        wedding.now_playing_song_id = None
+        db_session.commit()
+
+
+@pytest.fixture()
+def make_extra_invite(db_session: Session) -> Iterator[Callable[[], Invite]]:
+    """Factory for additional invites (distinct reaction identities)."""
+    created: list[int] = []
+
+    def _make() -> Invite:
+        invite = Invite(
+            code=f"PYTEST-REACT-{uuid4().hex[:8].upper()}",
+            wedding_id=TEST_WEDDING_ID,
+            household_name="Pytest Reactor",
+            role="guest",
+        )
+        db_session.add(invite)
+        db_session.commit()
+        created.append(invite.id)
+        return invite
+
+    yield _make
+    # Deleting the invite cascades its reactions at the DB level.
+    db_session.expire_all()
+    db_session.query(Invite).filter(Invite.id.in_(created)).delete(
+        synchronize_session=False
+    )
     db_session.commit()
 
 
@@ -188,7 +226,9 @@ class TestSongWall:
 
         response = guest_session.get("/api/music/requests/wall")
         assert response.status_code == 200
-        items = response.json()
+        payload = response.json()
+        # v2 wrapper: the wall is {"songs": [...], "now_playing": ... | null}.
+        items = payload["songs"]
         assert all(item["status"] == "approved" for item in items)
 
         ids = [item["id"] for item in items]
@@ -197,6 +237,232 @@ class TestSongWall:
         # Wall order: pinned first, then position ASC (nulls last), then created.
         ours = [i for i in ids if i in {plain.id, pinned.id, first.id, unpositioned.id}]
         assert ours == [pinned.id, first.id, plain.id, unpositioned.id]
+
+
+class TestReactions:
+    def test_react_unreact_lifecycle_is_idempotent(
+        self,
+        guest_session: TestClient,
+        db_session: Session,
+        cleanup_song_requests: None,
+    ) -> None:
+        song = make_song_request(title="Pytest Heartable")
+        db_session.add(song)
+        db_session.commit()
+
+        first = guest_session.post(f"/api/music/requests/{song.id}/react")
+        assert first.status_code == 201
+        assert first.json() == {"reaction_count": 1, "reacted_by_me": True}
+
+        # Double-react is a no-op: still exactly one row for this invite.
+        second = guest_session.post(f"/api/music/requests/{song.id}/react")
+        assert second.status_code in (200, 201)
+        assert second.json() == {"reaction_count": 1, "reacted_by_me": True}
+        assert (
+            db_session.query(SongReaction)
+            .filter(SongReaction.song_request_id == song.id)
+            .count()
+            == 1
+        )
+
+        assert (
+            guest_session.delete(f"/api/music/requests/{song.id}/react").status_code
+            == 204
+        )
+        # Un-reacting when there is no reaction is also a no-op.
+        assert (
+            guest_session.delete(f"/api/music/requests/{song.id}/react").status_code
+            == 204
+        )
+        assert (
+            db_session.query(SongReaction)
+            .filter(SongReaction.song_request_id == song.id)
+            .count()
+            == 0
+        )
+
+    def test_react_requires_wall_visible_song(
+        self,
+        guest_session: TestClient,
+        db_session: Session,
+        cleanup_song_requests: None,
+    ) -> None:
+        pending = make_song_request(title="Pytest Pending Heart", status="pending")
+        blocked = make_song_request(title="Pytest Blocked Heart", status="blocked")
+        db_session.add_all([pending, blocked])
+        db_session.commit()
+
+        assert (
+            guest_session.post(f"/api/music/requests/{pending.id}/react").status_code
+            == 404
+        )
+        assert (
+            guest_session.post(f"/api/music/requests/{blocked.id}/react").status_code
+            == 404
+        )
+        assert (
+            guest_session.delete(f"/api/music/requests/{pending.id}/react").status_code
+            == 404
+        )
+        assert (
+            guest_session.post("/api/music/requests/999999/react").status_code == 404
+        )
+
+    def test_wall_counts_and_membership_for_guest(
+        self,
+        guest_session: TestClient,
+        db_session: Session,
+        cleanup_song_requests: None,
+        make_extra_invite: Callable[[], Invite],
+    ) -> None:
+        loved = make_song_request(title="Pytest Loved")
+        unloved = make_song_request(title="Pytest Unloved")
+        db_session.add_all([loved, unloved])
+        db_session.commit()
+
+        # The guest reacts through the API; a second invite reacts directly.
+        assert (
+            guest_session.post(f"/api/music/requests/{loved.id}/react").status_code
+            == 201
+        )
+        other = make_extra_invite()
+        db_session.add(SongReaction(song_request_id=loved.id, invite_id=other.id))
+        db_session.commit()
+
+        response = guest_session.get("/api/music/requests/wall")
+        assert response.status_code == 200
+        by_title = {row["title"]: row for row in response.json()["songs"]}
+        assert by_title["Pytest Loved"]["reaction_count"] == 2
+        assert by_title["Pytest Loved"]["reacted_by_me"] is True
+        assert by_title["Pytest Unloved"]["reaction_count"] == 0
+        assert by_title["Pytest Unloved"]["reacted_by_me"] is False
+
+    def test_wall_counts_and_membership_for_coordinator(
+        self,
+        coordinator_session: TestClient,
+        db_session: Session,
+        cleanup_song_requests: None,
+        make_extra_invite: Callable[[], Invite],
+    ) -> None:
+        song = make_song_request(title="Pytest Coord Counts")
+        db_session.add(song)
+        db_session.commit()
+
+        for _ in range(2):
+            other = make_extra_invite()
+            db_session.add(SongReaction(song_request_id=song.id, invite_id=other.id))
+        db_session.commit()
+
+        response = coordinator_session.get("/api/music/requests/wall")
+        assert response.status_code == 200
+        by_title = {row["title"]: row for row in response.json()["songs"]}
+        assert by_title["Pytest Coord Counts"]["reaction_count"] == 2
+        # Others' hearts never read as the coordinator's own.
+        assert by_title["Pytest Coord Counts"]["reacted_by_me"] is False
+
+        assert (
+            coordinator_session.post(
+                f"/api/music/requests/{song.id}/react"
+            ).status_code
+            == 201
+        )
+        response = coordinator_session.get("/api/music/requests/wall")
+        by_title = {row["title"]: row for row in response.json()["songs"]}
+        assert by_title["Pytest Coord Counts"]["reaction_count"] == 3
+        assert by_title["Pytest Coord Counts"]["reacted_by_me"] is True
+
+    def test_admin_list_includes_reaction_count(
+        self,
+        coordinator_session: TestClient,
+        db_session: Session,
+        cleanup_song_requests: None,
+        make_extra_invite: Callable[[], Invite],
+    ) -> None:
+        song = make_song_request(title="Pytest Admin Count")
+        db_session.add(song)
+        db_session.commit()
+        other = make_extra_invite()
+        db_session.add(SongReaction(song_request_id=song.id, invite_id=other.id))
+        db_session.commit()
+
+        response = coordinator_session.get("/api/music/requests")
+        assert response.status_code == 200
+        by_title = {row["title"]: row for row in response.json()}
+        assert by_title["Pytest Admin Count"]["reaction_count"] == 1
+
+
+class TestNowPlaying:
+    def test_set_and_clear_now_playing(
+        self,
+        coordinator_session: TestClient,
+        db_session: Session,
+        cleanup_song_requests: None,
+        cleanup_now_playing: None,
+    ) -> None:
+        song = make_song_request(title="Pytest Spinning")
+        db_session.add(song)
+        db_session.commit()
+
+        set_response = coordinator_session.put(
+            "/api/music/now-playing", json={"song_request_id": song.id}
+        )
+        assert set_response.status_code == 200
+        assert set_response.json()["now_playing"]["id"] == song.id
+        assert set_response.json()["now_playing"]["title"] == "Pytest Spinning"
+
+        # The pick shows up in the guest wall payload and the GET endpoint.
+        wall = coordinator_session.get("/api/music/requests/wall")
+        assert wall.status_code == 200
+        assert wall.json()["now_playing"]["id"] == song.id
+        current = coordinator_session.get("/api/music/now-playing")
+        assert current.status_code == 200
+        assert current.json()["now_playing"]["id"] == song.id
+
+        clear_response = coordinator_session.put(
+            "/api/music/now-playing", json={"song_request_id": None}
+        )
+        assert clear_response.status_code == 200
+        assert clear_response.json()["now_playing"] is None
+        assert (
+            coordinator_session.get("/api/music/requests/wall").json()["now_playing"]
+            is None
+        )
+
+    def test_now_playing_requires_approved_song_of_this_wedding(
+        self,
+        coordinator_session: TestClient,
+        db_session: Session,
+        cleanup_song_requests: None,
+        cleanup_now_playing: None,
+    ) -> None:
+        pending = make_song_request(title="Pytest Not Yet", status="pending")
+        db_session.add(pending)
+        db_session.commit()
+
+        assert (
+            coordinator_session.put(
+                "/api/music/now-playing", json={"song_request_id": pending.id}
+            ).status_code
+            == 404
+        )
+        assert (
+            coordinator_session.put(
+                "/api/music/now-playing", json={"song_request_id": 999999}
+            ).status_code
+            == 404
+        )
+        db_session.expire_all()
+        wedding = db_session.get(Wedding, TEST_WEDDING_ID)
+        assert wedding is not None
+        assert wedding.now_playing_song_id is None
+
+    def test_now_playing_requires_coordinator(self, guest_session: TestClient) -> None:
+        assert (
+            guest_session.put(
+                "/api/music/now-playing", json={"song_request_id": None}
+            ).status_code
+            == 403
+        )
 
 
 class TestAdminSongRequests:
@@ -478,6 +744,12 @@ class TestUnauthenticated:
             "/api/music/requests/1/merge", json={"duplicate_ids": [2]}
         ).status_code == 401
         assert client.get("/api/music/export?format=csv").status_code == 401
+        assert client.post("/api/music/requests/1/react").status_code == 401
+        assert client.delete("/api/music/requests/1/react").status_code == 401
+        assert client.get("/api/music/now-playing").status_code == 401
+        assert client.put(
+            "/api/music/now-playing", json={"song_request_id": None}
+        ).status_code == 401
 
 
 class FakeOembedResponse:
@@ -747,7 +1019,7 @@ class TestPreviewMatching:
 
         response = guest_session.get("/api/music/requests/wall")
         assert response.status_code == 200
-        by_title = {row["title"]: row for row in response.json()}
+        by_title = {row["title"]: row for row in response.json()["songs"]}
         assert by_title["Pytest Song"]["preview_url"] == "https://audio.example/wall.m4a"
 
 

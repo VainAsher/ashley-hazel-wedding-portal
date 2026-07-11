@@ -4,17 +4,25 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Query as OrmQuery, Session
 
 from app.api.auth import ROLE_GUEST, require_coordinator, require_guest
 from app.api.schemas_auth import UserResponse
 from app.db.database import get_db
-from app.db.models import SongRequest
+from app.db.models import SongReaction, SongRequest, Wedding
 from app.db.schemas import (
+    AdminSongRequestResponse,
+    NowPlayingResponse,
+    NowPlayingUpdate,
+    SongReactionState,
     SongRequestCreate,
     SongRequestMerge,
     SongRequestResponse,
     SongRequestUpdate,
+    SongWallItem,
+    SongWallResponse,
 )
 from app.logging import get_logger
 from app.utils import music_metadata, music_previews
@@ -55,6 +63,49 @@ def wall_query(db: Session, wedding_id: int) -> OrmQuery[SongRequest]:
             SongRequest.id.asc(),
         )
     )
+
+
+def reaction_stats(
+    db: Session, song_ids: list[int], invite_id: int
+) -> dict[int, tuple[int, bool]]:
+    """Reaction count + "did this invite react?" per song, in ONE query."""
+    if not song_ids:
+        return {}
+    rows = (
+        db.query(
+            SongReaction.song_request_id,
+            func.count(SongReaction.id),
+            func.bool_or(SongReaction.invite_id == invite_id),
+        )
+        .filter(SongReaction.song_request_id.in_(song_ids))
+        .group_by(SongReaction.song_request_id)
+        .all()
+    )
+    return {song_id: (count, bool(mine)) for song_id, count, mine in rows}
+
+
+def to_wall_item(
+    song: SongRequest, stats: dict[int, tuple[int, bool]]
+) -> SongWallItem:
+    item = SongWallItem.model_validate(song)
+    item.reaction_count, item.reacted_by_me = stats.get(song.id, (0, False))
+    return item
+
+
+def get_wall_song_or_404(
+    db: Session, request_id: int, wedding_id: int, action: str
+) -> SongRequest:
+    """Reactions target only wall-visible (approved) songs — 404 otherwise."""
+    song_request = get_song_request_or_404(db, request_id, wedding_id, action)
+    if song_request.status != "approved":
+        logger.warning(
+            "song_request_not_on_wall",
+            extra={"action": action, "song_request_id": request_id},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Song request not found"
+        )
+    return song_request
 
 
 def apply_preview_match(db_request: SongRequest) -> bool:
@@ -129,25 +180,152 @@ async def create_song_request(
     return db_request
 
 
-@router.get("/requests/wall", response_model=list[SongRequestResponse])
+@router.get("/requests/wall", response_model=SongWallResponse)
 async def list_song_wall(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_guest),
-) -> list[SongRequest]:
-    return wall_query(db, current_user.wedding_id).all()
+) -> SongWallResponse:
+    songs = wall_query(db, current_user.wedding_id).all()
+    stats = reaction_stats(db, [song.id for song in songs], current_user.invite_id)
+    items = [to_wall_item(song, stats) for song in songs]
+
+    # The now-playing pick is always an approved song, so serve it from the
+    # wall items we already built (None if it slipped off the wall since).
+    wedding = db.get(Wedding, current_user.wedding_id)
+    now_playing = None
+    if wedding is not None and wedding.now_playing_song_id is not None:
+        now_playing = next(
+            (item for item in items if item.id == wedding.now_playing_song_id), None
+        )
+    return SongWallResponse(songs=items, now_playing=now_playing)
 
 
-@router.get("/requests", response_model=list[SongRequestResponse])
+@router.get("/requests", response_model=list[AdminSongRequestResponse])
 async def list_song_requests(
     db: Session = Depends(get_db),
     current_user: UserResponse = Depends(require_coordinator),
-) -> list[SongRequest]:
-    return (
+) -> list[AdminSongRequestResponse]:
+    songs = (
         db.query(SongRequest)
         .filter(SongRequest.wedding_id == current_user.wedding_id)
         .order_by(SongRequest.created_at.desc(), SongRequest.id.desc())
         .all()
     )
+    stats = reaction_stats(db, [song.id for song in songs], current_user.invite_id)
+    items = []
+    for song in songs:
+        item = AdminSongRequestResponse.model_validate(song)
+        item.reaction_count = stats.get(song.id, (0, False))[0]
+        items.append(item)
+    return items
+
+
+@router.post(
+    "/requests/{request_id}/react",
+    response_model=SongReactionState,
+)
+async def react_to_song(
+    request_id: int,
+    response: Response,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_guest),
+) -> SongReactionState:
+    """♥ a wall song. Idempotent: reacting twice keeps a single reaction."""
+    song = get_wall_song_or_404(db, request_id, current_user.wedding_id, "react")
+    existing = (
+        db.query(SongReaction)
+        .filter(
+            SongReaction.song_request_id == song.id,
+            SongReaction.invite_id == current_user.invite_id,
+        )
+        .first()
+    )
+    if existing is None:
+        db.add(
+            SongReaction(song_request_id=song.id, invite_id=current_user.invite_id)
+        )
+        try:
+            db.commit()
+            response.status_code = status.HTTP_201_CREATED
+            logger.info("song_reacted", extra={"song_request_id": song.id})
+        except IntegrityError:
+            # Lost a race with a concurrent double-tap — the reaction exists.
+            db.rollback()
+
+    count = (
+        db.query(func.count(SongReaction.id))
+        .filter(SongReaction.song_request_id == song.id)
+        .scalar()
+        or 0
+    )
+    return SongReactionState(reaction_count=count, reacted_by_me=True)
+
+
+@router.delete(
+    "/requests/{request_id}/react", status_code=status.HTTP_204_NO_CONTENT
+)
+async def unreact_to_song(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_guest),
+) -> None:
+    """Remove this member's ♥. Idempotent: a no-op when none exists."""
+    song = get_wall_song_or_404(db, request_id, current_user.wedding_id, "unreact")
+    removed = (
+        db.query(SongReaction)
+        .filter(
+            SongReaction.song_request_id == song.id,
+            SongReaction.invite_id == current_user.invite_id,
+        )
+        .delete(synchronize_session=False)
+    )
+    db.commit()
+    if removed:
+        logger.info("song_unreacted", extra={"song_request_id": song.id})
+
+
+@router.get("/now-playing", response_model=NowPlayingResponse)
+async def get_now_playing(
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_guest),
+) -> NowPlayingResponse:
+    wedding = db.get(Wedding, current_user.wedding_id)
+    if wedding is None or wedding.now_playing_song_id is None:
+        return NowPlayingResponse(now_playing=None)
+    song = db.get(SongRequest, wedding.now_playing_song_id)
+    if song is None or song.status != "approved":
+        return NowPlayingResponse(now_playing=None)
+    stats = reaction_stats(db, [song.id], current_user.invite_id)
+    return NowPlayingResponse(now_playing=to_wall_item(song, stats))
+
+
+@router.put("/now-playing", response_model=NowPlayingResponse)
+async def set_now_playing(
+    payload: NowPlayingUpdate,
+    db: Session = Depends(get_db),
+    current_user: UserResponse = Depends(require_coordinator),
+) -> NowPlayingResponse:
+    """Pick the wedding-day "currently playing" song; null clears it."""
+    wedding = db.get(Wedding, current_user.wedding_id)
+    if wedding is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Wedding not found"
+        )
+
+    if payload.song_request_id is None:
+        wedding.now_playing_song_id = None
+        db.commit()
+        logger.info("now_playing_cleared")
+        return NowPlayingResponse(now_playing=None)
+
+    song = get_wall_song_or_404(
+        db, payload.song_request_id, current_user.wedding_id, "set_now_playing"
+    )
+    wedding.now_playing_song_id = song.id
+    db.commit()
+    logger.info("now_playing_set", extra={"song_request_id": song.id})
+    stats = reaction_stats(db, [song.id], current_user.invite_id)
+    return NowPlayingResponse(now_playing=to_wall_item(song, stats))
 
 
 @router.patch("/requests/{request_id}", response_model=SongRequestResponse)

@@ -12,7 +12,10 @@ import {
   useBackfillPreviews,
   useMatchPreview,
   useMergeSongRequests,
+  useNowPlaying,
+  useSetNowPlaying,
   useUpdateSongRequest,
+  type AdminSongRequest,
   type MusicExportFormat,
   type SongRequest,
   type SongRequestStatus,
@@ -100,11 +103,15 @@ function RequestSummary({ request }: { request: SongRequest }) {
 
 export function Music() {
   const { data: requests, isLoading, isError, error } = useAllSongRequests()
+  const { data: nowPlayingState } = useNowPlaying()
 
   const updateMutation = useUpdateSongRequest()
   const mergeMutation = useMergeSongRequests()
   const matchMutation = useMatchPreview()
   const backfillMutation = useBackfillPreviews()
+  const nowPlayingMutation = useSetNowPlaying()
+
+  const nowPlayingId = nowPlayingState?.now_playing?.id ?? null
 
   const [feedback, setFeedback] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -142,7 +149,8 @@ export function Music() {
     updateMutation.isPending ||
     mergeMutation.isPending ||
     matchMutation.isPending ||
-    backfillMutation.isPending
+    backfillMutation.isPending ||
+    nowPlayingMutation.isPending
 
   const resetAlerts = () => {
     setFeedback(null)
@@ -260,6 +268,28 @@ export function Music() {
       )
     } catch (err) {
       reportError(err, 'Failed to match previews')
+    }
+  }
+
+  const setAsNowPlaying = async (request: AdminSongRequest) => {
+    resetAlerts()
+
+    try {
+      await nowPlayingMutation.mutateAsync(request.id)
+      setFeedback(`${request.title.trim()} is now playing.`)
+    } catch (err) {
+      reportError(err, 'Failed to set the now-playing song')
+    }
+  }
+
+  const clearNowPlaying = async () => {
+    resetAlerts()
+
+    try {
+      await nowPlayingMutation.mutateAsync(null)
+      setFeedback('Now playing cleared.')
+    } catch (err) {
+      reportError(err, 'Failed to clear the now-playing song')
     }
   }
 
@@ -393,14 +423,46 @@ export function Music() {
                 >
                   <div className="grid gap-1.5">
                     <RequestSummary request={request} />
-                    <Badge
-                      variant={request.preview_url ? 'info' : 'neutral'}
-                      className="justify-self-start"
-                    >
-                      {request.preview_url ? '▶ preview ready' : 'no preview'}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {request.id === nowPlayingId && (
+                        <Badge variant="warning">♪ Now playing</Badge>
+                      )}
+                      <Badge variant={request.preview_url ? 'info' : 'neutral'}>
+                        {request.preview_url ? '▶ preview ready' : 'no preview'}
+                      </Badge>
+                      {/* Guest ♥ count — a curation signal for the couple. */}
+                      <Badge
+                        variant="neutral"
+                        aria-label={`${request.reaction_count} hearts`}
+                      >
+                        ♥ {request.reaction_count}
+                      </Badge>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    {request.id === nowPlayingId ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        aria-label={`Clear now playing (${request.title.trim()})`}
+                        disabled={isMutating}
+                        onClick={() => void clearNowPlaying()}
+                      >
+                        Clear now playing
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        aria-label={`Set ${requestLabel(request)} as now playing`}
+                        disabled={isMutating}
+                        onClick={() => void setAsNowPlaying(request)}
+                      >
+                        Set as now playing
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       variant={request.pinned ? 'default' : 'outline'}
