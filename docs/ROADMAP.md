@@ -90,11 +90,12 @@ backlog, fix the small ones in-session. Known suspects: admin tables, jukebox ro
 
 ## Wave 2 — engagement layer (make the portal talk back)
 
-> **Status 2026-07-12: BUILT & STAGING-VERIFIED, awaiting the couple's release
-> call** (bundled with the Wave 1 mobile pass as one big release). All five
-> items below built by a second 5-agent swarm (migrations 017–019); comms
-> "Send" now delivers in-app for real; Spotify sync + external channels remain
-> behind their decision gates. Backlog rows flip to done at prod deploy.
+> **Status 2026-07-12: SHIPPED to production as v1.1.0** (bundled with the
+> Wave 1 mobile pass). All five items built by a second 5-agent swarm
+> (migrations 017–019); comms "Send" now delivers in-app for real. Rollback
+> ready: pre-release dump `wedding_prod-20260711-230948.sql.gz` + rollback.sh
+> re-ups image `104c5c8` (migrations are additive, old image runs cleanly).
+> Spotify sync + external channels remain behind their decision gates.
 
 ### 8. Member dashboard as comms + notifications surface (couple) — **L** · foundation piece
 The keystone for mentions, party comms, and honest "send". Plan:
