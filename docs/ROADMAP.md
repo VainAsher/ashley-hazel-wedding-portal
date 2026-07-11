@@ -25,6 +25,10 @@ Save-The-Date note (observations table, with typos) should move to the Ideas tab
 
 ## Wave 1 — v1.1 close-out (cheap, real value, before the ~24 Jul review)
 
+> **Status 2026-07-11: SHIPPED to production** (built by a 5-agent swarm in one
+> day). Items 1–6 live; remaining loose ends: the backup **restore drill**
+> (cron + first verified dump are in place) and item 7's **mobile pass**.
+
 ### 1. Backups scheduling (seed list) — **S** · ops only, no code
 Nightly `backup.sh` via cron for `deploy@192.168.0.32` (command already documented in
 `docs/guides/IT_ADMIN_GUIDE.md`), run one `restore.sh` drill to prove dumps restore,

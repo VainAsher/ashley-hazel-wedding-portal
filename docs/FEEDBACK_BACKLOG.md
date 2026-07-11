@@ -20,7 +20,7 @@ Add a row to the right table. Keep it short. Use:
 | Date | Source | Area | What happens / expected | Severity | Status |
 |------|--------|------|--------------------------|----------|--------|
 | 2026-06-26 | Couple | Timeline (tasks) | **Editing a task doesn't save** — opening a created task and pressing Save doesn't persist the edits. *2026-07-09: root cause found — the update schema typed `due_date` as datetime while the form sends a plain date, so editing any task that has a due date was rejected (422). One-line backend fix + regression test. *2026-07-09: fixed, live in prod — verified by editing a task with a due date on the live admin* | 🟠 major | done |
-| 2026-06-26 | Couple | Gallery / images | **Photos load very slowly** — needs lazy-loading + caching (and likely served thumbnails / responsive sizes instead of full-res for the grid). *Ratified 2026-07-08: grid fires all 86 full-res originals at once; no `loading="lazy"` in `Gallery.tsx`, no thumbnail sizes in the schema (`gallery_items` stores only `file_path`)*. *2026-07-09: fixed, live in prod: lazy-loading + decoding=async + 24-per-page "Show more"; also fixed nav doing a full page reload on every click (raw `<a>` → SPA links). True thumbnails still need backend work* | 🟡 minor | in-progress |
+| 2026-06-26 | Couple | Gallery / images | **Photos load very slowly** — needs lazy-loading + caching (and likely served thumbnails / responsive sizes instead of full-res for the grid). *Ratified 2026-07-08: grid fires all 86 full-res originals at once; no `loading="lazy"` in `Gallery.tsx`, no thumbnail sizes in the schema (`gallery_items` stores only `file_path`)*. *2026-07-09: fixed, live in prod: lazy-loading + decoding=async + 24-per-page "Show more"; also fixed nav doing a full page reload on every click (raw `<a>` → SPA links). True thumbnails still need backend work* *2026-07-11: done, live in prod — migration 015 + Pillow ~480px JPEG derivatives on upload, backfill endpoint, grid serves thumbs (lightbox keeps originals)* | 🟡 minor | done |
 | 2026-07-08 | IT/Admin | Guest footer | **Placeholder support email** — `support@wedding.example.com` hardcoded in `GuestLayout.tsx:85`, shown on every guest page; the mailto goes nowhere. *2026-07-09: fixed, live in prod: now Ajandrews210888@aol.com* | 🟡 minor | done |
 | 2026-07-08 | IT/Admin | Gallery (data) | **85/86 photo titles are raw filenames** (e.g. "20260613_120148.jpg") — the bulk load set `title` = filename (verified in prod DB). Frontend fallback is "Photo {id}", so fix = null/replace the seeded titles, or friendlier frontend handling. *2026-07-09: fixed, live in prod: frontend now shows a friendly date for timestamp filenames and hides camera-style names; DB cleanup optional* | 🟡 minor | done |
 | 2026-07-08 | IT/Admin | Schedule | **Ceremony never appears on the Schedule page** — it lists only `events` rows (2 exist); the ceremony lives on `weddings.ceremony_time` so guests see rehearsal dinner + wedding breakfast but not the ceremony itself. Also data checks for the couple: Wedding Breakfast is 11:00, *before* the 12:00 ceremony; Rehearsal Dinner has no time set; guest page shows no year on dates. *2026-07-09: fixed, live in prod: Schedule now synthesizes the ceremony from the wedding record (skipped if a ceremony event exists) and dates include the year. Couple confirmed the 11:00 breakfast / 12:00 ceremony and missing rehearsal time are intentional while plans are in flux* | 🟡 minor | done |
@@ -49,8 +49,8 @@ Add a row to the right table. Keep it short. Use:
 | 2026-07-10 | Couple | **Typography theme dials** — font/typography configurable from admin Settings, like the colour theme (display + body faces, maybe scale) | Full self-service brand control | new |
 | 2026-07-10 | Couple | **⚡ Real-audio looping playlist** — turn submitted/approved songs into a looping playlist with real audio on the site. Wanted *sooner rather than later*. *2026-07-10: done, live in prod — chosen solution: 30-second previews (keyless iTunes Search API, matched server-side on approval; admin Find/Clear/Match-all controls). Guest Dancefloor gains the "Now playing" jukebox: artwork, dedication, play/pause/prev/next, auto-advance, looping. Full-length audio would be the YouTube-embed path if ever wanted* | The Dancefloor becomes audible; prototype's "Currently playing" widget for real | done |
 | 2026-07-10 | Couple | **Kanban / project-management expansion** — drag-and-drop cards, dropdowns, validated design; worth getting right as the same board will power stag & hen planning | One good planning tool reused across couple + parties | new |
-| 2026-07-10 | Couple | **In-site bug/feedback tool** — super user-friendly way for ANY user to raise a bug or idea in-site, feeding a triage queue (i.e. this backlog, but self-serve) | Feedback stops depending on people finding this file | new |
-| 2026-07-09 | Couple | **Save-The-Date envelope animation** — the invite/landing page opens like an envelope (cat wax seal), with a little confetti sprinkle for the joy of it | First impression = an invitation being opened. *Planned: docs/ROADMAP.md Wave 1* | new |
+| 2026-07-10 | Couple | **In-site bug/feedback tool** — super user-friendly way for ANY user to raise a bug or idea in-site, feeding a triage queue (i.e. this backlog, but self-serve) | Feedback stops depending on people finding this file. *2026-07-11: done, live in prod — migration 016, floating Feedback pill on every page (Bug/Idea + message + auto-captured page/role/viewport), admin triage queue at /admin/feedback with New/Triaged/Done tabs* | done |
+| 2026-07-09 | Couple | **Save-The-Date envelope animation** — the invite/landing page opens like an envelope (cat wax seal), with a little confetti sprinkle for the joy of it | First impression = an invitation being opened. *2026-07-11: done, live in prod — sealed plum envelope with the cat wax seal, stays closed until tapped, card grows out with a one-shot confetti burst; once per session with a replay button; reduced-motion skips to the open card. Envelope sizes itself from the measured card (always 48px larger per side) after two rounds of couple feedback on the feel* | done |
 | 2026-07-10 | Couple | **Progressive onboarding + in-site user guide** — data-driven onboarding (show people what they haven't done yet: RSVP, song request, photo…) and an in-site guide | New guests learn the portal without the docs | new |
 | 2026-07-08 | IT/Admin | **Upload form should state accepted types/size limits** (images only today; guests already tried videos) | Avoids silent failures at the point of upload. *2026-07-09: fixed, live in prod: "Photos only, up to 25 MB" hint under the file input* | done |
 
@@ -58,7 +58,7 @@ Add a row to the right table. Keep it short. Use:
 | Date | Source | Note |
 |------|--------|------|
 | 2026-07-08 | IT/Admin | Full guest-site UI review done (desktop, logged-in guest). Solid foundations: proper landmarks, labelled forms, good empty states, route-level code splitting, no console errors. Dashboard/RSVP/Blessings values verified against the prod DB — all render faithfully. |
-| 2026-07-08 | IT/Admin | Minor: `/api/auth/me` is fetched twice per page load; dashboard shows bare "Loading wedding details..." text for ~4–6s before the hero (a skeleton would help). |
+| 2026-07-08 | IT/Admin | Minor: `/api/auth/me` is fetched twice per page load; dashboard shows bare "Loading wedding details..." text for ~4–6s before the hero (a skeleton would help). *2026-07-11: both fixed, live in prod — pages read the shared auth query (page-level duplicate fetch removed) and the dashboard shows a theme-tinted skeleton.* |
 | 2026-07-08 | IT/Admin | Mobile-width pass not completed (browser window wouldn't resize during review) — do a phone check before the v1.1 cut. |
 | 2026-07-09 | Couple | Cat photo supplied (`docs/assets/feedback/cat-header.jpeg`) for the header rebrand, plus a sixth background candidate (`bg-06-registry-candid.jpeg`). |
 | 2026-07-09 | IT/Admin | Admin sidebar labels are low-contrast (purple on near-black) — fold into the design-pass button/contrast work. *2026-07-09: fixed in the design pass (explicit light link text, gold hover).* |
@@ -75,11 +75,18 @@ Add a row to the right table. Keep it short. Use:
 - **No bulk guest import in the UI.** The 76 guests were loaded directly into the DB.
   *Candidate: CSV import + a households/plus-one model (the "+1/guest" rows are
   currently separate records).*
-- **No guest-data export/delete button.** Delete exists in the API; export doesn't.
-  *Candidate: per-guest export + a one-click delete in the UI (privacy).*
-- **Backups are manual.** `backup.sh` exists but isn't scheduled yet (PBS covers the
-  VM). *Candidate: ship the cron/systemd timer + offsite-to-NAS once resized.*
-- **Bootstrap parity.** `bootstrap_prod.py` now sets `phase=planning` + details, but
-  only on a fresh image; the live wedding row was corrected manually. Low priority.
-- **Minor ORM polish.** A couple of models lack `wedding` relationships (DB enforces
-  correctness); index-name drift in migration 011 vs the model. Cosmetic.
+- ~~**No guest-data export/delete button.**~~ *2026-07-11: done, live in prod —
+  per-row Export + "Export all guests (CSV)" (RFC-4180 client-side) beside the
+  existing Delete/confirm flow on admin Guests.*
+- ~~**Backups are manual.**~~ *2026-07-11: nightly 03:00 cron installed on `.32`
+  (`backup.sh` → `/home/deploy/wedding-prod-backups`, 14-day retention); first
+  dump taken and content-verified (all 20 tables). Restore drill still to run
+  (`restore.sh <dump>` → throwaway `wedding_restore_test`); offsite-to-NAS
+  still waits on the NAS resize.*
+- ~~**Bootstrap parity.**~~ *2026-07-11: done, live in prod — `bootstrap_prod.py`
+  now detects re-runs (via the invites it creates) and preserves the live
+  `phase` instead of resetting it to planning.*
+- ~~**Minor ORM polish.**~~ *2026-07-11: done — `GuestAudit.wedding` viewonly
+  relationship added (the only one missing); the migration-011 index-name
+  "drift" was already resolved in the model, stale INDEXING_STRATEGY.md note
+  corrected.*
