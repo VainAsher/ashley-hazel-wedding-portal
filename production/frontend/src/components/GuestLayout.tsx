@@ -2,6 +2,7 @@ import React from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { FeedbackWidget } from '@/components/FeedbackWidget'
+import { HowThisWorksDialog } from '@/components/HowThisWorksDialog'
 import { usePortalTheme } from '@/hooks/useTheme'
 import { Button } from '@/components/ui/button'
 import { buildTint } from '@/lib/theme'
@@ -118,15 +119,18 @@ export function GuestLayout({ children }: GuestLayoutProps) {
       {/* Footer */}
       <footer className="bg-plum-night/90 backdrop-blur border-t border-gold/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <p className="text-center text-sm text-cream/90 m-0">
-            Questions? Contact us at{' '}
-            <a
-              href="mailto:Ajandrews210888@aol.com"
-              className="text-gold hover:text-gold/80 underline"
-            >
-              Ajandrews210888@aol.com
-            </a>
-          </p>
+          <div className="flex flex-col items-center gap-3">
+            <p className="text-center text-sm text-cream/90 m-0">
+              Questions? Contact us at{' '}
+              <a
+                href="mailto:Ajandrews210888@aol.com"
+                className="text-gold hover:text-gold/80 underline"
+              >
+                Ajandrews210888@aol.com
+              </a>
+            </p>
+            <HowThisWorksDialog />
+          </div>
         </div>
       </footer>
 
