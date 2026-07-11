@@ -93,6 +93,10 @@ class Wedding(Base):
     now_playing_song_id: Mapped[int | None] = mapped_column(
         ForeignKey("song_requests.id", ondelete="SET NULL", use_alter=True)
     )
+    # The couple's "menu is ready" switch: gates guest meal selection in RSVP.
+    meal_selection_open: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("FALSE")
+    )
     created_at: Mapped[datetime | None] = mapped_column(
         DateTime, server_default=text("CURRENT_TIMESTAMP")
     )
@@ -116,6 +120,7 @@ class Wedding(Base):
     )
     feedback: Mapped[list["Feedback"]] = orm_relationship(back_populates="wedding")
     notifications: Mapped[list["Notification"]] = orm_relationship(back_populates="wedding")
+    menu_options: Mapped[list["MenuOption"]] = orm_relationship(back_populates="wedding")
 
 
 class Guest(Base):
@@ -177,6 +182,7 @@ class Guest(Base):
     plus_one_name: Mapped[str | None] = mapped_column(String(255))
     plus_one_rsvp: Mapped[RsvpStatus | None] = mapped_column(rsvp_status_enum)
     plus_one_dietary: Mapped[str | None] = mapped_column(Text)
+    plus_one_meal_choice: Mapped[str | None] = mapped_column(String(120))
     table_number: Mapped[int | None] = mapped_column(Integer)
     seat_number: Mapped[int | None] = mapped_column(Integer)
     notes: Mapped[str | None] = mapped_column(Text)
@@ -601,6 +607,41 @@ class SongReaction(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
+
+
+class MenuOption(Base):
+    __tablename__ = "menu_options"
+    __table_args__ = (
+        CheckConstraint(
+            "course IN ('starter', 'main', 'dessert') OR course IS NULL",
+            name="ck_menu_options_course",
+        ),
+        CheckConstraint(
+            "length(btrim(name)) > 0", name="ck_menu_options_name_not_blank"
+        ),
+        Index("idx_menu_options_wedding", "wedding_id"),
+        Index("idx_menu_options_wedding_active", "wedding_id", "active"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    # Grouping ships in the schema for later; the v1 UI is one flat list.
+    course: Mapped[str | None] = mapped_column(String(20))
+    is_vegetarian: Mapped[bool] = mapped_column(Boolean, server_default=text("FALSE"))
+    is_vegan: Mapped[bool] = mapped_column(Boolean, server_default=text("FALSE"))
+    is_gluten_free: Mapped[bool] = mapped_column(Boolean, server_default=text("FALSE"))
+    # Soft-delete flag: inactive options stay for history but leave the
+    # guest-facing menu.
+    active: Mapped[bool] = mapped_column(Boolean, server_default=text("TRUE"))
+    created_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()")
+    )
+
+    wedding: Mapped[Wedding] = orm_relationship(back_populates="menu_options")
 
 
 class Feedback(Base):

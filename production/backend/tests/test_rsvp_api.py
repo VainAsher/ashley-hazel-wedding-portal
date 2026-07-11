@@ -7,13 +7,39 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.db.models import Guest, Invite
+from app.db.models import Guest, Invite, MenuOption, Wedding
 from tests.fixtures.guests import TEST_WEDDING_ID, unique_guest_email
 
 
 TEST_INVITE_PREFIX = "PYTEST-RSVP"
 
 pytestmark = pytest.mark.usefixtures("clean_test_guests", "clean_test_rsvp_invites")
+
+
+@pytest.fixture()
+def open_meal_selection(db_session: Session) -> Iterator[None]:
+    """Open the shared wedding's meal selection with active options matching
+    the meal values these tests submit, restoring both afterwards."""
+    wedding = db_session.get(Wedding, TEST_WEDDING_ID)
+    assert wedding is not None
+    original = wedding.meal_selection_open
+    wedding.meal_selection_open = True
+    options = [
+        MenuOption(wedding_id=TEST_WEDDING_ID, name="vegetarian", is_vegetarian=True),
+        MenuOption(wedding_id=TEST_WEDDING_ID, name="fish"),
+    ]
+    db_session.add_all(options)
+    db_session.commit()
+    try:
+        yield
+    finally:
+        db_session.expire_all()
+        wedding = db_session.get(Wedding, TEST_WEDDING_ID)
+        if wedding is not None:
+            wedding.meal_selection_open = original
+        for option in options:
+            db_session.delete(option)
+        db_session.commit()
 
 
 @pytest.fixture()
@@ -100,6 +126,7 @@ class TestRsvpApi:
         self,
         client: TestClient,
         db_session: Session,
+        open_meal_selection: None,
     ) -> None:
         guest = create_rsvp_guest(db_session, name="Own RSVP Patch")
         login_with_invite(
@@ -135,6 +162,7 @@ class TestRsvpApi:
         self,
         client: TestClient,
         db_session: Session,
+        open_meal_selection: None,
         role: str,
     ) -> None:
         guest = create_rsvp_guest(db_session, name=f"{role.title()} RSVP Target")
@@ -226,7 +254,10 @@ class TestRsvpApi:
         self,
         client: TestClient,
         db_session: Session,
+        open_meal_selection: None,
     ) -> None:
+        # Even while meal selection is open, the value must name an active
+        # menu option for this wedding.
         guest = create_rsvp_guest(db_session, name="Invalid RSVP Meal")
         login_with_invite(
             client,
@@ -239,6 +270,27 @@ class TestRsvpApi:
         )
 
         assert response.status_code == 422
+
+    def test_meal_choice_rejected_while_selection_closed(
+        self,
+        client: TestClient,
+        db_session: Session,
+    ) -> None:
+        # No open_meal_selection fixture: the shared wedding default is closed,
+        # mirroring how the phase gate rejects with an explicit 403.
+        guest = create_rsvp_guest(db_session, name="Closed RSVP Meal")
+        login_with_invite(
+            client,
+            create_rsvp_invite(db_session, guest=guest, label="CLOSED-MEAL"),
+        )
+
+        response = client.patch(
+            f"/api/guests/{guest.id}",
+            json={"rsvp_status": "accepted", "meal_choice": "fish"},
+        )
+
+        assert response.status_code == 403
+        assert response.json() == {"detail": "Meal selection is not currently open."}
 
     def test_dietary_notes_length_rejected(
         self,

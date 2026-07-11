@@ -20,6 +20,7 @@ export interface WeddingSettings {
   reception_location: string | null
   phase: WeddingPhase
   theme: WeddingThemeSettings | null
+  meal_selection_open: boolean
 }
 
 export interface WeddingSettingsPayload {
@@ -31,6 +32,8 @@ export interface WeddingSettingsPayload {
   phase?: WeddingPhase
   // Explicit null resets the guest site to the built-in theme.
   theme?: WeddingThemeSettings | null
+  // Menu builder switch: opens guest meal selection in RSVP.
+  meal_selection_open?: boolean
 }
 
 export class SettingsApiError extends Error {

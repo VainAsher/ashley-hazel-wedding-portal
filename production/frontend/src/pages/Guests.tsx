@@ -65,7 +65,8 @@ interface GuestFormState {
   phone: string
   relationship: string
   rsvp_status: RsvpStatus
-  meal_choice: '' | MealChoice
+  // May hold a guest-picked menu option name, not just the legacy values.
+  meal_choice: string
   dietary_restrictions: string
   plus_one_name: string
   plus_one_rsvp: '' | RsvpStatus

@@ -1,7 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export type RsvpStatus = 'pending' | 'accepted' | 'declined' | 'tentative'
-export type MealChoice = 'chicken' | 'fish' | 'vegetarian'
 
 export interface GuestRsvp {
   id: number
@@ -11,12 +10,15 @@ export interface GuestRsvp {
   phone: string | null
   relationship: string | null
   rsvp_status: RsvpStatus
-  meal_choice: MealChoice | null
+  // Stores the chosen menu option's name (legacy rows may hold old
+  // fixed values like 'chicken').
+  meal_choice: string | null
   dietary_notes: string | null
   dietary_restrictions: string | null
   plus_one_name: string | null
   plus_one_rsvp: RsvpStatus | null
   plus_one_dietary: string | null
+  plus_one_meal_choice: string | null
   table_number: number | null
   seat_number: number | null
   notes: string | null
@@ -27,8 +29,10 @@ export interface GuestRsvp {
 export interface GuestRsvpUpdate {
   rsvp_status: RsvpStatus
   // Omitted while menu selection is closed — the backend PATCH uses
-  // exclude_unset, so leaving it out preserves any stored choice.
-  meal_choice?: MealChoice | null
+  // exclude_unset, so leaving it out preserves any stored choice (and the
+  // backend rejects meal fields outright while selection is closed).
+  meal_choice?: string | null
+  plus_one_meal_choice?: string | null
   dietary_notes: string | null
   plus_one_name: string | null
 }

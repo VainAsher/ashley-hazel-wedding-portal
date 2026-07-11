@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.api.auth import ROLE_GUEST, require_coordinator, require_guest
 from app.api.schemas_auth import UserResponse
 from app.db.database import get_db
-from app.db.models import Guest, Wedding
+from app.db.models import Guest, MenuOption, Wedding
 from app.db.schemas import GuestCreate, GuestResponse, GuestRSVPUpdate, GuestUpdate
 from app.logging import get_logger
 
@@ -148,6 +148,42 @@ async def update_guest_rsvp(
             detail="RSVP is not currently open.",
         )
     update_data = rsvp.model_dump(exclude_unset=True)
+
+    # Meal picks are gated like RSVP itself is gated by phase: while the
+    # couple's meal_selection_open switch is off, sending a meal field is
+    # rejected outright (403) rather than silently dropped, so a stale client
+    # can't believe a choice was saved. While open, a non-null choice must
+    # name one of this wedding's *active* menu options (422 otherwise).
+    meal_fields = {"meal_choice", "plus_one_meal_choice"} & update_data.keys()
+    if meal_fields:
+        wedding = db.get(Wedding, db_guest.wedding_id)
+        if wedding is None or not wedding.meal_selection_open:
+            logger.warning(
+                "guest_rsvp_meal_rejected_closed",
+                extra={"guest_id": guest_id, "meal_fields": sorted(meal_fields)},
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Meal selection is not currently open.",
+            )
+        active_names = {
+            name
+            for (name,) in db.query(MenuOption.name).filter(
+                MenuOption.wedding_id == db_guest.wedding_id,
+                MenuOption.active.is_(True),
+            )
+        }
+        for field in sorted(meal_fields):
+            value = update_data[field]
+            if value is not None and value not in active_names:
+                logger.warning(
+                    "guest_rsvp_meal_unknown_option",
+                    extra={"guest_id": guest_id, "meal_field": field},
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"Unknown menu option for {field}.",
+                )
 
     for field, value in update_data.items():
         setattr(db_guest, field, value)

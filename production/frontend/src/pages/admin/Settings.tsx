@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
 import { AdminLayout } from '@/components/AdminLayout'
+import { MenuManager } from '@/components/admin/MenuManager'
 import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -562,6 +563,8 @@ export function Settings() {
         )}
 
         {!isLoading && !isError && settings && <ThemeCard settings={settings} />}
+
+        {!isLoading && !isError && settings && <MenuManager />}
       </div>
     </AdminLayout>
   )
