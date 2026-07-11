@@ -8,10 +8,19 @@ import {
   type GuestRsvpUpdate,
   type RsvpStatus,
 } from '../api/rsvp'
+import { fetchPortalMenu, type PortalMenuOption } from '../api/portal'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
 import { Alert } from '../components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select'
 import { useAuth } from '../contexts/AuthContext'
 import { GuestLayout } from '../components/GuestLayout'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -20,12 +29,16 @@ interface RsvpFormData {
   rsvpStatus: RsvpStatus
   dietaryNotes: string
   plusOneName: string
+  mealChoice: string
+  plusOneMealChoice: string
 }
 
 const defaultFormData: RsvpFormData = {
   rsvpStatus: 'pending',
   dietaryNotes: '',
   plusOneName: '',
+  mealChoice: '',
+  plusOneMealChoice: '',
 }
 
 function formDataFromGuest(guest: GuestRsvp): RsvpFormData {
@@ -33,6 +46,8 @@ function formDataFromGuest(guest: GuestRsvp): RsvpFormData {
     rsvpStatus: guest.rsvp_status,
     dietaryNotes: guest.dietary_notes ?? '',
     plusOneName: guest.plus_one_name ?? '',
+    mealChoice: guest.meal_choice ?? '',
+    plusOneMealChoice: guest.plus_one_meal_choice ?? '',
   }
 }
 
@@ -65,12 +80,37 @@ function optionalText(value: string): string | null {
   return trimmed || null
 }
 
+function dietaryTags(option: PortalMenuOption): string {
+  const tags = [
+    option.is_vegetarian && 'vegetarian',
+    option.is_vegan && 'vegan',
+    option.is_gluten_free && 'gluten-free',
+  ].filter(Boolean)
+  return tags.join(', ')
+}
+
+/** Description + dietary tags of the currently chosen option, if any. */
+function MealHint({ options, chosen }: { options: PortalMenuOption[]; chosen: string }) {
+  const option = options.find((candidate) => candidate.name === chosen)
+  if (!option) {
+    return null
+  }
+  const tags = dietaryTags(option)
+  const text = [option.description, tags && `(${tags})`].filter(Boolean).join(' ')
+  if (!text) {
+    return null
+  }
+  return <p className="text-xs text-gray-500 m-0">{text}</p>
+}
+
 export function RSVP() {
   usePageTitle('RSVP')
   // Current user + wedding phase come from the shared auth context (a single
   // /api/auth/me query for the whole app) rather than a page-level fetch.
   const { user, weddingPhase, loading: authLoading, error: authError } = useAuth()
   const [guest, setGuest] = useState<GuestRsvp | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuOptions, setMenuOptions] = useState<PortalMenuOption[]>([])
   const [formData, setFormData] = useState<RsvpFormData>(defaultFormData)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -111,12 +151,20 @@ export function RSVP() {
           return
         }
 
-        const loadedGuest = await fetchGuestRsvp(user.guest_id)
+        // The portal menu tells us whether meal selection is open and, if so,
+        // which options to offer. A menu failure must not block the RSVP form
+        // itself — fall back to the closed (dietary-only) experience.
+        const [loadedGuest, menu] = await Promise.all([
+          fetchGuestRsvp(user.guest_id),
+          fetchPortalMenu().catch(() => ({ meal_selection_open: false, options: [] })),
+        ])
         if (!mounted) {
           return
         }
 
         setGuest(loadedGuest)
+        setMenuOpen(menu.meal_selection_open)
+        setMenuOptions(menu.options)
         setFormData(formDataFromGuest(loadedGuest))
       } catch (err) {
         if (mounted) {
@@ -155,6 +203,15 @@ export function RSVP() {
       rsvp_status: formData.rsvpStatus,
       dietary_notes: optionalText(formData.dietaryNotes),
       plus_one_name: optionalText(formData.plusOneName),
+    }
+
+    // Meal fields are only sent while selection is open — the backend rejects
+    // them otherwise, and omitting them preserves any stored choice.
+    if (menuOpen) {
+      payload.meal_choice = optionalText(formData.mealChoice)
+      payload.plus_one_meal_choice = optionalText(formData.plusOneName)
+        ? optionalText(formData.plusOneMealChoice)
+        : null
     }
 
     setSubmitting(true)
@@ -263,14 +320,45 @@ export function RSVP() {
               {formData.rsvpStatus === 'accepted' && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg">Dietary requirements</CardTitle>
+                    <CardTitle className="text-lg">
+                      {menuOpen ? 'Meals & dietary requirements' : 'Dietary requirements'}
+                    </CardTitle>
                     <CardDescription>
-                      Menu choices open nearer the day, once the menu is finalised. For now,
-                      tell us about any allergies or dietary requirements.
+                      {menuOpen
+                        ? 'The menu is ready — pick a meal for yourself (and your plus one), and tell us about any allergies or dietary requirements.'
+                        : 'Menu choices open nearer the day, once the menu is finalised. For now, tell us about any allergies or dietary requirements.'}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <fieldset disabled={formDisabled} className="border-0 space-y-4 m-0 p-0">
+                      {/* Meal choice — only once the couple opens meal selection */}
+                      {menuOpen && (
+                        <div className="space-y-2">
+                          <Label htmlFor="meal-choice" className="text-gray-700">
+                            Your meal
+                          </Label>
+                          {/* Radix v2 treats value="" as controlled-with-placeholder */}
+                          <Select
+                            value={formData.mealChoice}
+                            onValueChange={(value) =>
+                              setFormData((current) => ({ ...current, mealChoice: value }))
+                            }
+                          >
+                            <SelectTrigger id="meal-choice" aria-label="Your meal" disabled={formDisabled}>
+                              <SelectValue placeholder="Choose a meal" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {menuOptions.map((option) => (
+                                <SelectItem key={option.id} value={option.name}>
+                                  {option.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <MealHint options={menuOptions} chosen={formData.mealChoice} />
+                        </div>
+                      )}
+
                       {/* Dietary Notes */}
                       <div className="space-y-2">
                         <label htmlFor="dietary-notes" className="text-sm font-medium text-gray-700">
@@ -301,6 +389,37 @@ export function RSVP() {
                           placeholder="Enter name of your plus one"
                         />
                       </div>
+
+                      {/* Plus-one meal — needs an open menu and a named plus one */}
+                      {menuOpen && formData.plusOneName.trim() !== '' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="plus-one-meal-choice" className="text-gray-700">
+                            Plus one meal
+                          </Label>
+                          <Select
+                            value={formData.plusOneMealChoice}
+                            onValueChange={(value) =>
+                              setFormData((current) => ({ ...current, plusOneMealChoice: value }))
+                            }
+                          >
+                            <SelectTrigger
+                              id="plus-one-meal-choice"
+                              aria-label="Plus one meal"
+                              disabled={formDisabled}
+                            >
+                              <SelectValue placeholder="Choose a meal" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {menuOptions.map((option) => (
+                                <SelectItem key={option.id} value={option.name}>
+                                  {option.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <MealHint options={menuOptions} chosen={formData.plusOneMealChoice} />
+                        </div>
+                      )}
                     </fieldset>
                   </CardContent>
                 </Card>

@@ -88,3 +88,29 @@ export function fetchPortalTheme(apiBaseUrl = API_BASE_URL): Promise<PortalTheme
     apiBaseUrl,
   )
 }
+
+export interface PortalMenuOption {
+  id: number
+  name: string
+  description: string | null
+  course: string | null
+  is_vegetarian: boolean
+  is_vegan: boolean
+  is_gluten_free: boolean
+}
+
+export interface PortalMenuResponse {
+  meal_selection_open: boolean
+  options: PortalMenuOption[]
+}
+
+// Authenticated guests only: active options plus the couple's
+// meal_selection_open switch, so the RSVP page knows whether to show
+// meal selects.
+export function fetchPortalMenu(apiBaseUrl = API_BASE_URL): Promise<PortalMenuResponse> {
+  return requestJson<PortalMenuResponse>(
+    '/api/portal/menu',
+    'Unable to load the menu.',
+    apiBaseUrl,
+  )
+}

@@ -20,6 +20,7 @@ from app.api import (
     gallery,
     guests,
     invites,
+    menu,
     music,
     portal,
     settings as settings_api,
@@ -75,6 +76,8 @@ app.include_router(settings_api.router)
 app.include_router(blessings.router)
 app.include_router(music.router)
 app.include_router(feedback.router)
+app.include_router(menu.router)
+app.include_router(menu.portal_router)
 app.include_router(portal.router)
 
 # Serve uploaded gallery media. The directory lives on a Docker volume

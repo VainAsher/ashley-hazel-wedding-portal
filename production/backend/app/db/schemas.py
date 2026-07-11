@@ -8,7 +8,6 @@ from app.db.models import RsvpStatus, TaskStatus, TaskPriority
 
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-MEAL_CHOICES = {"chicken", "fish", "vegetarian"}
 
 
 class GuestBase(BaseModel):
@@ -24,6 +23,7 @@ class GuestBase(BaseModel):
     plus_one_name: str | None = Field(default=None, max_length=255)
     plus_one_rsvp: RsvpStatus | None = None
     plus_one_dietary: str | None = None
+    plus_one_meal_choice: str | None = Field(default=None, max_length=120)
     table_number: int | None = Field(default=None, ge=1)
     seat_number: int | None = Field(default=None, ge=1)
     notes: str | None = None
@@ -64,6 +64,7 @@ class GuestUpdate(BaseModel):
     plus_one_name: str | None = Field(default=None, max_length=255)
     plus_one_rsvp: RsvpStatus | None = None
     plus_one_dietary: str | None = None
+    plus_one_meal_choice: str | None = Field(default=None, max_length=120)
     table_number: int | None = Field(default=None, ge=1)
     seat_number: int | None = Field(default=None, ge=1)
     notes: str | None = None
@@ -91,22 +92,15 @@ class GuestUpdate(BaseModel):
 
 class GuestRSVPUpdate(BaseModel):
     rsvp_status: RsvpStatus | None = None
+    # Meal fields are only accepted while the wedding's meal_selection_open
+    # switch is on, and must name an active menu option — both enforced in the
+    # RSVP endpoint (they need the DB), not here.
     meal_choice: str | None = Field(default=None, max_length=100)
+    plus_one_meal_choice: str | None = Field(default=None, max_length=120)
     dietary_notes: str | None = Field(default=None, max_length=500)
     plus_one_name: str | None = Field(default=None, max_length=255)
 
-    @field_validator("meal_choice")
-    @classmethod
-    def meal_choice_must_be_supported(cls, value: str | None) -> str | None:
-        if value is None or value == "":
-            return None
-        meal_choice = value.strip().lower()
-        if meal_choice not in MEAL_CHOICES:
-            allowed = ", ".join(sorted(MEAL_CHOICES))
-            raise ValueError(f"Meal choice must be one of: {allowed}")
-        return meal_choice
-
-    @field_validator("dietary_notes", "plus_one_name")
+    @field_validator("meal_choice", "plus_one_meal_choice", "dietary_notes", "plus_one_name")
     @classmethod
     def blank_optional_text_to_none(cls, value: str | None) -> str | None:
         if value is None:
@@ -392,6 +386,7 @@ class WeddingSettingsResponse(BaseModel):
     reception_location: str | None = None
     phase: str
     theme: WeddingTheme | None = None
+    meal_selection_open: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -405,6 +400,8 @@ class WeddingSettingsUpdate(BaseModel):
     phase: str | None = None
     # Explicit null resets the guest site to the built-in defaults.
     theme: WeddingTheme | None = None
+    # Menu builder switch: opens guest meal selection in RSVP.
+    meal_selection_open: bool | None = None
 
     @field_validator("couple_names")
     @classmethod
@@ -844,6 +841,124 @@ class ScheduleEventResponse(BaseModel):
     description: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Menu builder (coordinator CRUD + guest-facing portal menu)
+# ---------------------------------------------------------------------------
+
+
+MENU_COURSES = {"starter", "main", "dessert"}
+
+
+def _validate_course(value: str | None) -> str | None:
+    if value is None or value == "":
+        return None
+    course = value.strip().lower()
+    if course not in MENU_COURSES:
+        allowed = ", ".join(sorted(MENU_COURSES))
+        raise ValueError(f"Course must be one of: {allowed}")
+    return course
+
+
+class MenuOptionCreate(BaseModel):
+    # Name is capped at 100 (not the column's 120) so a chosen option always
+    # fits guests.meal_choice VARCHAR(100).
+    name: str = Field(min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=2000)
+    course: str | None = Field(default=None, max_length=20)
+    is_vegetarian: bool = False
+    is_vegan: bool = False
+    is_gluten_free: bool = False
+    active: bool = True
+
+    @field_validator("name")
+    @classmethod
+    def name_must_not_be_blank(cls, value: str) -> str:
+        name = value.strip()
+        if not name:
+            raise ValueError("Menu option name is required")
+        return name
+
+    @field_validator("description")
+    @classmethod
+    def blank_description_to_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+    @field_validator("course")
+    @classmethod
+    def course_must_be_valid(cls, value: str | None) -> str | None:
+        return _validate_course(value)
+
+
+class MenuOptionUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=2000)
+    course: str | None = Field(default=None, max_length=20)
+    is_vegetarian: bool | None = None
+    is_vegan: bool | None = None
+    is_gluten_free: bool | None = None
+    active: bool | None = None
+
+    @field_validator("name")
+    @classmethod
+    def name_must_not_be_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        name = value.strip()
+        if not name:
+            raise ValueError("Menu option name is required")
+        return name
+
+    @field_validator("description")
+    @classmethod
+    def blank_description_to_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+    @field_validator("course")
+    @classmethod
+    def course_must_be_valid(cls, value: str | None) -> str | None:
+        return _validate_course(value)
+
+
+class MenuOptionResponse(BaseModel):
+    id: int
+    wedding_id: int
+    name: str
+    description: str | None = None
+    course: str | None = None
+    is_vegetarian: bool
+    is_vegan: bool
+    is_gluten_free: bool
+    active: bool
+    created_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PortalMenuOption(BaseModel):
+    id: int
+    name: str
+    description: str | None = None
+    course: str | None = None
+    is_vegetarian: bool
+    is_vegan: bool
+    is_gluten_free: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PortalMenuResponse(BaseModel):
+    # The RSVP page needs both together: the switch decides whether the meal
+    # selects render at all, and the options populate them.
+    meal_selection_open: bool
+    options: list[PortalMenuOption]
 
 
 # ---------------------------------------------------------------------------

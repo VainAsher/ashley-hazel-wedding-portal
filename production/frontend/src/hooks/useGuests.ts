@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export type RsvpStatus = 'pending' | 'accepted' | 'declined' | 'tentative'
+// Legacy fixed meal values used by the coordinator guest form; guest RSVP
+// meal picks store free-form menu option names instead.
 export type MealChoice = 'chicken' | 'fish' | 'vegetarian'
 
 export interface Guest {
@@ -13,11 +15,13 @@ export interface Guest {
   phone: string | null
   relationship: string | null
   rsvp_status: RsvpStatus
-  meal_choice: MealChoice | null
+  // Menu option name (or a legacy fixed value like 'chicken').
+  meal_choice: string | null
   dietary_restrictions: string | null
   plus_one_name: string | null
   plus_one_rsvp: RsvpStatus | null
   plus_one_dietary: string | null
+  plus_one_meal_choice: string | null
   table_number: number | null
   seat_number: number | null
   notes: string | null
@@ -32,11 +36,14 @@ export interface GuestPayload {
   phone: string | null
   relationship: string | null
   rsvp_status: RsvpStatus
-  meal_choice: MealChoice | null
+  // Coordinator edits still offer the legacy fixed values, but existing rows
+  // may hold menu option names picked by guests — keep the type open.
+  meal_choice: string | null
   dietary_restrictions: string | null
   plus_one_name: string | null
   plus_one_rsvp: RsvpStatus | null
   plus_one_dietary: string | null
+  plus_one_meal_choice?: string | null
   table_number: number | null
   seat_number: number | null
   notes: string | null

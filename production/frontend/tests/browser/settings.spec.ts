@@ -8,6 +8,7 @@ interface WeddingSettings {
   ceremony_time: string | null
   ceremony_location: string | null
   reception_location: string | null
+  meal_selection_open: boolean
 }
 
 const initialSettings: WeddingSettings = {
@@ -17,6 +18,7 @@ const initialSettings: WeddingSettings = {
   ceremony_time: '15:30:00',
   ceremony_location: 'Rose Garden',
   reception_location: 'Grand Hall',
+  meal_selection_open: false,
 }
 
 function json(route: Route, body: unknown, status = 200) {
@@ -47,6 +49,13 @@ async function installSettingsApi(page: Page) {
     }
 
     await json(route, { detail: 'Not found' }, 404)
+  })
+
+  // The Menu card (admin-menu.spec.ts covers its behaviour) fetches the
+  // option list on mount; answer with an empty menu so this spec stays
+  // focused on the settings form and theme card.
+  await page.route('**/api/menu', async (route) => {
+    await json(route, [])
   })
 }
 

@@ -30,10 +30,16 @@ const FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'pending', label: 'Pending' },
 ]
 
-const MEAL_LABELS: Record<string, string> = {
+// Meal choices now store menu option names verbatim; this map only dresses up
+// legacy fixed values recorded before the menu builder existed.
+const LEGACY_MEAL_LABELS: Record<string, string> = {
   chicken: 'Chicken',
   fish: 'Fish',
   vegetarian: 'Vegetarian',
+}
+
+function mealLabel(value: string): string {
+  return LEGACY_MEAL_LABELS[value] ?? value
 }
 
 const STATUS_VARIANT: Record<RsvpStatus, BadgeProps['variant']> = {
@@ -76,8 +82,13 @@ export function RsvpAdmin() {
         pending += 1
       }
 
+      // Count whatever values exist in the data — guest and plus-one picks —
+      // so the caterer's breakdown follows the couple's actual menu.
       if (guest.meal_choice) {
         meals[guest.meal_choice] = (meals[guest.meal_choice] ?? 0) + 1
+      }
+      if (guest.plus_one_meal_choice) {
+        meals[guest.plus_one_meal_choice] = (meals[guest.plus_one_meal_choice] ?? 0) + 1
       }
     }
 
@@ -157,7 +168,7 @@ export function RsvpAdmin() {
                   <ul className="mt-2 grid gap-1 sm:grid-cols-3">
                     {mealEntries.map(([meal, count]) => (
                       <li key={meal} className="text-sm text-gray-700">
-                        {MEAL_LABELS[meal] ?? meal}: {count}
+                        {mealLabel(meal)}: {count}
                       </li>
                     ))}
                   </ul>
@@ -219,9 +230,7 @@ export function RsvpAdmin() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {guest.meal_choice
-                            ? (MEAL_LABELS[guest.meal_choice] ?? guest.meal_choice)
-                            : '-'}
+                          {guest.meal_choice ? mealLabel(guest.meal_choice) : '-'}
                         </TableCell>
                         <TableCell>{dietaryNotes(guest)}</TableCell>
                         <TableCell>{displayValue(guest.plus_one_name)}</TableCell>

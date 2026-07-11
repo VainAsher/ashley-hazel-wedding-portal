@@ -17,6 +17,7 @@ interface Guest {
   plus_one_name: string | null
   plus_one_rsvp: RsvpStatus | null
   plus_one_dietary: string | null
+  plus_one_meal_choice: string | null
   table_number: number | null
   seat_number: number | null
   notes: string | null
@@ -27,8 +28,49 @@ interface Guest {
 interface PatchRequestRecord {
   rsvp_status?: RsvpStatus
   meal_choice?: string | null
+  plus_one_meal_choice?: string | null
   dietary_notes?: string | null
   plus_one_name?: string | null
+}
+
+interface PortalMenuOption {
+  id: number
+  name: string
+  description: string | null
+  course: string | null
+  is_vegetarian: boolean
+  is_vegan: boolean
+  is_gluten_free: boolean
+}
+
+interface PortalMenu {
+  meal_selection_open: boolean
+  options: PortalMenuOption[]
+}
+
+// Default: meal selection closed — today's dietary-only behaviour.
+const closedMenu: PortalMenu = { meal_selection_open: false, options: [] }
+
+function menuOption(
+  partial: Partial<PortalMenuOption> & Pick<PortalMenuOption, 'id' | 'name'>,
+): PortalMenuOption {
+  return {
+    description: null,
+    course: null,
+    is_vegetarian: false,
+    is_vegan: false,
+    is_gluten_free: false,
+    ...partial,
+  }
+}
+
+const openMenu: PortalMenu = {
+  meal_selection_open: true,
+  options: [
+    menuOption({ id: 1, name: 'Herb Roast Chicken' }),
+    menuOption({ id: 2, name: 'Wild Mushroom Wellington', is_vegetarian: true, is_vegan: true }),
+    menuOption({ id: 3, name: 'Grilled Sea Bass', is_gluten_free: true }),
+  ],
 }
 
 const currentUser = {
@@ -54,6 +96,7 @@ const initialGuest: Guest = {
   plus_one_name: 'Demo Plus One',
   plus_one_rsvp: null,
   plus_one_dietary: null,
+  plus_one_meal_choice: null,
   table_number: null,
   seat_number: null,
   notes: null,
@@ -84,6 +127,7 @@ async function installRsvpApi(
   page: Page,
   options: {
     guest?: Guest
+    menu?: PortalMenu
     patchStatus?: number
     patchDetail?: string
     requests?: PatchRequestRecord[]
@@ -93,6 +137,10 @@ async function installRsvpApi(
 
   await page.route('**/api/auth/me', async (route) => {
     await json(route, currentUser)
+  })
+
+  await page.route('**/api/portal/menu', async (route) => {
+    await json(route, options.menu ?? closedMenu)
   })
 
   await page.route(/\/api\/guests\/10$/, async (route) => {
@@ -251,4 +299,88 @@ test('hides dietary section when not accepting invitation', async ({ page }) => 
   // Change back to accepted - the dietary section should reappear
   await page.getByLabel('Accept').check()
   await expect(page.getByLabel('Dietary requirements')).toBeVisible()
+})
+
+test('hides meal selects while meal selection is closed', async ({ page }) => {
+  // Default mock menu is closed — this is today's behaviour and must stay.
+  await installRsvpApi(page)
+
+  await page.goto('/rsvp')
+
+  await expect(page.getByLabel('Dietary requirements')).toBeVisible()
+  await expect(page.getByLabel('Your meal')).toHaveCount(0)
+  await expect(page.getByLabel('Plus one meal')).toHaveCount(0)
+  // The "opens nearer the day" copy stays while the menu is closed.
+  await expect(page.getByText('Menu choices open nearer the day', { exact: false })).toBeVisible()
+})
+
+test('shows meal selects when meal selection is open', async ({ page }) => {
+  await installRsvpApi(page, { menu: openMenu })
+
+  await page.goto('/rsvp')
+
+  await expect(page.getByLabel('Your meal')).toBeVisible()
+  // Plus-one select appears because the guest has a plus one named.
+  await expect(page.getByLabel('Plus one meal')).toBeVisible()
+  await expect(page.getByText('Menu choices open nearer the day', { exact: false })).not.toBeVisible()
+
+  // The select is populated from the portal menu.
+  await page.getByLabel('Your meal').click()
+  for (const name of ['Herb Roast Chicken', 'Wild Mushroom Wellington', 'Grilled Sea Bass']) {
+    await expect(page.getByRole('option', { name })).toBeVisible()
+  }
+  await page.keyboard.press('Escape')
+})
+
+test('hides the plus-one meal select when no plus one is named', async ({ page }) => {
+  await installRsvpApi(page, {
+    guest: { ...initialGuest, plus_one_name: null },
+    menu: openMenu,
+  })
+
+  await page.goto('/rsvp')
+
+  await expect(page.getByLabel('Your meal')).toBeVisible()
+  await expect(page.getByLabel('Plus one meal')).toHaveCount(0)
+})
+
+test('submits meal choices for guest and plus one while open', async ({ page }) => {
+  const requests: PatchRequestRecord[] = []
+  await installRsvpApi(page, {
+    guest: {
+      ...initialGuest,
+      rsvp_status: 'pending',
+      meal_choice: null,
+      dietary_notes: null,
+      plus_one_name: 'Demo Plus One',
+      plus_one_meal_choice: null,
+    },
+    menu: openMenu,
+    requests,
+  })
+
+  await page.goto('/rsvp')
+
+  await page.getByLabel('Accept').check()
+
+  await page.getByLabel('Your meal').click()
+  await page.getByRole('option', { name: 'Herb Roast Chicken' }).click()
+
+  await page.getByLabel('Plus one meal').click()
+  await page.getByRole('option', { name: 'Wild Mushroom Wellington' }).click()
+
+  await page.getByLabel('Dietary requirements').fill('No nuts')
+
+  await page.getByRole('button', { name: 'Save RSVP' }).click()
+  await expect(page.locator('[role="alert"]').filter({ hasText: 'RSVP saved.' })).toBeVisible({ timeout: 5000 })
+
+  expect(requests).toEqual([
+    {
+      rsvp_status: 'accepted',
+      dietary_notes: 'No nuts',
+      plus_one_name: 'Demo Plus One',
+      meal_choice: 'Herb Roast Chicken',
+      plus_one_meal_choice: 'Wild Mushroom Wellington',
+    },
+  ])
 })

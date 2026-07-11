@@ -60,6 +60,7 @@ class TestWeddingSettings:
             "reception_location",
             "phase",
             "theme",
+            "meal_selection_open",
         }
 
     def test_put_updates_and_persists(
