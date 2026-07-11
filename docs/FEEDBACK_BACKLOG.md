@@ -78,11 +78,12 @@ Add a row to the right table. Keep it short. Use:
 - ~~**No guest-data export/delete button.**~~ *2026-07-11: done, live in prod —
   per-row Export + "Export all guests (CSV)" (RFC-4180 client-side) beside the
   existing Delete/confirm flow on admin Guests.*
-- ~~**Backups are manual.**~~ *2026-07-11: nightly 03:00 cron installed on `.32`
-  (`backup.sh` → `/home/deploy/wedding-prod-backups`, 14-day retention); first
-  dump taken and content-verified (all 20 tables). Restore drill still to run
-  (`restore.sh <dump>` → throwaway `wedding_restore_test`); offsite-to-NAS
-  still waits on the NAS resize.*
+- ~~**Backups are manual.**~~ *2026-07-11: done — nightly 03:00 cron installed on
+  `.32` (`backup.sh` → `/home/deploy/wedding-prod-backups`, 14-day retention);
+  first dump taken, and the restore drill PASSED: restored into the throwaway
+  `wedding_restore_test`, row counts matched live exactly (78 guests / 85
+  photos / 11 invites / 2 songs), throwaway dropped. Offsite-to-NAS still
+  waits on the NAS resize.*
 - ~~**Bootstrap parity.**~~ *2026-07-11: done, live in prod — `bootstrap_prod.py`
   now detects re-runs (via the invites it creates) and preserves the live
   `phase` instead of resetting it to planning.*
