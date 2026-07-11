@@ -5,9 +5,10 @@ import { Mail } from 'lucide-react'
  * Save-The-Date envelope reveal (ROADMAP Wave 1 item 5).
  *
  * On first visit per browser session the invite page renders as a closed
- * plum envelope with the prototype's cat wax seal. Tapping it (or waiting
- * ~2.5s) lifts the flap, the invitation card rises in behind it, and a
- * one-shot confetti sprinkle in the prototype palette falls over the page.
+ * plum envelope with the prototype's cat wax seal. It stays sealed until the
+ * guest taps it; then the flap lifts, the invitation card grows out from the
+ * envelope, and a one-shot confetti sprinkle in the prototype palette falls
+ * over the page.
  *
  * - `prefers-reduced-motion: reduce` skips straight to the open card.
  * - A sessionStorage flag makes it play once per session; a tiny envelope
@@ -18,7 +19,6 @@ import { Mail } from 'lucide-react'
 
 export const ENVELOPE_SESSION_KEY = 'ah-envelope-opened'
 
-const AUTO_OPEN_MS = 2500
 const OPEN_SETTLE_MS = 1200
 const CONFETTI_DELAY_MS = 450
 const CONFETTI_DURATION_MS = 2000
@@ -195,13 +195,6 @@ export function EnvelopeReveal({ children }: EnvelopeRevealProps) {
     )
   }, [])
 
-  // Untouched envelopes open themselves after a moment.
-  useEffect(() => {
-    if (phase !== 'closed') return
-    const timer = window.setTimeout(open, AUTO_OPEN_MS)
-    return () => window.clearTimeout(timer)
-  }, [phase, open])
-
   const replay = useCallback(() => {
     setConfetti(false)
     setPhase('closed')
@@ -213,14 +206,15 @@ export function EnvelopeReveal({ children }: EnvelopeRevealProps) {
     <>
       <style>{`
         @keyframes env-card-enter {
-          from { opacity: 0; transform: translateY(26px) scale(0.985); }
+          from { opacity: 0; transform: translateY(90px) scale(0.68); }
+          60% { opacity: 1; }
           to { opacity: 1; transform: translateY(0) scale(1); }
         }
         @keyframes env-hint-pulse {
           0%, 100% { opacity: 0.65; }
           50% { opacity: 1; }
         }
-        .env-card-enter { animation: env-card-enter 700ms ease-out 300ms both; }
+        .env-card-enter { animation: env-card-enter 900ms cubic-bezier(0.22, 1, 0.36, 1) 250ms both; }
         .env-hint { animation: env-hint-pulse 2.2s ease-in-out infinite; }
         .env-flap {
           clip-path: polygon(0 0, 100% 0, 50% 96%);
@@ -253,7 +247,7 @@ export function EnvelopeReveal({ children }: EnvelopeRevealProps) {
         >
           <button
             aria-label="Open your invitation"
-            className="relative block w-full max-w-[330px] cursor-pointer border-0 bg-transparent p-0 text-left outline-none focus-visible:ring-4 focus-visible:ring-gold/80"
+            className="relative block w-full max-w-[520px] cursor-pointer border-0 bg-transparent p-0 text-left outline-none focus-visible:ring-4 focus-visible:ring-gold/80"
             onClick={open}
             type="button"
           >
@@ -298,7 +292,7 @@ export function EnvelopeReveal({ children }: EnvelopeRevealProps) {
 
                 {/* Cat wax seal at the flap tip (fades as the flap lifts) */}
                 <span
-                  className={`absolute left-1/2 top-[56%] block h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-b from-[#ffe9a8] to-gold p-[5px] shadow-[0_6px_16px_rgba(0,0,0,0.45)] transition-all duration-300 ${
+                  className={`absolute left-1/2 top-[56%] block h-20 w-20 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-b from-[#ffe9a8] to-gold p-[5px] shadow-[0_6px_16px_rgba(0,0,0,0.45)] transition-all duration-300 ${
                     phase === 'opening' ? 'scale-50 opacity-0' : 'scale-100 opacity-100'
                   }`}
                 >

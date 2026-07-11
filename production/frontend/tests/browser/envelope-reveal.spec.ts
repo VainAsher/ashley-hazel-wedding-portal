@@ -34,11 +34,12 @@ const inviteHeading = (page: Page) =>
   page.getByRole('heading', { name: 'Enter Invite Code' })
 
 test.describe('reduced motion', () => {
-  test.use({ reducedMotion: 'reduce' })
-
   test('renders the open invitation immediately with no envelope or confetti', async ({
     page,
   }) => {
+    // NOTE: the context-level `test.use({ reducedMotion })` option does not
+    // reach the page in this Playwright setup; the programmatic API does.
+    await page.emulateMedia({ reducedMotion: 'reduce' })
     await mockQuietBackend(page)
 
     await page.goto('/invite')
@@ -94,7 +95,7 @@ test('second visit in the same session skips the envelope', async ({ page }) => 
   await expect(envelope(page)).toHaveCount(0)
 })
 
-test('replay affordance reseals the envelope and it auto-opens untouched', async ({
+test('replay affordance reseals the envelope, which stays sealed until tapped', async ({
   page,
 }) => {
   await mockQuietBackend(page)
@@ -113,7 +114,12 @@ test('replay affordance reseals the envelope and it auto-opens untouched', async
   await expect(envelope(page)).toBeVisible()
   await expect(inviteHeading(page)).toHaveCount(0)
 
-  // Left untouched, the envelope opens itself after ~2.5s.
-  await expect(inviteHeading(page)).toBeVisible({ timeout: 6000 })
-  await expect(envelope(page)).toHaveCount(0)
+  // No auto-open: left untouched, the envelope stays sealed.
+  await page.waitForTimeout(3000)
+  await expect(envelope(page)).toBeVisible()
+  await expect(inviteHeading(page)).toHaveCount(0)
+
+  // Only a tap opens it.
+  await envelope(page).click()
+  await expect(inviteHeading(page)).toBeVisible()
 })
