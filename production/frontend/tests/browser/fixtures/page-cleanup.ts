@@ -40,6 +40,17 @@ export async function cleanupPageState(page: Page): Promise<void> {
       }),
     )
 
+    // The notifications bell (guest + admin headers) fetches this on every
+    // page. Default to "no notifications" so specs stay console-error-free;
+    // notification specs register their own route later, which wins.
+    await page.route('**/api/notifications', (route) =>
+      route.fulfill({
+        body: JSON.stringify({ items: [], unread_count: 0 }),
+        contentType: 'application/json',
+        status: 200,
+      }),
+    )
+
     // Clear cookies and local storage
     await page.context().clearCookies()
     await page.evaluate(() => {

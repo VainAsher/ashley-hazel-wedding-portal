@@ -282,18 +282,20 @@ test('shows empty state after deleting the only message', async ({ page }) => {
   await expect(mainRegion(page).getByText('0 messages')).toBeVisible()
 })
 
-test('marks a draft message as sent', async ({ page }) => {
+test('sends a draft message to member dashboards', async ({ page }) => {
   await page.goto('/admin/communications')
 
   const row = page.getByRole('row', { name: /Existing Announcement/ })
   await expect(row.getByText('Draft', { exact: true })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Mark Existing Announcement as sent' }).click()
+  await page.getByRole('button', { name: 'Send Existing Announcement' }).click()
 
-  await expect(page.getByRole('status')).toHaveText('Message marked as sent.')
+  await expect(page.getByRole('status')).toHaveText(
+    'Message sent — delivered to member dashboards in-app.',
+  )
   await expect(row.getByText('Sent', { exact: true })).toBeVisible()
   await expect(
-    page.getByRole('button', { name: 'Mark Existing Announcement as sent' }),
+    page.getByRole('button', { name: 'Send Existing Announcement' }),
   ).not.toBeVisible()
 })
 
@@ -335,9 +337,11 @@ test('completes add, edit, mark-sent, and delete flow', async ({ page }) => {
   const row = page.getByRole('row', { name: /E2E Notice/ })
   await expect(row.getByRole('cell', { name: 'Declined', exact: true })).toBeVisible()
 
-  // Mark sent
-  await page.getByRole('button', { name: 'Mark E2E Notice as sent' }).click()
-  await expect(page.getByRole('status')).toHaveText('Message marked as sent.')
+  // Send
+  await page.getByRole('button', { name: 'Send E2E Notice' }).click()
+  await expect(page.getByRole('status')).toHaveText(
+    'Message sent — delivered to member dashboards in-app.',
+  )
   await expect(row.getByText('Sent', { exact: true })).toBeVisible()
 
   // Delete

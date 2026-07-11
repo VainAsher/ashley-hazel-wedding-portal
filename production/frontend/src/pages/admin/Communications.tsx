@@ -53,11 +53,18 @@ const CHANNEL_OPTIONS: { value: CommunicationChannel; label: string }[] = [
   { value: 'announcement', label: 'Announcement' },
 ]
 
+// Party audiences (wedding party / stags / hens) are selectable now but reach
+// nobody until the Wave 3 party flags land on invites.
 const AUDIENCE_OPTIONS: { value: CommunicationAudience; label: string }[] = [
-  { value: 'all', label: 'All' },
+  { value: 'all', label: 'All members' },
+  { value: 'guests', label: 'Guests' },
+  { value: 'coordinators', label: 'Coordinators' },
   { value: 'attending', label: 'Attending' },
   { value: 'pending', label: 'Pending' },
   { value: 'declined', label: 'Declined' },
+  { value: 'wedding_party', label: 'Wedding party' },
+  { value: 'stags', label: 'Stags' },
+  { value: 'hens', label: 'Hens' },
 ]
 
 const STATUS_OPTIONS: { value: CommunicationStatus; label: string }[] = [
@@ -74,10 +81,15 @@ const CHANNEL_LABELS: Record<CommunicationChannel, string> = {
 }
 
 const AUDIENCE_LABELS: Record<CommunicationAudience, string> = {
-  all: 'All',
+  all: 'All members',
+  guests: 'Guests',
+  coordinators: 'Coordinators',
   attending: 'Attending',
   pending: 'Pending',
   declined: 'Declined',
+  wedding_party: 'Wedding party',
+  stags: 'Stags',
+  hens: 'Hens',
 }
 
 const STATUS_VARIANT: Record<CommunicationStatus, BadgeProps['variant']> = {
@@ -288,7 +300,7 @@ export function Communications() {
 
     try {
       await sendMutation.mutateAsync(message.id)
-      setFeedback('Message marked as sent.')
+      setFeedback('Message sent — delivered to member dashboards in-app.')
     } catch (err) {
       setActionError(
         err instanceof CommunicationApiError ? err.message : 'Failed to send message',
@@ -400,11 +412,11 @@ export function Communications() {
                             type="button"
                             variant="outline"
                             size="sm"
-                            aria-label={`Mark ${message.subject} as sent`}
+                            aria-label={`Send ${message.subject}`}
                             disabled={sendMutation.isPending}
                             onClick={() => void handleSend(message)}
                           >
-                            Mark sent
+                            Send
                           </Button>
                         )}
                         <Button
@@ -508,6 +520,11 @@ export function Communications() {
                 </Select>
               </div>
             </div>
+
+            <p className="text-xs text-gray-500 m-0">
+              Sending delivers this message to member dashboards in-app. External
+              channels (email, WhatsApp, SMS) are not connected yet.
+            </p>
 
             <div className="grid gap-2">
               <Label htmlFor="comm-status">Status</Label>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { useAuth } from '../contexts/AuthContext'
 import { GuestLayout } from '../components/GuestLayout'
+import { NotificationsCard } from '../components/NotificationsCard'
 import { OnboardingChecklist } from '../components/OnboardingChecklist'
 import { Alert } from '../components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
@@ -231,6 +232,8 @@ export function Dashboard() {
             <KeyDetails wedding={wedding} />
           </>
         )}
+
+        <NotificationsCard />
 
         <OnboardingChecklist />
 

@@ -562,7 +562,20 @@ class EventResponse(BaseModel):
 
 
 COMMUNICATION_CHANNELS = {"email", "whatsapp", "sms", "announcement"}
-COMMUNICATION_AUDIENCES = {"all", "attending", "pending", "declined"}
+# Member-group audiences (guests/coordinators match invite roles today;
+# wedding_party/stags/hens ship ahead of the Wave 3 party flags and match no
+# invites yet) plus the original RSVP-based audiences.
+COMMUNICATION_AUDIENCES = {
+    "all",
+    "attending",
+    "pending",
+    "declined",
+    "guests",
+    "coordinators",
+    "wedding_party",
+    "stags",
+    "hens",
+}
 COMMUNICATION_STATUSES = {"draft", "scheduled", "sent"}
 
 
@@ -969,3 +982,31 @@ class FeedbackResponse(BaseModel):
     created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+
+
+NOTIFICATION_KINDS = {"communication", "mention", "system"}
+
+
+class NotificationResponse(BaseModel):
+    id: int
+    wedding_id: int
+    kind: str
+    title: str
+    body: str | None = None
+    link_path: str | None = None
+    created_at: datetime | None = None
+    read_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NotificationListResponse(BaseModel):
+    """Wrapper so the bell gets its unread badge in the same round trip."""
+
+    items: list[NotificationResponse]
+    unread_count: int
