@@ -251,7 +251,7 @@ export function Timeline() {
       title="Timeline"
       breadcrumb={[{ label: 'Dashboard', href: '/admin' }, { label: 'Timeline' }]}
     >
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <section className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-semibold text-gray-900 m-0">Task board</h2>

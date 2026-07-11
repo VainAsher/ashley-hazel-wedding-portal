@@ -97,10 +97,26 @@ test('shows quick links to the other portal pages', async ({ page }) => {
     'href',
     '/blessings',
   )
+  await expect(quickLinks.getByRole('link', { name: /Dancefloor/ })).toHaveAttribute(
+    'href',
+    '/music',
+  )
   await expect(quickLinks.getByRole('link', { name: /Gallery/ })).toHaveAttribute(
     'href',
     '/gallery',
   )
+})
+
+test('every guest page is reachable from the header nav', async ({ page }) => {
+  await installPortalApi(page, { ...wedding })
+  await page.goto('/dashboard')
+
+  // The nav must never hide entries at any viewport (it previously clipped
+  // Dancefloor + Gallery behind an overflow scroller on phones).
+  const nav = page.getByRole('navigation', { name: 'Guest pages' })
+  for (const label of ['Dashboard', 'RSVP', 'Schedule', 'Blessings', 'Dancefloor', 'Gallery']) {
+    await expect(nav.getByRole('link', { name: label })).toBeInViewport()
+  }
 })
 
 test('shows a skeleton while the wedding details load', async ({ page }) => {

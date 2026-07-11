@@ -46,6 +46,11 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
       const res = await fetch(`/api/invites?wedding_id=${weddingId}`, {
         credentials: 'include',
       })
+      if (res.status === 403) {
+        throw new Error(
+          'Only the couple can view and manage invitation codes.',
+        )
+      }
       if (!res.ok) throw new Error('Failed to load invites')
       const data = await res.json()
       setInvites(data)

@@ -85,8 +85,10 @@ export function GuestLayout({ children }: GuestLayoutProps) {
           </div>
 
           {/* Navigation */}
+          {/* Wraps onto a second row on narrow screens so every page stays
+              reachable (an overflow scroller hid Dancefloor + Gallery). */}
           <nav aria-label="Guest pages" className="-mb-px">
-            <div className="flex space-x-8 overflow-x-auto">
+            <div className="flex flex-wrap gap-x-6 sm:gap-x-8">
               {navigationItems.map((item) => (
                 <NavLink
                   key={item.href}

@@ -57,7 +57,7 @@ export function Invitations() {
       title="Invitations"
       breadcrumb={[{ label: 'Dashboard', href: '/admin' }, { label: 'Invitations' }]}
     >
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <section>
           <h2 className="text-xl font-semibold text-gray-900 m-0">Invitations</h2>
           <p className="text-sm text-gray-600 m-0 mt-1">

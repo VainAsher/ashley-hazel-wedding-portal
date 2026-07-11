@@ -11,10 +11,12 @@ interface AdminLayoutProps {
   title?: string
 }
 
+// coupleOnly entries are hidden from coordinators — their backing APIs
+// (e.g. /api/invites) are require_couple, so the pages would only error.
 const adminMenuItems = [
   { label: 'Dashboard', href: '/admin', icon: '📊' },
   { label: 'Guests', href: '/guests', icon: '👥' },
-  { label: 'Invitations', href: '/admin/invitations', icon: '📧' },
+  { label: 'Invitations', href: '/admin/invitations', icon: '📧', coupleOnly: true },
   { label: 'RSVP', href: '/admin/rsvp', icon: '✅' },
   { label: 'Budget', href: '/admin/budget', icon: '💰' },
   { label: 'Events', href: '/admin/events', icon: '📅' },
@@ -45,8 +47,11 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
   }, [mobileNavOpen])
 
   // Shared nav links, reused by the desktop sidebar and the mobile drawer.
+  const visibleMenuItems = adminMenuItems.filter(
+    (item) => !item.coupleOnly || user?.role === 'couple',
+  )
   const navLinks = (opts: { showLabels: boolean; onNavigate?: () => void }) =>
-    adminMenuItems.map((item) => (
+    visibleMenuItems.map((item) => (
       <Link
         key={item.href}
         to={item.href}

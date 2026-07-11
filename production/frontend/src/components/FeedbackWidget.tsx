@@ -91,15 +91,18 @@ export function FeedbackWidget() {
 
   return (
     <>
+      {/* Icon-only on phones: the full pill covered footer links and
+          right-aligned submit buttons at narrow widths. */}
       <button
         type="button"
+        aria-label="Send feedback"
         onClick={() => handleOpenChange(true)}
-        className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-plum-night/95 px-4 py-2.5 text-sm font-medium text-cream shadow-lg ring-1 ring-gold/60 backdrop-blur transition-colors hover:bg-plum hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold"
+        className="fixed bottom-4 right-4 z-40 inline-flex items-center gap-2 rounded-full bg-plum-night/95 p-3 text-sm font-medium text-cream shadow-lg ring-1 ring-gold/60 backdrop-blur transition-colors hover:bg-plum hover:text-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-gold sm:px-4 sm:py-2.5"
       >
         <span aria-hidden="true" className="text-base leading-none">
           💬
         </span>
-        Feedback
+        <span className="hidden sm:inline">Feedback</span>
       </button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>

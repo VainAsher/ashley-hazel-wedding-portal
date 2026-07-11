@@ -311,7 +311,7 @@ export function Settings() {
       title="Settings"
       breadcrumb={[{ label: 'Dashboard', href: '/admin' }, { label: 'Settings' }]}
     >
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <section>
           <h2 className="text-xl font-semibold text-gray-900 m-0">Wedding Settings</h2>
           <p className="text-sm text-gray-600 m-0 mt-1">
