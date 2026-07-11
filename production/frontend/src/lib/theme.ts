@@ -6,12 +6,154 @@ export interface WeddingTheme {
   primary: string
   secondary: string
   tint_opacity: number
+  display_font: string
+  body_font: string
+  type_scale: number
 }
+
+// ---------------------------------------------------------------------------
+// Typography dials — the single frontend source of truth. The backend mirrors
+// these allowlists in app/db/schemas.py (THEME_DISPLAY_FONTS /
+// THEME_BODY_FONTS); keep both in sync. First entry is the default.
+// ---------------------------------------------------------------------------
+
+export interface FontOption {
+  /** Canonical name stored in the theme (must match the backend allowlist). */
+  value: string
+  /** Full CSS font-family stack applied via the CSS custom property. */
+  stack: string
+  /** Google Fonts css2 family spec — absent for defaults that ship with the
+   * site so the out-of-the-box theme loads no extra stylesheet. */
+  google?: string
+}
+
+export const THEME_DISPLAY_FONTS: FontOption[] = [
+  { value: 'Georgia', stack: 'Georgia, "Times New Roman", serif' },
+  {
+    value: 'Playfair Display',
+    stack: '"Playfair Display", Georgia, serif',
+    google: 'Playfair+Display:wght@400;600;700',
+  },
+  {
+    value: 'Cormorant Garamond',
+    stack: '"Cormorant Garamond", Georgia, serif',
+    google: 'Cormorant+Garamond:wght@400;600;700',
+  },
+  {
+    value: 'EB Garamond',
+    stack: '"EB Garamond", Georgia, serif',
+    google: 'EB+Garamond:wght@400;600;700',
+  },
+  {
+    value: 'Libre Baskerville',
+    stack: '"Libre Baskerville", Georgia, serif',
+    google: 'Libre+Baskerville:wght@400;700',
+  },
+  { value: 'Lora', stack: 'Lora, Georgia, serif', google: 'Lora:wght@400;600;700' },
+  { value: 'Marcellus', stack: 'Marcellus, Georgia, serif', google: 'Marcellus' },
+  { value: 'Great Vibes', stack: '"Great Vibes", Georgia, cursive', google: 'Great+Vibes' },
+]
+
+export const THEME_BODY_FONTS: FontOption[] = [
+  // Inter is already bundled via global.css — the site default costs nothing.
+  { value: 'Inter', stack: 'Inter, system-ui, sans-serif' },
+  {
+    value: 'Source Sans 3',
+    stack: '"Source Sans 3", Inter, system-ui, sans-serif',
+    google: 'Source+Sans+3:wght@400;600;700',
+  },
+  {
+    value: 'Nunito Sans',
+    stack: '"Nunito Sans", Inter, system-ui, sans-serif',
+    google: 'Nunito+Sans:wght@400;600;700',
+  },
+  {
+    value: 'Karla',
+    stack: 'Karla, Inter, system-ui, sans-serif',
+    google: 'Karla:wght@400;600;700',
+  },
+  {
+    value: 'Mulish',
+    stack: 'Mulish, Inter, system-ui, sans-serif',
+    google: 'Mulish:wght@400;600;700',
+  },
+]
+
+export const THEME_TYPE_SCALES = [0.9, 1.0, 1.1] as const
 
 export const DEFAULT_THEME: WeddingTheme = {
   primary: '#f6c445',
   secondary: '#2b064d',
   tint_opacity: 0.9,
+  display_font: THEME_DISPLAY_FONTS[0].value,
+  body_font: THEME_BODY_FONTS[0].value,
+  type_scale: 1.0,
+}
+
+export function findDisplayFont(value: string | undefined): FontOption {
+  return THEME_DISPLAY_FONTS.find((font) => font.value === value) ?? THEME_DISPLAY_FONTS[0]
+}
+
+export function findBodyFont(value: string | undefined): FontOption {
+  return THEME_BODY_FONTS.find((font) => font.value === value) ?? THEME_BODY_FONTS[0]
+}
+
+const THEME_FONTS_LINK_ID = 'ah-theme-fonts'
+const FONT_PREVIEW_LINK_ID = 'ah-theme-fonts-preview'
+
+export function buildGoogleFontsHref(specs: string[]): string {
+  const families = specs.map((spec) => `family=${spec}`).join('&')
+  return `https://fonts.googleapis.com/css2?${families}&display=swap`
+}
+
+/**
+ * Keep a single Google Fonts <link> in sync with the theme's font choices.
+ * Defaults (Georgia + Inter) need nothing from Google, so the link is removed
+ * entirely and the site stays dependency-free out of the box.
+ */
+function syncGoogleFontsLink(fonts: FontOption[]): void {
+  const specs = fonts.map((font) => font.google).filter((spec): spec is string => Boolean(spec))
+  const existing = document.getElementById(THEME_FONTS_LINK_ID)
+
+  if (specs.length === 0) {
+    existing?.remove()
+    return
+  }
+
+  const href = buildGoogleFontsHref(specs)
+  if (existing instanceof HTMLLinkElement) {
+    if (existing.href !== href) {
+      existing.href = href
+    }
+    return
+  }
+
+  const link = document.createElement('link')
+  link.id = THEME_FONTS_LINK_ID
+  link.rel = 'stylesheet'
+  link.href = href
+  document.head.appendChild(link)
+}
+
+/**
+ * Load every allowlisted Google family once, so the admin font pickers can
+ * render each option (and the live preview) in its real face. Admin-only —
+ * the guest site never calls this.
+ */
+export function ensureFontPreviewStylesheet(): void {
+  if (document.getElementById(FONT_PREVIEW_LINK_ID)) {
+    return
+  }
+
+  const specs = [...THEME_DISPLAY_FONTS, ...THEME_BODY_FONTS]
+    .map((font) => font.google)
+    .filter((spec): spec is string => Boolean(spec))
+
+  const link = document.createElement('link')
+  link.id = FONT_PREVIEW_LINK_ID
+  link.rel = 'stylesheet'
+  link.href = buildGoogleFontsHref(specs)
+  document.head.appendChild(link)
 }
 
 interface Hsl {
@@ -105,4 +247,16 @@ export function applyTheme(theme: WeddingTheme): void {
     '--theme-plum-night',
     triplet({ h: secondary.h, s: secondary.s, l: Math.max(Math.round(secondary.l * 0.4), 3) }),
   )
+
+  // Typography dials. Older stored themes may predate these keys — fall back
+  // to the defaults (first allowlist entry) so the site always has a stack.
+  const displayFont = findDisplayFont(theme.display_font)
+  const bodyFont = findBodyFont(theme.body_font)
+  root.style.setProperty('--font-display', displayFont.stack)
+  root.style.setProperty('--font-sans', bodyFont.stack)
+
+  const typeScale = theme.type_scale ?? 1.0
+  root.style.fontSize = typeScale === 1.0 ? '' : `${Math.round(typeScale * 100)}%`
+
+  syncGoogleFontsLink([displayFont, bodyFont])
 }

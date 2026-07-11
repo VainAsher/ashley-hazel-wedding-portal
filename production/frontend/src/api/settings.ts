@@ -6,6 +6,9 @@ export interface WeddingThemeSettings {
   primary: string
   secondary: string
   tint_opacity: number
+  display_font: string
+  body_font: string
+  type_scale: number
 }
 
 export interface WeddingSettings {
