@@ -19,6 +19,10 @@ import { Mail } from 'lucide-react'
 
 export const ENVELOPE_SESSION_KEY = 'ah-envelope-opened'
 
+// The envelope is drawn this much larger than the revealed card on every
+// side, so the card always plausibly fits inside it.
+const ENVELOPE_EXCESS = 48
+
 const OPEN_SETTLE_MS = 1200
 const CONFETTI_DELAY_MS = 450
 const CONFETTI_DURATION_MS = 2000
@@ -173,7 +177,30 @@ export function EnvelopeReveal({ children }: EnvelopeRevealProps) {
     prefersReducedMotion() || hasOpenedThisSession() ? 'open' : 'closed',
   )
   const [confetti, setConfetti] = useState(false)
+  const [cardSize, setCardSize] = useState<{ width: number; height: number } | null>(
+    null,
+  )
+  const cardWrapRef = useRef<HTMLDivElement | null>(null)
   const timersRef = useRef<number[]>([])
+
+  // While sealed, the card renders invisibly underneath the overlay so it can
+  // be measured — the envelope is then drawn ENVELOPE_EXCESS larger than it.
+  useEffect(() => {
+    if (phase !== 'closed') return
+    const wrapper = cardWrapRef.current
+    if (!wrapper) return
+    const card = wrapper.querySelector('[data-envelope-card]') ?? wrapper
+    const measure = () => {
+      const rect = card.getBoundingClientRect()
+      if (rect.width > 0 && rect.height > 0) {
+        setCardSize({ width: rect.width, height: rect.height })
+      }
+    }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(card)
+    return () => observer.disconnect()
+  }, [phase])
 
   useEffect(() => {
     const timers = timersRef.current
@@ -229,10 +256,20 @@ export function EnvelopeReveal({ children }: EnvelopeRevealProps) {
         }
       `}</style>
 
-      {/* The invitation card. Hidden entirely while the envelope is sealed. */}
-      {phase !== 'closed' && (
-        <div className={phase === 'opening' ? 'env-card-enter' : undefined}>{children}</div>
-      )}
+      {/* The invitation card. Rendered invisibly (for measuring) while sealed. */}
+      <div
+        aria-hidden={phase === 'closed' || undefined}
+        className={
+          phase === 'closed'
+            ? 'invisible'
+            : phase === 'opening'
+              ? 'env-card-enter'
+              : undefined
+        }
+        ref={cardWrapRef}
+      >
+        {children}
+      </div>
 
       {/* Sealed envelope overlay */}
       {revealing && (
@@ -247,7 +284,7 @@ export function EnvelopeReveal({ children }: EnvelopeRevealProps) {
         >
           <button
             aria-label="Open your invitation"
-            className="relative block w-full max-w-[520px] cursor-pointer border-0 bg-transparent p-0 text-left outline-none focus-visible:ring-4 focus-visible:ring-gold/80"
+            className="relative block w-full max-w-[720px] cursor-pointer border-0 bg-transparent p-0 text-left outline-none focus-visible:ring-4 focus-visible:ring-gold/80"
             onClick={open}
             type="button"
           >
@@ -257,8 +294,17 @@ export function EnvelopeReveal({ children }: EnvelopeRevealProps) {
 
             <span className="mt-5 block" style={{ perspective: '900px' }}>
               <span
-                className="relative block aspect-[10/7] w-full rounded-xl border-2 border-gold/70 bg-gradient-to-b from-[#41125f] to-[#2b064d] shadow-[0_24px_60px_rgba(0,0,0,0.6)]"
-                style={{ transformStyle: 'preserve-3d' }}
+                className={`relative mx-auto block rounded-xl border-2 border-gold/70 bg-gradient-to-b from-[#41125f] to-[#2b064d] shadow-[0_24px_60px_rgba(0,0,0,0.6)] ${
+                  cardSize ? '' : 'aspect-[10/7] w-full max-w-[520px]'
+                }`}
+                data-testid="envelope-body"
+                style={{
+                  transformStyle: 'preserve-3d',
+                  ...(cardSize && {
+                    width: `min(${Math.round(cardSize.width) + ENVELOPE_EXCESS * 2}px, calc(100vw - 2rem))`,
+                    height: `min(${Math.round(cardSize.height) + ENVELOPE_EXCESS * 2}px, calc(100vh - 9rem))`,
+                  }),
+                }}
               >
                 {/* Letter peeking out of the pocket */}
                 <span className="absolute inset-x-[8%] bottom-[10%] top-[12%] rounded-md bg-gradient-to-b from-[#fff7e9] to-[#f8e7ad]" />

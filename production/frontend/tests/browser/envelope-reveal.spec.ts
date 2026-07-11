@@ -61,10 +61,11 @@ test('first visit shows the sealed envelope; clicking it reveals a usable invite
 
   await page.goto('/invite')
 
-  // Sealed: envelope (with the cat wax seal) is shown, the card is not.
+  // Sealed: envelope (with the cat wax seal) is shown; the card renders
+  // invisibly underneath (it is measured to size the envelope).
   await expect(envelope(page)).toBeVisible()
   await expect(envelope(page).locator('img[src*="cat-seal"]')).toBeVisible()
-  await expect(inviteHeading(page)).toHaveCount(0)
+  await expect(inviteHeading(page)).not.toBeVisible()
 
   await envelope(page).click()
 
@@ -79,6 +80,28 @@ test('first visit shows the sealed envelope; clicking it reveals a usable invite
 
   // Confetti is one-shot: the canvas unmounts once the burst finishes.
   await expect(page.getByTestId('confetti-canvas')).toHaveCount(0, { timeout: 5000 })
+})
+
+test('sealed envelope is drawn larger than the card it reveals', async ({ page }) => {
+  await mockQuietBackend(page)
+
+  await page.goto('/invite')
+  await expect(envelope(page)).toBeVisible()
+
+  // Give the measuring effect a beat to apply the derived size.
+  await page.waitForTimeout(400)
+  const envelopeBox = await page.getByTestId('envelope-body').boundingBox()
+
+  await envelope(page).click()
+  await expect(inviteHeading(page)).toBeVisible()
+  // Wait for the enter animation to settle so the card's box is final.
+  await expect(page.getByTestId('confetti-canvas')).toHaveCount(0, { timeout: 5000 })
+  const cardBox = await page.locator('[data-envelope-card]').boundingBox()
+
+  expect(envelopeBox).not.toBeNull()
+  expect(cardBox).not.toBeNull()
+  expect(envelopeBox!.width).toBeGreaterThanOrEqual(cardBox!.width)
+  expect(envelopeBox!.height).toBeGreaterThanOrEqual(cardBox!.height)
 })
 
 test('second visit in the same session skips the envelope', async ({ page }) => {
@@ -112,12 +135,12 @@ test('replay affordance reseals the envelope, which stays sealed until tapped', 
 
   await replayButton(page).click()
   await expect(envelope(page)).toBeVisible()
-  await expect(inviteHeading(page)).toHaveCount(0)
+  await expect(inviteHeading(page)).not.toBeVisible()
 
   // No auto-open: left untouched, the envelope stays sealed.
   await page.waitForTimeout(3000)
   await expect(envelope(page)).toBeVisible()
-  await expect(inviteHeading(page)).toHaveCount(0)
+  await expect(inviteHeading(page)).not.toBeVisible()
 
   // Only a tap opens it.
   await envelope(page).click()

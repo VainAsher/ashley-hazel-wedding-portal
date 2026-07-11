@@ -49,7 +49,7 @@ export function AuthLayout({ children, title, description }: AuthLayoutProps) {
 
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12">
-        <div className="relative w-full max-w-[560px]">
+        <div className="relative w-full max-w-[560px]" data-envelope-card>
           {/* Pattern band framing the invitation */}
           <div
             aria-hidden="true"
