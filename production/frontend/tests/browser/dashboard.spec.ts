@@ -119,6 +119,25 @@ test('every guest page is reachable from the header nav', async ({ page }) => {
   }
 })
 
+test('nudges the guest with the onboarding checklist when items remain', async ({ page }) => {
+  await installPortalApi(page, { ...wedding })
+  // Overrides the all-done default from cleanupPageState (later routes win).
+  await page.route('**/api/portal/me/progress', async (route) => {
+    await json(route, {
+      rsvp_submitted: false,
+      song_requested: true,
+      photo_submitted: true,
+      blessing_posted: true,
+    })
+  })
+  await page.goto('/dashboard')
+
+  const card = page.getByTestId('onboarding-checklist')
+  await expect(card).toBeVisible()
+  await expect(card.getByText("3 of 4 done — you haven't RSVP'd yet 💌")).toBeVisible()
+  await expect(card.getByRole('link', { name: 'RSVP now' })).toHaveAttribute('href', '/rsvp')
+})
+
 test('shows a skeleton while the wedding details load', async ({ page }) => {
   await page.route('**/api/portal/wedding', async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 700))

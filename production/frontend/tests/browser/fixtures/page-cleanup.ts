@@ -23,6 +23,23 @@ export async function cleanupPageState(page: Page): Promise<void> {
       }),
     )
 
+    // The guest dashboard fetches onboarding progress. Default to "all done"
+    // so the checklist card stays out of every other spec's way (and no spec
+    // trips over an unmocked 404 console error). onboarding.spec.ts registers
+    // its own route, which wins over this one.
+    await page.route('**/api/portal/me/progress', (route) =>
+      route.fulfill({
+        body: JSON.stringify({
+          rsvp_submitted: true,
+          song_requested: true,
+          photo_submitted: true,
+          blessing_posted: true,
+        }),
+        contentType: 'application/json',
+        status: 200,
+      }),
+    )
+
     // Clear cookies and local storage
     await page.context().clearCookies()
     await page.evaluate(() => {
@@ -39,6 +56,10 @@ export async function cleanupPageState(page: Page): Promise<void> {
     await page.addInitScript(() => {
       try {
         window.sessionStorage.setItem('ah-envelope-opened', '1')
+        // Likewise pre-mark the one-time nav coach mark as seen so it never
+        // floats over other specs' pages. onboarding.spec.ts manages this
+        // flag itself to exercise the first-visit hint.
+        window.localStorage.setItem('ah-nav-hint-seen', '1')
       } catch {
         // Storage unavailable: the app treats this as a first visit.
       }

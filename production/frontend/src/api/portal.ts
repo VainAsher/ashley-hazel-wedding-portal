@@ -72,6 +72,22 @@ export function fetchPortalSchedule(apiBaseUrl = API_BASE_URL): Promise<PortalSc
   )
 }
 
+export interface PortalProgress {
+  rsvp_submitted: boolean
+  song_requested: boolean
+  photo_submitted: boolean
+  blessing_posted: boolean
+}
+
+// What the current member has and hasn't done yet (onboarding checklist).
+export function fetchPortalProgress(apiBaseUrl = API_BASE_URL): Promise<PortalProgress> {
+  return requestJson<PortalProgress>(
+    '/api/portal/me/progress',
+    'Unable to load your checklist.',
+    apiBaseUrl,
+  )
+}
+
 export interface PortalThemeResponse {
   theme: {
     primary: string

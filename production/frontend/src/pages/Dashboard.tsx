@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 
 import { useAuth } from '../contexts/AuthContext'
 import { GuestLayout } from '../components/GuestLayout'
+import { OnboardingChecklist } from '../components/OnboardingChecklist'
 import { Alert } from '../components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Skeleton } from '../components/ui/skeleton'
@@ -230,6 +231,8 @@ export function Dashboard() {
             <KeyDetails wedding={wedding} />
           </>
         )}
+
+        <OnboardingChecklist />
 
         <section aria-label="Quick links" className="grid gap-4 sm:grid-cols-2">
           {quickLinks.map(({ href, title, description, icon: Icon }) => (
