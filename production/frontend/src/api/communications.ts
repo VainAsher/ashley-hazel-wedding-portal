@@ -1,7 +1,16 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export type CommunicationChannel = 'email' | 'whatsapp' | 'sms' | 'announcement'
-export type CommunicationAudience = 'all' | 'attending' | 'pending' | 'declined'
+export type CommunicationAudience =
+  | 'all'
+  | 'attending'
+  | 'pending'
+  | 'declined'
+  | 'guests'
+  | 'coordinators'
+  | 'wedding_party'
+  | 'stags'
+  | 'hens'
 export type CommunicationStatus = 'draft' | 'scheduled' | 'sent'
 
 export interface Communication {

@@ -107,6 +107,7 @@ class Wedding(Base):
     gallery_items: Mapped[list["GalleryItem"]] = orm_relationship(back_populates="wedding")
     song_requests: Mapped[list["SongRequest"]] = orm_relationship(back_populates="wedding")
     feedback: Mapped[list["Feedback"]] = orm_relationship(back_populates="wedding")
+    notifications: Mapped[list["Notification"]] = orm_relationship(back_populates="wedding")
 
 
 class Guest(Base):
@@ -596,3 +597,35 @@ class Feedback(Base):
     )
 
     wedding: Mapped[Wedding] = orm_relationship(back_populates="feedback")
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+    __table_args__ = (
+        CheckConstraint(
+            "kind IN ('communication', 'mention', 'system')",
+            name="ck_notifications_kind",
+        ),
+        Index("idx_notifications_recipient_read", "recipient_invite_id", "read_at"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), nullable=False
+    )
+    # The durable per-member identity is the invite (sessions store invite_id);
+    # notifications address the invite, not the guest row.
+    recipient_invite_id: Mapped[int] = mapped_column(
+        ForeignKey("invites.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    body: Mapped[str | None] = mapped_column(Text)
+    link_path: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    wedding: Mapped[Wedding] = orm_relationship(back_populates="notifications")
+    recipient_invite: Mapped[Invite] = orm_relationship()

@@ -2,6 +2,7 @@ import React from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { FeedbackWidget } from '@/components/FeedbackWidget'
+import { NotificationsBell } from '@/components/NotificationsBell'
 import { usePortalTheme } from '@/hooks/useTheme'
 import { Button } from '@/components/ui/button'
 import { buildTint } from '@/lib/theme'
@@ -69,6 +70,7 @@ export function GuestLayout({ children }: GuestLayoutProps) {
 
             {/* User Info & Logout */}
             <div className="flex items-center gap-4">
+              <NotificationsBell variant="guest" />
               <div className="text-right hidden sm:block">
                 <p className="m-0 text-sm font-medium text-cream">{user?.name || 'Guest'}</p>
                 <p className="m-0 text-xs capitalize text-gold">{user?.role}</p>

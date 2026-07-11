@@ -4,10 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.auth import require_coordinator
+from app.api.auth import (
+    ROLE_COORDINATOR,
+    ROLE_COUPLE,
+    ROLE_GUEST,
+    require_coordinator,
+)
 from app.api.schemas_auth import UserResponse
 from app.db.database import get_db
-from app.db.models import Communication, Wedding
+from app.db.models import Communication, Guest, Invite, Notification, RsvpStatus, Wedding
 from app.db.schemas import (
     CommunicationCreate,
     CommunicationResponse,
@@ -18,6 +23,40 @@ from app.logging import get_logger
 
 router = APIRouter(prefix="/api/communications", tags=["communications"])
 logger = get_logger(__name__)
+
+# notifications.title is VARCHAR(200); communication subjects go up to 255.
+NOTIFICATION_TITLE_MAX = 200
+
+# The original RSVP-based audiences target guest invites by RSVP status.
+AUDIENCE_RSVP_STATUS = {
+    "attending": RsvpStatus.accepted,
+    "pending": RsvpStatus.pending,
+    "declined": RsvpStatus.declined,
+}
+
+# Party audiences ship ahead of the Wave 3 party flags: valid to select,
+# but they match no invites until members carry party membership.
+PARTY_AUDIENCES = {"wedding_party", "stags", "hens"}
+
+
+def audience_invites(db: Session, wedding_id: int, audience: str) -> list[Invite]:
+    """Resolve a communication audience to the invites it addresses."""
+    if audience in PARTY_AUDIENCES:
+        return []
+
+    query = db.query(Invite).filter(Invite.wedding_id == wedding_id)
+    if audience == "guests":
+        query = query.filter(Invite.role == ROLE_GUEST)
+    elif audience == "coordinators":
+        # The couple run the admin alongside coordinators everywhere else
+        # (require_coordinator), so they are part of this audience too.
+        query = query.filter(Invite.role.in_((ROLE_COUPLE, ROLE_COORDINATOR)))
+    elif audience in AUDIENCE_RSVP_STATUS:
+        query = query.join(Guest, Invite.guest_id == Guest.id).filter(
+            Guest.rsvp_status == AUDIENCE_RSVP_STATUS[audience]
+        )
+    # "all": every invite in the wedding, no extra filter.
+    return query.all()
 
 
 def get_communication_or_404(
@@ -144,10 +183,33 @@ async def send_communication(
     db_communication = get_communication_or_404(
         db, communication_id, current_user.wedding_id, "send_communication"
     )
-    # No real dispatch happens here; this only marks the record as sent.
+    # External channels (email/WhatsApp/SMS) are still not connected; sending
+    # delivers in-app by fanning out one notification per audience invite,
+    # surfaced on member dashboards and the header bell.
+    recipients = audience_invites(
+        db, db_communication.wedding_id, db_communication.audience
+    )
+    for invite in recipients:
+        db.add(
+            Notification(
+                wedding_id=db_communication.wedding_id,
+                recipient_invite_id=invite.id,
+                kind="communication",
+                title=db_communication.subject[:NOTIFICATION_TITLE_MAX],
+                body=db_communication.body,
+                link_path="/dashboard",
+            )
+        )
     db_communication.status = "sent"
     db_communication.sent_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(db_communication)
-    logger.info("communication_sent", extra={"communication_id": communication_id})
+    logger.info(
+        "communication_sent",
+        extra={
+            "communication_id": communication_id,
+            "audience": db_communication.audience,
+            "notified": len(recipients),
+        },
+    )
     return db_communication

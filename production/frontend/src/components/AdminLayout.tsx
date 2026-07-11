@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { FeedbackWidget } from '@/components/FeedbackWidget'
+import { NotificationsBell } from '@/components/NotificationsBell'
 import { usePageTitle } from '@/hooks/usePageTitle'
 
 interface AdminLayoutProps {
@@ -162,7 +163,8 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Header */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
-          <div className="px-4 sm:px-6 lg:px-8 py-4">
+          <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
             {/* Mobile menu trigger — only on screens below the sm breakpoint,
                 where the desktop sidebar is hidden. */}
             <button
@@ -199,6 +201,9 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
 
             {/* Title */}
             {title && <h1 className="text-2xl font-bold text-gray-900">{title}</h1>}
+            </div>
+
+            <NotificationsBell variant="admin" />
           </div>
         </header>
 
