@@ -1,6 +1,6 @@
 {
   "name": "wedding-dashboard-frontend",
-  "version": "1.1.0-rc1",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
