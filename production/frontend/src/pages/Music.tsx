@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 
-import { Music2 } from 'lucide-react'
+import { Heart, Music2 } from 'lucide-react'
 
 import { useAuth } from '../contexts/AuthContext'
 import { GuestLayout } from '../components/GuestLayout'
@@ -15,7 +15,8 @@ import {
   MusicApiError,
   useSongWall,
   useSubmitSongRequest,
-  type SongRequest,
+  useToggleReaction,
+  type SongWallItem,
 } from '../hooks/useMusic'
 
 function optionalText(value: string): string | null {
@@ -23,21 +24,50 @@ function optionalText(value: string): string | null {
   return trimmed || null
 }
 
-function SongCard({ song }: { song: SongRequest }) {
-  const displayTitle = song.artist ? `${song.title} — ${song.artist}` : song.title
+function songDisplayTitle(song: SongWallItem): string {
+  return song.artist ? `${song.title} — ${song.artist}` : song.title
+}
+
+function SongCard({ song }: { song: SongWallItem }) {
+  const toggleReaction = useToggleReaction()
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">
-          {song.pinned && (
-            <span title="Pinned" className="text-gold mr-1.5">
-              ★
-            </span>
-          )}
-          {displayTitle}
-        </CardTitle>
-        <CardDescription>Requested by {song.requested_by}</CardDescription>
+        <div className="flex items-start justify-between gap-3">
+          <div className="grid gap-1.5 min-w-0">
+            <CardTitle className="text-base">
+              {song.pinned && (
+                <span title="Pinned" className="text-gold mr-1.5">
+                  ★
+                </span>
+              )}
+              {songDisplayTitle(song)}
+            </CardTitle>
+            <CardDescription>Requested by {song.requested_by}</CardDescription>
+          </div>
+          <button
+            type="button"
+            aria-pressed={song.reacted_by_me}
+            aria-label={
+              song.reacted_by_me
+                ? `Remove your heart from ${song.title}`
+                : `Give a heart to ${song.title}`
+            }
+            onClick={() => toggleReaction.mutate(song)}
+            className={`flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+              song.reacted_by_me
+                ? 'border-gold bg-plum text-gold'
+                : 'border-gray-300 bg-background text-gray-600 hover:border-plum hover:text-plum'
+            }`}
+          >
+            <Heart
+              aria-hidden="true"
+              className={`h-4 w-4 ${song.reacted_by_me ? 'fill-current' : ''}`}
+            />
+            <span data-testid="reaction-count">{song.reaction_count}</span>
+          </button>
+        </div>
       </CardHeader>
       {song.dedication && (
         <CardContent>
@@ -48,9 +78,48 @@ function SongCard({ song }: { song: SongRequest }) {
   )
 }
 
+/** The couple's wedding-day pick — shown above the jukebox while it is set. */
+function NowPlayingCard({ song }: { song: SongWallItem }) {
+  return (
+    <section
+      aria-label="Currently playing"
+      className="rounded-3xl border-2 border-gold bg-plum p-5 text-cream shadow-xl"
+    >
+      <p className="m-0 text-xs font-extrabold uppercase tracking-[0.18em] text-gold">
+        <span className="mr-1.5 inline-block animate-pulse" aria-hidden="true">
+          ♪
+        </span>
+        Currently playing
+      </p>
+      <div className="mt-3 flex items-center gap-4">
+        {song.artwork_url ? (
+          <img
+            src={song.artwork_url}
+            alt=""
+            className="h-16 w-16 flex-shrink-0 rounded-xl object-cover ring-2 ring-gold/60"
+          />
+        ) : (
+          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-cream/10 ring-2 ring-gold/60">
+            <Music2 className="h-7 w-7 animate-pulse text-gold" aria-hidden="true" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p
+            className="m-0 truncate font-display text-lg font-bold"
+            data-testid="now-playing-title"
+          >
+            {songDisplayTitle(song)}
+          </p>
+          <p className="m-0 truncate text-sm text-cream/80">Picked by Ashley &amp; Hazel</p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export function Music() {
   usePageTitle('Dancefloor')
-  const { data: songs, isLoading, isError, error } = useSongWall()
+  const { data: wall, isLoading, isError, error } = useSongWall()
   const submitMutation = useSubmitSongRequest()
 
   const [title, setTitle] = useState('')
@@ -67,7 +136,8 @@ export function Music() {
   const { weddingPhase, loading: authLoading } = useAuth()
   const phase = authLoading ? null : weddingPhase ?? 'live'
 
-  const songList = songs ?? []
+  const songList = wall?.songs ?? []
+  const nowPlaying = wall?.now_playing ?? null
   const requestsOpen = phase === 'live'
   const requestsClosed = phase !== null && phase !== 'live'
 
@@ -116,7 +186,9 @@ export function Music() {
           </CardHeader>
         </Card>
 
-        {songs && songs.length > 0 && <Jukebox songs={songs} />}
+        {nowPlaying && <NowPlayingCard song={nowPlaying} />}
+
+        {songList.length > 0 && <Jukebox songs={songList} />}
 
         {feedback && (
           <Alert variant="success" role="status" aria-live="polite">

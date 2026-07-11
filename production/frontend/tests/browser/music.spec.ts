@@ -23,6 +23,8 @@ interface SongRequest {
   spotify_track_id: string | null
   preview_url: string | null
   created_at: string
+  reaction_count: number
+  reacted_by_me: boolean
 }
 
 function songRequest(overrides: Partial<SongRequest>): SongRequest {
@@ -43,6 +45,8 @@ function songRequest(overrides: Partial<SongRequest>): SongRequest {
     spotify_track_id: null,
     preview_url: null,
     created_at: '2026-06-01T10:00:00Z',
+    reaction_count: 0,
+    reacted_by_me: false,
     ...overrides,
   }
 }
@@ -75,14 +79,61 @@ function json(route: Route, body: unknown, status = 200) {
 
 interface MusicApiState {
   posts: unknown[]
+  reactions: { id: number; method: string }[]
 }
 
-async function installMusicApi(page: Page, wall: SongRequest[]): Promise<MusicApiState> {
-  const state: MusicApiState = { posts: [] }
+async function installMusicApi(
+  page: Page,
+  wall: SongRequest[],
+  nowPlayingId: number | null = null,
+): Promise<MusicApiState> {
+  const state: MusicApiState = { posts: [], reactions: [] }
   let nextId = 1000
 
   await page.route('**/api/music/requests/wall', async (route) => {
-    await json(route, wall)
+    await json(route, {
+      songs: wall,
+      now_playing: wall.find((song) => song.id === nowPlayingId) ?? null,
+    })
+  })
+
+  // Reactions mutate the wall fixture so the post-toggle refetch agrees with
+  // the optimistic cache update.
+  await page.route(/\/api\/music\/requests\/(\d+)\/react$/, async (route) => {
+    const match = new URL(route.request().url()).pathname.match(/\/(\d+)\/react$/)
+    const songId = Number(match?.[1])
+    const song = wall.find((entry) => entry.id === songId)
+    if (!song) {
+      await json(route, { detail: 'Song request not found' }, 404)
+      return
+    }
+
+    const method = route.request().method()
+    state.reactions.push({ id: songId, method })
+
+    if (method === 'POST') {
+      if (!song.reacted_by_me) {
+        song.reacted_by_me = true
+        song.reaction_count += 1
+      }
+      await json(
+        route,
+        { reaction_count: song.reaction_count, reacted_by_me: true },
+        201,
+      )
+      return
+    }
+
+    if (method === 'DELETE') {
+      if (song.reacted_by_me) {
+        song.reacted_by_me = false
+        song.reaction_count = Math.max(0, song.reaction_count - 1)
+      }
+      await route.fulfill({ status: 204, body: '' })
+      return
+    }
+
+    await json(route, { detail: 'Not found' }, 404)
   })
 
   await page.route('**/api/music/requests', async (route) => {
@@ -348,4 +399,107 @@ test('no jukebox renders when no wall songs have previews', async ({ page }) => 
 
   await expect(songWall(page).getByText('Dancing Queen — ABBA')).toBeVisible()
   await expect(jukebox(page)).toHaveCount(0)
+})
+
+// ---------------------------------------------------------------------------
+// ♥ reactions (Dancefloor v2)
+// ---------------------------------------------------------------------------
+
+test('the heart toggle posts a reaction and updates the count optimistically', async ({
+  page,
+}) => {
+  const api = await installMusicApi(page, [
+    songRequest({ id: 21, title: 'Dancing Queen', artist: 'ABBA', reaction_count: 2 }),
+    songRequest({ id: 22, title: 'Mr. Brightside', requested_by: 'Uncle Bob' }),
+  ])
+  await page.goto('/music')
+
+  const heart = songWall(page).getByRole('button', {
+    name: 'Give a heart to Dancing Queen',
+  })
+  await expect(heart).toBeVisible()
+  await expect(heart.getByTestId('reaction-count')).toHaveText('2')
+
+  await heart.click()
+
+  const filled = songWall(page).getByRole('button', {
+    name: 'Remove your heart from Dancing Queen',
+  })
+  await expect(filled).toBeVisible()
+  await expect(filled).toHaveAttribute('aria-pressed', 'true')
+  await expect(filled.getByTestId('reaction-count')).toHaveText('3')
+  await expect.poll(() => api.reactions).toEqual([{ id: 21, method: 'POST' }])
+
+  // The untouched song keeps its own count.
+  await expect(
+    songWall(page)
+      .getByRole('button', { name: 'Give a heart to Mr. Brightside' })
+      .getByTestId('reaction-count'),
+  ).toHaveText('0')
+})
+
+test('tapping a filled heart removes the reaction via DELETE', async ({ page }) => {
+  const api = await installMusicApi(page, [
+    songRequest({
+      id: 31,
+      title: 'September',
+      artist: 'Earth, Wind & Fire',
+      reaction_count: 5,
+      reacted_by_me: true,
+    }),
+  ])
+  await page.goto('/music')
+
+  const filled = songWall(page).getByRole('button', {
+    name: 'Remove your heart from September',
+  })
+  await expect(filled.getByTestId('reaction-count')).toHaveText('5')
+
+  await filled.click()
+
+  const empty = songWall(page).getByRole('button', {
+    name: 'Give a heart to September',
+  })
+  await expect(empty).toBeVisible()
+  await expect(empty).toHaveAttribute('aria-pressed', 'false')
+  await expect(empty.getByTestId('reaction-count')).toHaveText('4')
+  await expect.poll(() => api.reactions).toEqual([{ id: 31, method: 'DELETE' }])
+})
+
+// ---------------------------------------------------------------------------
+// Currently playing (Dancefloor v2)
+// ---------------------------------------------------------------------------
+
+test('shows the currently-playing card when the couple set a song', async ({ page }) => {
+  await installMusicApi(
+    page,
+    [
+      songRequest({
+        id: 41,
+        title: 'Perfect',
+        artist: 'Ed Sheeran',
+        requested_by: 'Nan',
+        artwork_url:
+          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'/%3E",
+      }),
+      songRequest({ id: 42, title: 'Mr. Brightside', requested_by: 'Uncle Bob' }),
+    ],
+    41,
+  )
+  await page.goto('/music')
+
+  const nowPlaying = page.getByRole('region', { name: 'Currently playing' })
+  await expect(nowPlaying).toBeVisible()
+  await expect(nowPlaying.getByTestId('now-playing-title')).toHaveText(
+    'Perfect — Ed Sheeran',
+  )
+  await expect(nowPlaying.getByText('Picked by Ashley & Hazel')).toBeVisible()
+})
+
+test('no currently-playing card renders when nothing is set', async ({ page }) => {
+  await installMusicApi(page, wallEntries.map((entry) => ({ ...entry })))
+  await page.goto('/music')
+
+  await expect(songWall(page).getByText('Dancing Queen — ABBA')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Currently playing' })).toHaveCount(0)
 })

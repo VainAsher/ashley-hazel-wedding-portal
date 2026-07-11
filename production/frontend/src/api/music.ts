@@ -21,6 +21,32 @@ export interface SongRequest {
   created_at: string
 }
 
+/** A wall song plus this member's reaction state (Dancefloor v2). */
+export interface SongWallItem extends SongRequest {
+  reaction_count: number
+  reacted_by_me: boolean
+}
+
+/** Wall payload: the approved songs plus the couple's now-playing pick. */
+export interface SongWall {
+  songs: SongWallItem[]
+  now_playing: SongWallItem | null
+}
+
+/** Admin moderation row — reaction count included as a curation signal. */
+export interface AdminSongRequest extends SongRequest {
+  reaction_count: number
+}
+
+export interface ReactionState {
+  reaction_count: number
+  reacted_by_me: boolean
+}
+
+export interface NowPlayingState {
+  now_playing: SongWallItem | null
+}
+
 export interface SongRequestCreate {
   title: string
   artist?: string | null
@@ -68,7 +94,7 @@ async function readErrorMessage(response: Response, fallback: string): Promise<s
   return fallback
 }
 
-export async function fetchSongWall(apiBaseUrl = API_BASE_URL): Promise<SongRequest[]> {
+export async function fetchSongWall(apiBaseUrl = API_BASE_URL): Promise<SongWall> {
   const response = await fetch(`${apiBaseUrl}/api/music/requests/wall`, {
     credentials: 'include',
   })
@@ -80,7 +106,76 @@ export async function fetchSongWall(apiBaseUrl = API_BASE_URL): Promise<SongRequ
     )
   }
 
-  return response.json() as Promise<SongRequest[]>
+  return response.json() as Promise<SongWall>
+}
+
+export async function reactToSong(
+  id: number,
+  apiBaseUrl = API_BASE_URL,
+): Promise<ReactionState> {
+  const response = await fetch(`${apiBaseUrl}/api/music/requests/${id}/react`, {
+    credentials: 'include',
+    method: 'POST',
+  })
+
+  if (!response.ok) {
+    throw new MusicApiError(
+      await readErrorMessage(response, 'Unable to react to this song.'),
+      response.status,
+    )
+  }
+
+  return response.json() as Promise<ReactionState>
+}
+
+export async function unreactToSong(id: number, apiBaseUrl = API_BASE_URL): Promise<void> {
+  const response = await fetch(`${apiBaseUrl}/api/music/requests/${id}/react`, {
+    credentials: 'include',
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    throw new MusicApiError(
+      await readErrorMessage(response, 'Unable to remove your reaction.'),
+      response.status,
+    )
+  }
+}
+
+export async function fetchNowPlaying(apiBaseUrl = API_BASE_URL): Promise<NowPlayingState> {
+  const response = await fetch(`${apiBaseUrl}/api/music/now-playing`, {
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    throw new MusicApiError(
+      await readErrorMessage(response, 'Unable to load the now-playing song.'),
+      response.status,
+    )
+  }
+
+  return response.json() as Promise<NowPlayingState>
+}
+
+export async function setNowPlaying(
+  songRequestId: number | null,
+  apiBaseUrl = API_BASE_URL,
+): Promise<NowPlayingState> {
+  const response = await fetch(`${apiBaseUrl}/api/music/now-playing`, {
+    body: JSON.stringify({ song_request_id: songRequestId }),
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    method: 'PUT',
+  })
+
+  if (!response.ok) {
+    throw new MusicApiError(
+      await readErrorMessage(response, 'Unable to update the now-playing song.'),
+      response.status,
+    )
+  }
+
+  return response.json() as Promise<NowPlayingState>
 }
 
 export async function submitSongRequest(
@@ -104,7 +199,9 @@ export async function submitSongRequest(
   return response.json() as Promise<SongRequest>
 }
 
-export async function fetchAllSongRequests(apiBaseUrl = API_BASE_URL): Promise<SongRequest[]> {
+export async function fetchAllSongRequests(
+  apiBaseUrl = API_BASE_URL,
+): Promise<AdminSongRequest[]> {
   const response = await fetch(`${apiBaseUrl}/api/music/requests`, {
     credentials: 'include',
   })
@@ -116,7 +213,7 @@ export async function fetchAllSongRequests(apiBaseUrl = API_BASE_URL): Promise<S
     )
   }
 
-  return response.json() as Promise<SongRequest[]>
+  return response.json() as Promise<AdminSongRequest[]>
 }
 
 export async function updateSongRequest(

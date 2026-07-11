@@ -88,6 +88,11 @@ class Wedding(Base):
     )
     # Couple-configurable guest-site theme (admin Settings dials); NULL = defaults.
     theme: Mapped[dict | None] = mapped_column(JSONB)
+    # Wedding-day "currently playing" pick (Dancefloor v2); NULL = nothing set.
+    # use_alter breaks the weddings <-> song_requests FK cycle for create_all.
+    now_playing_song_id: Mapped[int | None] = mapped_column(
+        ForeignKey("song_requests.id", ondelete="SET NULL", use_alter=True)
+    )
     created_at: Mapped[datetime | None] = mapped_column(
         DateTime, server_default=text("CURRENT_TIMESTAMP")
     )
@@ -105,7 +110,10 @@ class Wedding(Base):
     communications: Mapped[list["Communication"]] = orm_relationship(back_populates="wedding")
     blessings: Mapped[list["Blessing"]] = orm_relationship(back_populates="wedding")
     gallery_items: Mapped[list["GalleryItem"]] = orm_relationship(back_populates="wedding")
-    song_requests: Mapped[list["SongRequest"]] = orm_relationship(back_populates="wedding")
+    # foreign_keys pinned: weddings.now_playing_song_id adds a second FK path.
+    song_requests: Mapped[list["SongRequest"]] = orm_relationship(
+        back_populates="wedding", foreign_keys="SongRequest.wedding_id"
+    )
     feedback: Mapped[list["Feedback"]] = orm_relationship(back_populates="wedding")
 
 
@@ -562,7 +570,36 @@ class SongRequest(Base):
         DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
 
-    wedding: Mapped[Wedding] = orm_relationship(back_populates="song_requests")
+    wedding: Mapped[Wedding] = orm_relationship(
+        back_populates="song_requests", foreign_keys=[wedding_id]
+    )
+
+
+class SongReaction(Base):
+    """A guest's ♥ on a wall song — one per invite per song (Dancefloor v2).
+
+    The invite is the durable identity (display names are editable), so the
+    unique constraint is on (song_request_id, invite_id).
+    """
+
+    __tablename__ = "song_reactions"
+    __table_args__ = (
+        UniqueConstraint(
+            "song_request_id", "invite_id", name="uq_song_reactions_song_invite"
+        ),
+        Index("idx_song_reactions_invite", "invite_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    song_request_id: Mapped[int] = mapped_column(
+        ForeignKey("song_requests.id", ondelete="CASCADE"), nullable=False
+    )
+    invite_id: Mapped[int] = mapped_column(
+        ForeignKey("invites.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
 
 
 class Feedback(Base):

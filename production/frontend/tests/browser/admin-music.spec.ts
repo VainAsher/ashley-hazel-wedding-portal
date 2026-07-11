@@ -23,6 +23,7 @@ interface SongRequest {
   spotify_track_id: string | null
   preview_url: string | null
   created_at: string
+  reaction_count: number
 }
 
 const ARTWORK_DATA_URI =
@@ -46,6 +47,7 @@ function songRequest(overrides: Partial<SongRequest>): SongRequest {
     spotify_track_id: null,
     preview_url: null,
     created_at: '2026-06-01T10:00:00Z',
+    reaction_count: 0,
     ...overrides,
   }
 }
@@ -87,6 +89,7 @@ const initialRequests: SongRequest[] = [
     requested_by: 'Nan',
     status: 'approved',
     created_at: '2026-05-20T10:00:00Z',
+    reaction_count: 3,
   }),
   songRequest({
     id: 202,
@@ -121,11 +124,13 @@ interface AdminMusicApiState {
   exports: string[]
   previewMatches: number[]
   backfills: number
+  nowPlayingPuts: unknown[]
 }
 
 async function installAdminMusicApi(
   page: Page,
   initial: SongRequest[],
+  nowPlayingId: number | null = null,
 ): Promise<AdminMusicApiState> {
   const state: AdminMusicApiState = {
     patches: [],
@@ -133,8 +138,28 @@ async function installAdminMusicApi(
     exports: [],
     previewMatches: [],
     backfills: 0,
+    nowPlayingPuts: [],
   }
   let requests = initial.map((request) => ({ ...request }))
+  let currentNowPlayingId = nowPlayingId
+
+  await page.route('**/api/music/now-playing', async (route) => {
+    const request = route.request()
+
+    if (request.method() === 'PUT') {
+      const payload = request.postDataJSON() as { song_request_id: number | null }
+      state.nowPlayingPuts.push(payload)
+      currentNowPlayingId = payload.song_request_id
+    } else if (request.method() !== 'GET') {
+      await json(route, { detail: 'Not found' }, 404)
+      return
+    }
+
+    const current = requests.find((row) => row.id === currentNowPlayingId) ?? null
+    await json(route, {
+      now_playing: current ? { ...current, reacted_by_me: false } : null,
+    })
+  })
 
   await page.route('**/api/music/requests', async (route) => {
     if (route.request().method() !== 'GET') {
@@ -478,4 +503,53 @@ test('match all previews posts the backfill and reports the count', async ({ pag
     page.getByRole('status').filter({ hasText: 'Matched 1 preview.' }),
   ).toBeVisible()
   expect(state.backfills).toBe(1)
+})
+
+// ---------------------------------------------------------------------------
+// Dancefloor v2: ♥ counts + now playing
+// ---------------------------------------------------------------------------
+
+test('approved playlist rows show the guest heart counts', async ({ page }) => {
+  await installAdminMusicApi(page, initialRequests)
+  await page.goto('/admin/music')
+
+  const approved = approvedRegion(page)
+  await expect(approved.getByText('♥ 3')).toBeVisible()
+  await expect(approved.getByText('♥ 0')).toBeVisible()
+})
+
+test('set as now playing sends the PUT and marks the current row', async ({ page }) => {
+  const api = await installAdminMusicApi(page, initialRequests)
+  await page.goto('/admin/music')
+
+  const approved = approvedRegion(page)
+  await expect(approved.getByText('♪ Now playing')).toHaveCount(0)
+
+  await approved
+    .getByRole('button', { name: 'Set Perfect (Nan) as now playing' })
+    .click()
+
+  await expect(page.getByRole('status')).toHaveText('Perfect is now playing.')
+  expect(api.nowPlayingPuts).toEqual([{ song_request_id: 201 }])
+
+  await expect(approved.getByText('♪ Now playing')).toBeVisible()
+  await expect(
+    approved.getByRole('button', { name: 'Clear now playing (Perfect)' }),
+  ).toBeVisible()
+})
+
+test('clear now playing sends the null PUT and removes the badge', async ({ page }) => {
+  const api = await installAdminMusicApi(page, initialRequests, 202)
+  await page.goto('/admin/music')
+
+  const approved = approvedRegion(page)
+  await expect(approved.getByText('♪ Now playing')).toBeVisible()
+
+  await approved
+    .getByRole('button', { name: 'Clear now playing (September)' })
+    .click()
+
+  await expect(page.getByRole('status')).toHaveText('Now playing cleared.')
+  expect(api.nowPlayingPuts).toEqual([{ song_request_id: null }])
+  await expect(approved.getByText('♪ Now playing')).toHaveCount(0)
 })

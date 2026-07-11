@@ -819,6 +819,41 @@ class SongRequestResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class SongWallItem(SongRequestResponse):
+    """A wall song plus its reaction state for the requesting member."""
+
+    reaction_count: int = 0
+    reacted_by_me: bool = False
+
+
+class SongWallResponse(BaseModel):
+    """Dancefloor wall payload: the songs plus the couple's now-playing pick."""
+
+    songs: list[SongWallItem]
+    now_playing: SongWallItem | None = None
+
+
+class AdminSongRequestResponse(SongRequestResponse):
+    """Admin moderation row — reaction count included as a curation signal."""
+
+    reaction_count: int = 0
+
+
+class SongReactionState(BaseModel):
+    reaction_count: int
+    reacted_by_me: bool
+
+
+class NowPlayingUpdate(BaseModel):
+    """PUT /api/music/now-playing body; null clears the pick."""
+
+    song_request_id: int | None
+
+
+class NowPlayingResponse(BaseModel):
+    now_playing: SongWallItem | None = None
+
+
 # ---------------------------------------------------------------------------
 # Guest portal (read-only wedding info for guests)
 # ---------------------------------------------------------------------------
