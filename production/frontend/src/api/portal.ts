@@ -77,6 +77,9 @@ export interface PortalThemeResponse {
     primary: string
     secondary: string
     tint_opacity: number
+    display_font: string
+    body_font: string
+    type_scale: number
   } | null
 }
 

@@ -368,6 +368,28 @@ WEDDING_PHASES = {"planning", "live", "event", "archived"}
 
 HEX_COLOR_PATTERN = r"^#[0-9a-fA-F]{6}$"
 
+# Curated typography allowlists — the single backend source of truth. The
+# frontend mirrors these in src/lib/theme.ts (THEME_DISPLAY_FONTS /
+# THEME_BODY_FONTS); keep both lists in sync. First entry is the default.
+THEME_DISPLAY_FONTS = (
+    "Georgia",
+    "Playfair Display",
+    "Cormorant Garamond",
+    "EB Garamond",
+    "Libre Baskerville",
+    "Lora",
+    "Marcellus",
+    "Great Vibes",
+)
+THEME_BODY_FONTS = (
+    "Inter",
+    "Source Sans 3",
+    "Nunito Sans",
+    "Karla",
+    "Mulish",
+)
+THEME_TYPE_SCALES = (0.9, 1.0, 1.1)
+
 
 class WeddingTheme(BaseModel):
     """Guest-site theme dials set by the couple in admin Settings.
@@ -376,11 +398,43 @@ class WeddingTheme(BaseModel):
     secondary: deep contrast colour used for text on primary and the
         photo-background tint (prototype deep plum)
     tint_opacity: strength of the tint over background photos
+    display_font: headings typeface (allowlisted; prototype Georgia serif)
+    body_font: running-text typeface (allowlisted; prototype Inter/system)
+    type_scale: root font-size multiplier — 0.9 (cosy) / 1.0 / 1.1 (roomy)
     """
 
     primary: str = Field(default="#f6c445", pattern=HEX_COLOR_PATTERN)
     secondary: str = Field(default="#2b064d", pattern=HEX_COLOR_PATTERN)
     tint_opacity: float = Field(default=0.9, ge=0.3, le=1.0)
+    display_font: str = THEME_DISPLAY_FONTS[0]
+    body_font: str = THEME_BODY_FONTS[0]
+    type_scale: float = 1.0
+
+    @field_validator("display_font")
+    @classmethod
+    def display_font_must_be_allowlisted(cls, value: str) -> str:
+        if value not in THEME_DISPLAY_FONTS:
+            raise ValueError(
+                "Headings font must be one of: " + ", ".join(THEME_DISPLAY_FONTS)
+            )
+        return value
+
+    @field_validator("body_font")
+    @classmethod
+    def body_font_must_be_allowlisted(cls, value: str) -> str:
+        if value not in THEME_BODY_FONTS:
+            raise ValueError("Text font must be one of: " + ", ".join(THEME_BODY_FONTS))
+        return value
+
+    @field_validator("type_scale")
+    @classmethod
+    def type_scale_must_be_allowlisted(cls, value: float) -> float:
+        if value not in THEME_TYPE_SCALES:
+            raise ValueError(
+                "Type scale must be one of: "
+                + ", ".join(str(scale) for scale in THEME_TYPE_SCALES)
+            )
+        return value
 
 
 class WeddingSettingsResponse(BaseModel):

@@ -28,8 +28,8 @@
   }
 
   body {
+    /* font-sans reads var(--font-sans) — the admin "Text font" dial. */
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', sans-serif;
   }
 
   h1,

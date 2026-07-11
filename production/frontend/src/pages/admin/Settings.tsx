@@ -22,7 +22,16 @@ import {
   type WeddingSettingsPayload,
   type WeddingThemeSettings,
 } from '@/hooks/useSettings'
-import { buildTint, DEFAULT_THEME } from '@/lib/theme'
+import {
+  buildTint,
+  DEFAULT_THEME,
+  ensureFontPreviewStylesheet,
+  findBodyFont,
+  findDisplayFont,
+  THEME_BODY_FONTS,
+  THEME_DISPLAY_FONTS,
+  type FontOption,
+} from '@/lib/theme'
 
 const PHASE_OPTIONS: { value: WeddingPhase; label: string; description: string }[] = [
   { value: 'planning', label: 'Planning', description: 'Guest portal dormant — RSVP not yet open.' },
@@ -113,19 +122,74 @@ function ColourDial({ id, label, hint, value, onChange }: ColourDialProps) {
   )
 }
 
+interface FontDialProps {
+  id: string
+  label: string
+  hint: string
+  options: FontOption[]
+  value: string
+  onChange: (value: string) => void
+}
+
+function FontDial({ id, label, hint, options, value, onChange }: FontDialProps) {
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id={id} aria-label={label}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem
+              key={option.value}
+              value={option.value}
+              style={{ fontFamily: option.stack }}
+            >
+              {option.value}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-gray-500 m-0">{hint}</p>
+    </div>
+  )
+}
+
+const TYPE_SCALE_OPTIONS: { value: number; label: string }[] = [
+  { value: 0.9, label: 'Cosy' },
+  { value: 1.0, label: 'Standard' },
+  { value: 1.1, label: 'Roomy' },
+]
+
+// Older saved themes predate the typography keys — fill them with defaults.
+function themeWithDefaults(theme: WeddingThemeSettings | null): WeddingThemeSettings {
+  return { ...DEFAULT_THEME, ...(theme ?? {}) }
+}
+
 function ThemeCard({ settings }: { settings: WeddingSettings }) {
   const updateMutation = useUpdateSettings()
-  const [theme, setTheme] = useState<WeddingThemeSettings>(settings.theme ?? DEFAULT_THEME)
+  const [theme, setTheme] = useState<WeddingThemeSettings>(() =>
+    themeWithDefaults(settings.theme),
+  )
   const [feedback, setFeedback] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
-    setTheme(settings.theme ?? DEFAULT_THEME)
+    setTheme(themeWithDefaults(settings.theme))
   }, [settings.theme])
+
+  // Load the allowlisted faces so the pickers and preview render for real.
+  useEffect(() => {
+    ensureFontPreviewStylesheet()
+  }, [])
 
   const isSaving = updateMutation.isPending
   const hexesValid = isValidHex(theme.primary) && isValidHex(theme.secondary)
   const tintPercent = Math.round(theme.tint_opacity * 100)
+  const displayStack = findDisplayFont(theme.display_font).stack
+  const bodyStack = findBodyFont(theme.body_font).stack
+  const typeScale = theme.type_scale ?? 1.0
 
   const previewTint = hexesValid
     ? buildTint(theme.secondary, theme.tint_opacity)
@@ -195,28 +259,95 @@ function ThemeCard({ settings }: { settings: WeddingSettings }) {
             </p>
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FontDial
+              id="theme-display-font"
+              label="Headings font"
+              hint="Your names, page titles, and section headings."
+              options={THEME_DISPLAY_FONTS}
+              value={theme.display_font ?? DEFAULT_THEME.display_font}
+              onChange={(value) => setTheme((t) => ({ ...t, display_font: value }))}
+            />
+            <FontDial
+              id="theme-body-font"
+              label="Text font"
+              hint="Everything else — details, forms, and buttons."
+              options={THEME_BODY_FONTS}
+              value={theme.body_font ?? DEFAULT_THEME.body_font}
+              onChange={(value) => setTheme((t) => ({ ...t, body_font: value }))}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <span className="text-sm font-medium">Type scale</span>
+            <div
+              role="group"
+              aria-label="Type scale"
+              className="inline-flex w-fit overflow-hidden rounded-md border border-input"
+            >
+              {TYPE_SCALE_OPTIONS.map((option) => {
+                const active = typeScale === option.value
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setTheme((t) => ({ ...t, type_scale: option.value }))}
+                    className={`px-4 py-2 text-sm font-medium transition-colors ${
+                      active
+                        ? 'bg-plum text-white'
+                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+            <p className="text-xs text-gray-500 m-0">
+              How large text sits across the whole guest site.
+            </p>
+          </div>
+
           {/* Live preview */}
           <div className="grid gap-2">
             <span className="text-sm font-medium">Preview</span>
             <div
               aria-hidden="true"
-              className="flex items-center justify-between gap-4 rounded-2xl px-5 py-6 bg-cover bg-center"
+              data-testid="theme-preview"
+              className="grid gap-3 rounded-2xl px-5 py-6 bg-cover bg-center"
               style={{
                 backgroundImage: `${previewTint}, url(/backgrounds/bg-02-registry-office.jpg)`,
+                fontSize: `calc(1rem * ${typeScale})`,
               }}
             >
-              <p className="m-0 font-display text-xl" style={{ color: '#fff6df' }}>
-                Ashley &amp; Hazel
-              </p>
-              <span
-                className="rounded-full px-4 py-2 text-sm font-semibold"
-                style={{
-                  backgroundColor: hexesValid ? theme.primary : DEFAULT_THEME.primary,
-                  color: hexesValid ? theme.secondary : DEFAULT_THEME.secondary,
-                }}
+              <div className="flex items-center justify-between gap-4">
+                <p
+                  className="m-0"
+                  data-testid="theme-preview-heading"
+                  style={{ color: '#fff6df', fontFamily: displayStack, fontSize: '1.25em' }}
+                >
+                  Ashley &amp; Hazel
+                </p>
+                <span
+                  className="rounded-full px-4 py-2 font-semibold"
+                  style={{
+                    backgroundColor: hexesValid ? theme.primary : DEFAULT_THEME.primary,
+                    color: hexesValid ? theme.secondary : DEFAULT_THEME.secondary,
+                    fontFamily: bodyStack,
+                    fontSize: '0.875em',
+                  }}
+                >
+                  Sample button
+                </span>
+              </div>
+              <p
+                className="m-0"
+                data-testid="theme-preview-body"
+                style={{ color: '#fff6df', fontFamily: bodyStack, fontSize: '0.875em' }}
               >
-                Sample button
-              </span>
+                You are warmly invited to celebrate with us.
+              </p>
             </div>
           </div>
 

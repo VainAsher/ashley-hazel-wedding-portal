@@ -122,6 +122,13 @@ class TestWeddingSettings:
         assert response.status_code == 401
 
 
+DEFAULT_TYPOGRAPHY = {
+    "display_font": "Georgia",
+    "body_font": "Inter",
+    "type_scale": 1.0,
+}
+
+
 class TestWeddingTheme:
     def test_theme_round_trip(
         self,
@@ -132,12 +139,13 @@ class TestWeddingTheme:
         theme = {"primary": "#AA5500", "secondary": "#112233", "tint_opacity": 0.75}
         response = coordinator_session.put("/api/settings/wedding", json={"theme": theme})
         assert response.status_code == 200
-        assert response.json()["theme"] == theme
+        # Unset typography dials come back as the canonical defaults.
+        assert response.json()["theme"] == {**theme, **DEFAULT_TYPOGRAPHY}
 
         # Guests (and the pre-login invite page) read it from the public endpoint.
         public = client.get("/api/portal/theme")
         assert public.status_code == 200
-        assert public.json()["theme"] == theme
+        assert public.json()["theme"] == {**theme, **DEFAULT_TYPOGRAPHY}
 
     def test_theme_reset_with_null(
         self,
@@ -172,3 +180,86 @@ class TestWeddingTheme:
 
     def test_public_theme_needs_no_auth(self, client: TestClient) -> None:
         assert client.get("/api/portal/theme").status_code == 200
+
+
+class TestWeddingTypography:
+    def test_fonts_and_scale_round_trip(
+        self,
+        coordinator_session: TestClient,
+        client: TestClient,
+        db_session: Session,
+        restore_wedding: None,
+    ) -> None:
+        theme = {
+            "primary": "#AA5500",
+            "secondary": "#112233",
+            "tint_opacity": 0.75,
+            "display_font": "Playfair Display",
+            "body_font": "Nunito Sans",
+            "type_scale": 1.1,
+        }
+        response = coordinator_session.put("/api/settings/wedding", json={"theme": theme})
+        assert response.status_code == 200
+        assert response.json()["theme"] == theme
+
+        # Persisted in the wedding's JSONB theme column.
+        db_session.expire_all()
+        wedding = db_session.get(Wedding, TEST_WEDDING_ID)
+        assert wedding is not None
+        assert wedding.theme["display_font"] == "Playfair Display"
+        assert wedding.theme["body_font"] == "Nunito Sans"
+        assert wedding.theme["type_scale"] == 1.1
+
+        # The public theme endpoint carries the typography keys too.
+        public = client.get("/api/portal/theme")
+        assert public.status_code == 200
+        assert public.json()["theme"] == theme
+
+    @pytest.mark.parametrize(
+        "display_font",
+        ["Comic Sans MS", "georgia", "Playfair Display; DROP TABLE", ""],
+    )
+    def test_rejects_unknown_display_font(
+        self, coordinator_session: TestClient, display_font: str
+    ) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding",
+            json={"theme": {"display_font": display_font}},
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize("body_font", ["Papyrus", "inter", "Georgia", ""])
+    def test_rejects_unknown_body_font(
+        self, coordinator_session: TestClient, body_font: str
+    ) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding",
+            json={"theme": {"body_font": body_font}},
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize("type_scale", [0.5, 0.95, 1.2, 2, "big"])
+    def test_rejects_unknown_type_scale(
+        self, coordinator_session: TestClient, type_scale: object
+    ) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding",
+            json={"theme": {"type_scale": type_scale}},
+        )
+        assert response.status_code == 422
+
+    def test_defaults_returned_when_unset(
+        self,
+        coordinator_session: TestClient,
+        restore_wedding: None,
+    ) -> None:
+        # A colour-only theme (e.g. saved before the typography dials shipped)
+        # still reports the default fonts and scale.
+        coordinator_session.put(
+            "/api/settings/wedding",
+            json={"theme": {"primary": "#AA5500", "secondary": "#112233"}},
+        )
+        theme = coordinator_session.get("/api/settings/wedding").json()["theme"]
+        assert theme["display_font"] == "Georgia"
+        assert theme["body_font"] == "Inter"
+        assert theme["type_scale"] == 1.0

@@ -54,6 +54,12 @@ test.beforeEach(async ({ page }) => {
   await cleanupPageState(page)
   await initializeErrorTracking(page)
 
+  // The theme card loads Google font faces for its pickers/preview — keep the
+  // suite deterministic and offline-safe by stubbing the stylesheet.
+  await page.route('https://fonts.googleapis.com/**', (route) =>
+    route.fulfill({ body: '', contentType: 'text/css' }),
+  )
+
   await page.route('**/api/auth/me', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -132,7 +138,61 @@ test('saves the guest-site theme dials', async ({ page }) => {
   ).toBeVisible()
 
   expect(putPayloads).toEqual([
-    { theme: { primary: '#00aa88', secondary: '#102030', tint_opacity: 0.6 } },
+    {
+      theme: {
+        primary: '#00aa88',
+        secondary: '#102030',
+        tint_opacity: 0.6,
+        display_font: 'Georgia',
+        body_font: 'Inter',
+        type_scale: 1,
+      },
+    },
+  ])
+})
+
+test('saves chosen fonts and type scale, and previews them live', async ({ page }) => {
+  await page.goto('/admin/settings')
+
+  const main = mainRegion(page)
+  await expect(main.getByRole('heading', { name: 'Guest Site Theme' })).toBeVisible()
+
+  // Pick a display face — the option list renders each face in its own font.
+  await main.getByLabel('Headings font', { exact: true }).click()
+  const playfairOption = page.getByRole('option', { name: 'Playfair Display' })
+  await expect(playfairOption).toHaveCSS('font-family', /Playfair Display/)
+  await playfairOption.click()
+
+  await main.getByLabel('Text font', { exact: true }).click()
+  await page.getByRole('option', { name: 'Nunito Sans' }).click()
+
+  await main
+    .getByRole('group', { name: 'Type scale' })
+    .getByRole('button', { name: 'Roomy' })
+    .click()
+
+  // The live preview follows the dials immediately.
+  await expect(page.getByTestId('theme-preview-heading')).toHaveCSS(
+    'font-family',
+    /Playfair Display/,
+  )
+  await expect(page.getByTestId('theme-preview-body')).toHaveCSS('font-family', /Nunito Sans/)
+  await expect(page.getByTestId('theme-preview')).toHaveCSS('font-size', '17.6px') // 16px * 1.1
+
+  await main.getByRole('button', { name: 'Save theme' }).click()
+  await expect(page.getByRole('status').filter({ hasText: 'Theme saved' })).toBeVisible()
+
+  expect(putPayloads).toEqual([
+    {
+      theme: {
+        primary: '#f6c445',
+        secondary: '#2b064d',
+        tint_opacity: 0.9,
+        display_font: 'Playfair Display',
+        body_font: 'Nunito Sans',
+        type_scale: 1.1,
+      },
+    },
   ])
 })
 

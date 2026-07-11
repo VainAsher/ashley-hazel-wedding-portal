@@ -32,8 +32,10 @@ const config: Config = {
         cream: 'hsl(var(--theme-cream))',
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        display: ['Georgia', '"Times New Roman"', 'serif'],
+        // Driven by the admin typography dials (ThemeApplier sets the vars);
+        // the var() fallbacks are the canonical prototype stacks.
+        sans: ['var(--font-sans, Inter, system-ui, sans-serif)'],
+        display: ['var(--font-display, Georgia, "Times New Roman", serif)'],
       },
     },
   },
