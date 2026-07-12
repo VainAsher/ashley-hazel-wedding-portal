@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
-from app.db.models import RsvpStatus, TaskStatus, TaskPriority
+from app.db.models import RsvpStatus, TaskStatus, TaskPriority, TaskContext
 
 
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -122,6 +122,9 @@ class TaskBase(BaseModel):
     description: str | None = None
     status: TaskStatus = TaskStatus.not_started
     priority: TaskPriority = TaskPriority.medium
+    # Which planning board this task belongs to. The admin Timeline always
+    # sends 'wedding'; stag/hen boards are Wave 3 item 14 D2 (not mounted yet).
+    context: TaskContext = TaskContext.wedding
     due_date: date | None = None
     assigned_to: int | None = None
     category: str | None = Field(default=None, max_length=100)
@@ -145,6 +148,7 @@ class TaskUpdate(BaseModel):
     description: str | None = None
     status: TaskStatus | None = None
     priority: TaskPriority | None = None
+    context: TaskContext | None = None
     # date, not datetime — the edit form sends "YYYY-MM-DD" exactly like
     # TaskCreate; datetime here rejected every edit of a task with a due date.
     due_date: date | None = None
@@ -162,8 +166,22 @@ class TaskUpdate(BaseModel):
         return title
 
 
+class TaskMove(BaseModel):
+    """Body for PATCH /api/tasks/{id}/move — drag a card to a column slot.
+
+    `position` is the 0-based target index within the destination column
+    (after the move). No fractional positions: the server resequences
+    neighbours as a simple integer resequence, which is plenty at wedding
+    scale. A position past the end of the column clamps to an append.
+    """
+
+    status: TaskStatus
+    position: int = Field(ge=0)
+
+
 class TaskResponse(TaskBase):
     id: int
+    position: int | None = None
     created_at: datetime
     updated_at: datetime
 

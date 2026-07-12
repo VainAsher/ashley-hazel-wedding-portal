@@ -49,6 +49,16 @@ class TaskPriority(str, enum.Enum):
     high = "high"
 
 
+class TaskContext(str, enum.Enum):
+    """Which planning board a task belongs to. Kanban V2 scopes tasks so the
+    same board can power Stag & Hen planning later (Wave 3 item 14 D2); the
+    admin Timeline always uses `wedding` for now."""
+
+    wedding = "wedding"
+    stag = "stag"
+    hen = "hen"
+
+
 rsvp_status_enum = Enum(
     RsvpStatus,
     name="rsvp_status",
@@ -68,6 +78,14 @@ task_status_enum = Enum(
 task_priority_enum = Enum(
     TaskPriority,
     name="task_priority",
+    native_enum=True,
+    create_type=False,
+    values_callable=lambda values: [item.value for item in values],
+)
+
+task_context_enum = Enum(
+    TaskContext,
+    name="task_context",
     native_enum=True,
     create_type=False,
     values_callable=lambda values: [item.value for item in values],
@@ -302,12 +320,23 @@ class Task(Base):
             "priority IN ('low', 'medium', 'high')",
             name="tasks_priority_valid",
         ),
+        CheckConstraint(
+            "context IN ('wedding', 'stag', 'hen')",
+            name="tasks_context_valid",
+        ),
         Index("idx_tasks_wedding_id", "wedding_id"),
         Index("idx_tasks_status", "status"),
         Index("idx_tasks_priority", "priority"),
         Index("idx_tasks_assigned_to", "assigned_to"),
         Index("idx_tasks_due_date", "due_date"),
         Index("idx_tasks_wedding_status", "wedding_id", "status"),
+        Index(
+            "idx_tasks_wedding_context_status_position",
+            "wedding_id",
+            "context",
+            "status",
+            "position",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -322,6 +351,16 @@ class Task(Base):
     priority: Mapped[TaskPriority] = mapped_column(
         task_priority_enum, nullable=False, server_default=text("'medium'")
     )
+    # Which planning board (wedding/stag/hen) this task lives on. The admin
+    # Timeline always writes 'wedding'; stag/hen mounting is Wave 3 item 14 D2.
+    context: Mapped[TaskContext] = mapped_column(
+        task_context_enum, nullable=False, server_default=text("'wedding'")
+    )
+    # Ordering slot within (wedding_id, context, status) for drag & drop.
+    # Simple integer resequence per column (no fractional positions) —
+    # plenty at wedding scale. Nullable for rows created before the v2
+    # migration backfilled them; the API always writes an explicit int.
+    position: Mapped[int | None] = mapped_column(Integer)
     due_date: Mapped[date | None] = mapped_column(Date)
     assigned_to: Mapped[int | None] = mapped_column(
         ForeignKey("wedding_party.id", ondelete="SET NULL")

@@ -2,6 +2,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export type TaskStatus = 'not_started' | 'in_progress' | 'done' | 'blocked'
 export type TaskPriority = 'low' | 'medium' | 'high'
+export type TaskContext = 'wedding' | 'stag' | 'hen'
 
 export interface Task {
   id: number
@@ -10,8 +11,11 @@ export interface Task {
   description: string | null
   status: TaskStatus
   priority: TaskPriority
+  context: TaskContext
+  position: number | null
   due_date: string | null
   assigned_to: string | null
+  category: string | null
 }
 
 export interface TaskPayload {
@@ -22,6 +26,11 @@ export interface TaskPayload {
   priority: TaskPriority
   due_date: string | null
   assigned_to: string | null
+}
+
+export interface TaskMovePayload {
+  status: TaskStatus
+  position: number
 }
 
 export class TaskApiError extends Error {
@@ -85,8 +94,12 @@ async function request<T>(
   return payload as T
 }
 
-export function fetchTasks(): Promise<Task[]> {
-  return request<Task[]>('/api/tasks', { method: 'GET' }, 'Failed to load tasks')
+export function fetchTasks(context: TaskContext = 'wedding'): Promise<Task[]> {
+  return request<Task[]>(
+    `/api/tasks?context=${context}`,
+    { method: 'GET' },
+    'Failed to load tasks',
+  )
 }
 
 export function createTask(payload: TaskPayload): Promise<Task> {
@@ -107,4 +120,12 @@ export function updateTask(id: number, payload: TaskPayload): Promise<Task> {
 
 export async function deleteTask(id: number): Promise<void> {
   await request<unknown>(`/api/tasks/${id}`, { method: 'DELETE' }, 'Failed to delete task')
+}
+
+export function moveTask(id: number, payload: TaskMovePayload): Promise<Task> {
+  return request<Task>(
+    `/api/tasks/${id}/move`,
+    { method: 'PATCH', body: JSON.stringify(payload) },
+    'Failed to move task',
+  )
 }

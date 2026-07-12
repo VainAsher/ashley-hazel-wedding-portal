@@ -78,6 +78,7 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/017_create_notifications.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/018_dancefloor_v2.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/019_create_menu.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/020_task_board_v2.sql
 
       - name: Seed test data
         run: |
@@ -180,6 +181,7 @@ jobs:
           psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/017_create_notifications.sql
           psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/018_dancefloor_v2.sql
           psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/019_create_menu.sql
+          psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/020_task_board_v2.sql
 
       - name: Seed test data
         run: |
