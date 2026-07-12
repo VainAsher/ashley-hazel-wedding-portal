@@ -190,27 +190,36 @@ matches the caterer conversation, courses can come later).
 - Tests: dnd-kit interactions in Playwright via keyboard DnD (reliable headless).
 
 ### 14. Stag & Hen party portals (couple) — **XL**, phased
-**D1 — membership + shell + message board (L):**
-- Migration: `invites.party VARCHAR(10)` ('stag'|'hen'|NULL) + `invites.party_admin
-  BOOLEAN` (best man / maid of honour run their party); expose both via auth/me.
-- Access rule (confirm with couple): party content visible ONLY to that party's
-  members — **the couple is deliberately excluded** ("without leaking plans"), except
-  memberships themselves which the couple manages in Invitations (assign Stag/Hen +
-  party-admin toggles there).
-- Guest nav gains "Stag Do" / "Hen Do" for flagged members → `/party` (single route,
-  party resolved server-side). v1 content: members list (profiles from item 15),
-  **party message board** (new `party_messages` table, blessings-pattern, scoped by
-  party, party-admin can pin/hide), and a party details card (date/venue free-text,
-  party-admin editable).
-- Backend guard: `require_party_member` dependency (invite.party match); every
-  endpoint wedding- AND party-scoped. Explicit tests that couple/coordinator/other
-  party get 403/404.
+
+> **Decisions confirmed 2026-07-12** (full contract in
+> `docs/specs/PARTY_PORTALS_D1.md`): individual Ashley/Hazel invite identity
+> (splits the current single shared couple code into two); each partner is
+> excluded from their own party by default, but the *other* partner's
+> default visibility is a couple-configurable Settings dial
+> (`partner_visible` default, or `locked`) rather than hardcoded, with a
+> **reversible** reveal toggle either way; Best Man/Maid of Honour is a
+> single-select-per-party designation that grants `party_admin`; profiles
+> (item 15) will be guest-visible, not party-only.
+
+**D1 — membership + shell + message board (L):** see
+`docs/specs/PARTY_PORTALS_D1.md` for the full data model, access-rule truth
+table, and API/frontend shape. Headline points: migration 021 (`invites`
+gains `party`/`party_admin`/`party_title`/`partner_label`/
+`associated_party`; new `party_reveals`, `party_messages`, `party_info`
+tables; `weddings.party_visibility_mode`); routes are `/party/stag` and
+`/party/hen` (explicit, not the single `/party` originally sketched here,
+since couple access is no longer symmetric); coordinators keep full admin
+control of the mechanics but do **not** get automatic read access to party
+content itself — flagged in the spec as the one call worth double-checking
+with the couple before it ships.
 **D2 — party planning board (M, after 13):** mount `TaskBoard` with
-`context='stag'|'hen'`, party-admin manages, members view/complete.
+`context='stag'|'hen'` — trivial now, `TaskBoard` already accepts a context
+prop from the Kanban V2 extraction.
 **D3 — profiles on the party pages (S, after 15).**
-**Risks:** the couple-exclusion rule inverts the app's "couple sees everything"
-assumption — needs its own test class; and party members are guests with the same
-codes, so no auth changes beyond the flag.
+**Risks:** the access rule is the most privacy-sensitive logic in the app —
+needs exhaustive test coverage per the spec's truth table, tested from both
+directions (each partner truly cannot see the other's party without an
+explicit grant, verified via direct API calls, not just UI hiding).
 
 ### 15. Wedding-party mini profiles (couple) — **M/L**
 Migration: `member_profiles` (invite_id unique FK, display_name, role_title, about,
@@ -220,9 +229,8 @@ best_known_for, favourite_song, photo_path). Photo upload reuses the gallery
 per decision). Frontend: "My profile" editor (prototype Profiles screen is the design
 reference — avatar/role/known-for cards in the plum/gold theme); cards render in the
 party area.
-**Decision (couple):** party-only, or also a public "Meet the wedding party" page for
-all guests (prototype had it public; recommend public page with party-approved
-profiles only).
+**Decision confirmed 2026-07-12:** guest-visible, not party-only — a "Meet the
+wedding party" page open to every logged-in guest.
 
 ### 16. @mentions (couple) — **M**, after 8 (notifications) + 15 (directory)
 Parse `@Display Name` in blessings, song dedications, and party messages at render;
