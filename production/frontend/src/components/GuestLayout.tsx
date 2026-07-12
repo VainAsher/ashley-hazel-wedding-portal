@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { FeedbackWidget } from '@/components/FeedbackWidget'
 import { HowThisWorksDialog } from '@/components/HowThisWorksDialog'
 import { NotificationsBell } from '@/components/NotificationsBell'
+import { usePartyAccess } from '@/hooks/useParty'
 import { usePortalTheme } from '@/hooks/useTheme'
 import { Button } from '@/components/ui/button'
 import { buildTint } from '@/lib/theme'
@@ -22,12 +23,17 @@ const ROUTE_BACKGROUNDS: Record<string, string> = {
   '/blessings': '/backgrounds/bg-01-winter-selfie.jpg',
   '/music': '/backgrounds/bg-05-evening-sky.jpg',
   '/gallery': '/backgrounds/bg-05-evening-sky.jpg',
+  '/party/stag': '/backgrounds/bg-04-woodland-walk.jpg',
+  '/party/hen': '/backgrounds/bg-01-winter-selfie.jpg',
 }
 
 export function GuestLayout({ children }: GuestLayoutProps) {
   const { user, logout } = useAuth()
   const { pathname } = useLocation()
   const theme = usePortalTheme()
+  // Nav-hint only — every party content endpoint independently re-checks
+  // access, so hiding these links is never the security boundary.
+  const { data: partyAccess } = usePartyAccess()
 
   const backgroundImage = ROUTE_BACKGROUNDS[pathname] ?? ROUTE_BACKGROUNDS['/dashboard']
   const tint = buildTint(theme.secondary, theme.tint_opacity)
@@ -39,6 +45,8 @@ export function GuestLayout({ children }: GuestLayoutProps) {
     { label: 'Blessings', href: '/blessings' },
     { label: 'Dancefloor', href: '/music' },
     { label: 'Gallery', href: '/gallery' },
+    ...(partyAccess?.stag ? [{ label: 'Stag Do', href: '/party/stag' }] : []),
+    ...(partyAccess?.hen ? [{ label: 'Hen Do', href: '/party/hen' }] : []),
   ]
 
   return (

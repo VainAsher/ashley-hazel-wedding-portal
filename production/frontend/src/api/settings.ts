@@ -11,6 +11,10 @@ export interface WeddingThemeSettings {
   type_scale: number
 }
 
+// Wave 3 item 14 D1: the non-subject partner's default access to their
+// partner's stag/hen party. See docs/specs/PARTY_PORTALS_D1.md.
+export type PartyVisibilityMode = 'partner_visible' | 'locked'
+
 export interface WeddingSettings {
   id: number
   couple_names: string
@@ -21,6 +25,7 @@ export interface WeddingSettings {
   phase: WeddingPhase
   theme: WeddingThemeSettings | null
   meal_selection_open: boolean
+  party_visibility_mode: PartyVisibilityMode
 }
 
 export interface WeddingSettingsPayload {
@@ -34,6 +39,7 @@ export interface WeddingSettingsPayload {
   theme?: WeddingThemeSettings | null
   // Menu builder switch: opens guest meal selection in RSVP.
   meal_selection_open?: boolean
+  party_visibility_mode?: PartyVisibilityMode
 }
 
 export class SettingsApiError extends Error {

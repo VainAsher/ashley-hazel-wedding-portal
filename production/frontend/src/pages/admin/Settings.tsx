@@ -18,6 +18,7 @@ import {
   SettingsApiError,
   useSettings,
   useUpdateSettings,
+  type PartyVisibilityMode,
   type WeddingPhase,
   type WeddingSettings,
   type WeddingSettingsPayload,
@@ -375,6 +376,94 @@ function ThemeCard({ settings }: { settings: WeddingSettings }) {
   )
 }
 
+const PARTY_VISIBILITY_OPTIONS: { value: PartyVisibilityMode; label: string; description: string }[] = [
+  {
+    value: 'partner_visible',
+    label: 'Partner visible',
+    description:
+      "The non-subject partner sees their partner's party from the start (they're not the one being surprised), and can reveal it to their partner whenever they choose.",
+  },
+  {
+    value: 'locked',
+    label: 'Locked',
+    description:
+      'The non-subject partner also starts locked out. A coordinator or that party’s Best Man/Maid of Honour grants them in first.',
+  },
+]
+
+// Wave 3 item 14 D1: the cross-grant visibility dial. Small card, matching
+// the house style of the Menu/Theme cards above — deliberately not touching
+// either of those.
+function PartyVisibilityCard({ settings }: { settings: WeddingSettings }) {
+  const updateMutation = useUpdateSettings()
+  const [feedback, setFeedback] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  const mode = settings.party_visibility_mode
+
+  const setMode = async (value: PartyVisibilityMode) => {
+    if (value === mode) return
+    setFeedback(null)
+    setSaveError(null)
+    try {
+      await updateMutation.mutateAsync({ party_visibility_mode: value })
+      setFeedback('Party visibility saved.')
+    } catch (err) {
+      setSaveError(err instanceof SettingsApiError ? err.message : 'Failed to save party visibility')
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Party Visibility</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-3">
+          <p className="text-sm text-gray-600 m-0">
+            Controls whether the non-subject partner can see their partner&apos;s Stag/Hen Do
+            from the start, or needs to be granted in.
+          </p>
+
+          {feedback && (
+            <Alert variant="success" role="status" aria-live="polite">
+              {feedback}
+            </Alert>
+          )}
+          {saveError && <Alert variant="destructive">{saveError}</Alert>}
+
+          <div role="radiogroup" aria-label="Party visibility" className="grid gap-3">
+            {PARTY_VISIBILITY_OPTIONS.map((option) => {
+              const active = mode === option.value
+              return (
+                <label
+                  key={option.value}
+                  className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer ${
+                    active ? 'border-plum bg-plum/5' : 'border-input'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="party-visibility-mode"
+                    className="mt-1"
+                    checked={active}
+                    disabled={updateMutation.isPending}
+                    onChange={() => void setMode(option.value)}
+                  />
+                  <span className="grid gap-0.5">
+                    <span className="text-sm font-medium">{option.label}</span>
+                    <span className="text-xs text-gray-500">{option.description}</span>
+                  </span>
+                </label>
+              )
+            })}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function validate(form: SettingsFormState): string | null {
   if (!form.couple_names.trim()) {
     return 'Couple names are required.'
@@ -563,6 +652,8 @@ export function Settings() {
         )}
 
         {!isLoading && !isError && settings && <ThemeCard settings={settings} />}
+
+        {!isLoading && !isError && settings && <PartyVisibilityCard settings={settings} />}
 
         {!isLoading && !isError && settings && <MenuManager />}
       </div>

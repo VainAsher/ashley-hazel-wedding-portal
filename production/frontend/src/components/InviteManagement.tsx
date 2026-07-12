@@ -1,5 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react'
 
+type PartyValue = 'stag' | 'hen' | null
+
 interface Invite {
   id: number
   code: string
@@ -8,12 +10,22 @@ interface Invite {
   guest_id: number | null
   household_name: string | null
   created_at: string
+  party?: PartyValue
+  party_admin?: boolean
+  party_title?: string | null
+  partner_label?: string | null
+  associated_party?: PartyValue
 }
 
 interface Guest {
   id: number
   name: string
   email: string | null
+}
+
+const PARTY_ADMIN_TITLE: Record<'stag' | 'hen', string> = {
+  stag: 'Best Man',
+  hen: 'Maid of Honour',
 }
 
 export function InviteManagement({ weddingId }: { weddingId: number }) {
@@ -26,8 +38,23 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
   const [role, setRole] = useState<string>('guest')
   const [generating, setGenerating] = useState(false)
 
+  // Wave 3 item 14 D1: "wedding party" flags for a new guest invite.
+  const [party, setParty] = useState<'none' | 'stag' | 'hen'>('none')
+  const [partyAdmin, setPartyAdmin] = useState(false)
+  // Individual couple identity fields for a new couple invite.
+  const [partnerLabel, setPartnerLabel] = useState('')
+  const [associatedParty, setAssociatedParty] = useState<'none' | 'stag' | 'hen'>('none')
+
   const [linkingInviteId, setLinkingInviteId] = useState<number | null>(null)
   const [linkingGuestId, setLinkingGuestId] = useState<number | null>(null)
+
+  // Party fields editor (guest party/party_admin or couple identity fields).
+  const [editingPartyInvite, setEditingPartyInvite] = useState<Invite | null>(null)
+  const [editParty, setEditParty] = useState<'none' | 'stag' | 'hen'>('none')
+  const [editPartyAdmin, setEditPartyAdmin] = useState(false)
+  const [editPartnerLabel, setEditPartnerLabel] = useState('')
+  const [editAssociatedParty, setEditAssociatedParty] = useState<'none' | 'stag' | 'hen'>('none')
+  const [editSaving, setEditSaving] = useState(false)
 
   // Load invites and guests on mount
   useEffect(() => {
@@ -76,6 +103,11 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
     }
   }
 
+  // The guest currently holding Best Man/Maid of Honour for a party, if any
+  // — used to show the "this will replace the current holder" messaging.
+  const currentPartyAdmin = (target: 'stag' | 'hen') =>
+    invites.find((invite) => invite.party === target && invite.party_admin)
+
   const generateInvite = async (e: FormEvent) => {
     e.preventDefault()
     setGenerating(true)
@@ -83,14 +115,21 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
     setSuccess(null)
 
     try {
+      const body: Record<string, unknown> = { wedding_id: weddingId, role }
+      if (role === 'guest' && party !== 'none') {
+        body.party = party
+        body.party_admin = partyAdmin
+      }
+      if (role === 'couple') {
+        if (partnerLabel.trim()) body.partner_label = partnerLabel.trim()
+        if (associatedParty !== 'none') body.associated_party = associatedParty
+      }
+
       const res = await fetch('/api/invites', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          wedding_id: weddingId,
-          role,
-        }),
+        body: JSON.stringify(body),
       })
 
       if (!res.ok) {
@@ -102,6 +141,10 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
       setInvites([newInvite, ...invites])
       setSuccess(`Invite code generated: ${newInvite.code}`)
       setRole('guest')
+      setParty('none')
+      setPartyAdmin(false)
+      setPartnerLabel('')
+      setAssociatedParty('none')
 
       // Auto-clear success message after 3 seconds
       setTimeout(() => {
@@ -111,6 +154,56 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
       setError(err instanceof Error ? err.message : 'Error generating invite')
     } finally {
       setGenerating(false)
+    }
+  }
+
+  const openPartyEditor = (invite: Invite) => {
+    setEditingPartyInvite(invite)
+    setEditParty((invite.party as 'stag' | 'hen' | undefined) ?? 'none')
+    setEditPartyAdmin(invite.party_admin ?? false)
+    setEditPartnerLabel(invite.partner_label ?? '')
+    setEditAssociatedParty((invite.associated_party as 'stag' | 'hen' | undefined) ?? 'none')
+  }
+
+  const savePartyEdits = async () => {
+    if (!editingPartyInvite) return
+    setEditSaving(true)
+    setError(null)
+
+    try {
+      const body: Record<string, unknown> =
+        editingPartyInvite.role === 'guest'
+          ? {
+              party: editParty === 'none' ? null : editParty,
+              party_admin: editParty === 'none' ? false : editPartyAdmin,
+            }
+          : {
+              partner_label: editPartnerLabel.trim() || null,
+              associated_party: editAssociatedParty === 'none' ? null : editAssociatedParty,
+            }
+
+      const res = await fetch(`/api/invites/${editingPartyInvite.id}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.detail || 'Failed to update invite')
+      }
+
+      const updated = await res.json()
+      setInvites((current) => current.map((i) => (i.id === updated.id ? updated : i)))
+      setSuccess('Wedding party details updated')
+      setEditingPartyInvite(null)
+
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error updating invite')
+    } finally {
+      setEditSaving(false)
     }
   }
 
@@ -211,6 +304,83 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
             {generating ? 'Generating...' : 'Generate Code'}
           </button>
         </form>
+
+        {/* Wave 3 item 14 D1: guest "wedding party" flags. */}
+        {role === 'guest' && (
+          <fieldset style={partyFieldsetStyle}>
+            <legend style={partyLegendStyle}>Wedding party (optional)</legend>
+            <div style={radioGroupStyle} role="radiogroup" aria-label="Wedding party">
+              {(['none', 'stag', 'hen'] as const).map((value) => (
+                <label key={value} style={radioLabelStyle}>
+                  <input
+                    type="radio"
+                    name="new-invite-party"
+                    value={value}
+                    checked={party === value}
+                    onChange={() => {
+                      setParty(value)
+                      if (value === 'none') setPartyAdmin(false)
+                    }}
+                  />
+                  {value === 'none' ? 'None' : value === 'stag' ? 'Stag Do' : 'Hen Do'}
+                </label>
+              ))}
+            </div>
+            {party !== 'none' && (
+              <label style={{ ...radioLabelStyle, marginTop: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={partyAdmin}
+                  onChange={(e) => setPartyAdmin(e.target.checked)}
+                />
+                {`Make this guest the ${PARTY_ADMIN_TITLE[party]}`}
+                {partyAdmin && currentPartyAdmin(party) && (
+                  <span style={mutedStyle}>
+                    {' '}
+                    — this will replace {currentPartyAdmin(party)?.household_name ||
+                      guests.find((g) => g.id === currentPartyAdmin(party)?.guest_id)?.name ||
+                      'the current holder'}
+                  </span>
+                )}
+              </label>
+            )}
+          </fieldset>
+        )}
+
+        {/* Wave 3 item 14 D1: individual couple identity fields. */}
+        {role === 'couple' && (
+          <fieldset style={partyFieldsetStyle}>
+            <legend style={partyLegendStyle}>Individual identity (optional)</legend>
+            <div style={formGroupStyle}>
+              <label htmlFor="partner-label-input" style={labelStyle}>
+                Partner label
+              </label>
+              <input
+                id="partner-label-input"
+                type="text"
+                value={partnerLabel}
+                onChange={(e) => setPartnerLabel(e.target.value)}
+                placeholder="e.g. Ashley"
+                style={inputStyle}
+              />
+            </div>
+            <div style={formGroupStyle}>
+              <label htmlFor="associated-party-select" style={labelStyle}>
+                Their own party
+              </label>
+              <select
+                id="associated-party-select"
+                value={associatedParty}
+                onChange={(e) => setAssociatedParty(e.target.value as 'none' | 'stag' | 'hen')}
+                style={inputStyle}
+              >
+                <option value="none">None</option>
+                <option value="stag">Stag Do</option>
+                <option value="hen">Hen Do</option>
+              </select>
+            </div>
+          </fieldset>
+        )}
       </section>
 
       {/* Invites List */}
@@ -230,6 +400,7 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
                 <th style={tableCellStyle}>Code</th>
                 <th style={tableCellStyle}>Role</th>
                 <th style={tableCellStyle}>Guest</th>
+                <th style={tableCellStyle}>Wedding Party</th>
                 <th style={tableCellStyle}>Created</th>
                 <th style={tableCellStyle}>Actions</th>
               </tr>
@@ -262,6 +433,26 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
                       )}
                     </td>
                     <td style={tableCellStyle}>
+                      {invite.role === 'guest' && invite.party && (
+                        <span>
+                          {invite.party === 'stag' ? 'Stag Do' : 'Hen Do'}
+                          {invite.party_admin && (
+                            <span style={mutedStyle}> ({invite.party_title || PARTY_ADMIN_TITLE[invite.party]})</span>
+                          )}
+                        </span>
+                      )}
+                      {invite.role === 'couple' && invite.associated_party && (
+                        <span style={mutedStyle}>
+                          {invite.partner_label ? `${invite.partner_label} — ` : ''}
+                          {invite.associated_party === 'stag' ? 'Stag Do' : 'Hen Do'}
+                        </span>
+                      )}
+                      {((invite.role === 'guest' && !invite.party) ||
+                        (invite.role === 'couple' && !invite.associated_party)) && (
+                        <span style={mutedStyle}>—</span>
+                      )}
+                    </td>
+                    <td style={tableCellStyle}>
                       {new Date(invite.created_at).toLocaleDateString()}
                     </td>
                     <td style={tableCellActionsStyle}>
@@ -275,6 +466,15 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
                           title="Link to guest"
                         >
                           🔗
+                        </button>
+                      )}
+                      {(invite.role === 'guest' || invite.role === 'couple') && (
+                        <button
+                          onClick={() => openPartyEditor(invite)}
+                          style={buttonSmallStyle}
+                          title="Edit wedding party details"
+                        >
+                          🎉
                         </button>
                       )}
                       <button
@@ -342,6 +542,123 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
           </div>
         </div>
       )}
+
+      {/* Wedding Party Editor Modal (Wave 3 item 14 D1) */}
+      {editingPartyInvite && (
+        <div
+          style={modalOverlayStyle}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingPartyInvite(null)
+          }}
+        >
+          <div
+            style={modalStyle}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit Wedding Party Details"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={modalTitleStyle}>Edit Wedding Party Details</h3>
+
+            {editingPartyInvite.role === 'guest' ? (
+              <>
+                <div
+                  style={radioGroupStyle}
+                  role="radiogroup"
+                  aria-label="Wedding party"
+                >
+                  {(['none', 'stag', 'hen'] as const).map((value) => (
+                    <label key={value} style={radioLabelStyle}>
+                      <input
+                        type="radio"
+                        name="edit-invite-party"
+                        value={value}
+                        checked={editParty === value}
+                        onChange={() => {
+                          setEditParty(value)
+                          if (value === 'none') setEditPartyAdmin(false)
+                        }}
+                      />
+                      {value === 'none' ? 'None' : value === 'stag' ? 'Stag Do' : 'Hen Do'}
+                    </label>
+                  ))}
+                </div>
+                {editParty !== 'none' && (
+                  <label style={{ ...radioLabelStyle, marginTop: '8px' }}>
+                    <input
+                      type="checkbox"
+                      checked={editPartyAdmin}
+                      onChange={(e) => setEditPartyAdmin(e.target.checked)}
+                    />
+                    {`Make this guest the ${PARTY_ADMIN_TITLE[editParty]}`}
+                    {editPartyAdmin &&
+                      currentPartyAdmin(editParty) &&
+                      currentPartyAdmin(editParty)?.id !== editingPartyInvite.id && (
+                        <span style={mutedStyle}>
+                          {' '}
+                          — this will replace{' '}
+                          {currentPartyAdmin(editParty)?.household_name ||
+                            guests.find((g) => g.id === currentPartyAdmin(editParty)?.guest_id)
+                              ?.name ||
+                            'the current holder'}
+                        </span>
+                      )}
+                  </label>
+                )}
+              </>
+            ) : (
+              <>
+                <div style={formGroupStyle}>
+                  <label htmlFor="edit-partner-label-input" style={labelStyle}>
+                    Partner label
+                  </label>
+                  <input
+                    id="edit-partner-label-input"
+                    type="text"
+                    value={editPartnerLabel}
+                    onChange={(e) => setEditPartnerLabel(e.target.value)}
+                    placeholder="e.g. Ashley"
+                    style={inputStyle}
+                  />
+                </div>
+                <div style={formGroupStyle}>
+                  <label htmlFor="edit-associated-party-select" style={labelStyle}>
+                    Their own party
+                  </label>
+                  <select
+                    id="edit-associated-party-select"
+                    value={editAssociatedParty}
+                    onChange={(e) =>
+                      setEditAssociatedParty(e.target.value as 'none' | 'stag' | 'hen')
+                    }
+                    style={inputStyle}
+                  >
+                    <option value="none">None</option>
+                    <option value="stag">Stag Do</option>
+                    <option value="hen">Hen Do</option>
+                  </select>
+                </div>
+              </>
+            )}
+
+            <div style={modalButtonsStyle}>
+              <button
+                onClick={savePartyEdits}
+                style={buttonPrimaryStyle}
+                disabled={editSaving}
+              >
+                {editSaving ? 'Saving...' : 'Save'}
+              </button>
+              <button
+                onClick={() => setEditingPartyInvite(null)}
+                style={buttonSecondaryStyle}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -377,6 +694,34 @@ const formStyle = {
 
 const formGroupStyle = {
   display: 'grid',
+  gap: '6px',
+}
+
+const partyFieldsetStyle = {
+  border: '1px solid #e5e7eb',
+  borderRadius: '4px',
+  display: 'grid',
+  gap: '10px',
+  marginTop: '16px',
+  padding: '12px 14px',
+}
+
+const partyLegendStyle = {
+  color: '#374151',
+  fontSize: '13px',
+  fontWeight: 700,
+  padding: '0 4px',
+}
+
+const radioGroupStyle = {
+  display: 'flex',
+  gap: '16px',
+}
+
+const radioLabelStyle = {
+  alignItems: 'center',
+  display: 'flex',
+  fontSize: '14px',
   gap: '6px',
 }
 

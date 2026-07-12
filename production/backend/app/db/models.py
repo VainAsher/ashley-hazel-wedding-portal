@@ -94,6 +94,12 @@ task_context_enum = Enum(
 
 class Wedding(Base):
     __tablename__ = "weddings"
+    __table_args__ = (
+        CheckConstraint(
+            "party_visibility_mode IN ('partner_visible', 'locked')",
+            name="ck_weddings_party_visibility_mode_valid",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     couple_names: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -114,6 +120,12 @@ class Wedding(Base):
     # The couple's "menu is ready" switch: gates guest meal selection in RSVP.
     meal_selection_open: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("FALSE")
+    )
+    # Cross-grant default for the non-subject partner's access to their
+    # partner's stag/hen party (Wave 3 item 14 D1). See
+    # docs/specs/PARTY_PORTALS_D1.md "Access rule".
+    party_visibility_mode: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default=text("'partner_visible'")
     )
     created_at: Mapped[datetime | None] = mapped_column(
         DateTime, server_default=text("CURRENT_TIMESTAMP")
@@ -245,9 +257,24 @@ class Invite(Base):
             "role IN ('couple', 'coordinator', 'guest')",
             name="ck_invites_role_valid",
         ),
+        CheckConstraint(
+            "party IN ('stag', 'hen') OR party IS NULL",
+            name="ck_invites_party_valid",
+        ),
+        CheckConstraint(
+            "associated_party IN ('stag', 'hen') OR associated_party IS NULL",
+            name="ck_invites_associated_party_valid",
+        ),
         Index("idx_invites_code", "code", unique=True),
         Index("idx_invites_wedding_role", "wedding_id", "role"),
         Index("idx_invites_guest_id", "guest_id"),
+        Index(
+            "uq_one_party_admin_per_party",
+            "wedding_id",
+            "party",
+            unique=True,
+            postgresql_where=text("party_admin = true"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -262,6 +289,23 @@ class Invite(Base):
     role: Mapped[str] = mapped_column(
         String(50), nullable=False, server_default=text("'guest'")
     )
+    # Guest's party membership (Wave 3 item 14 D1). NULL = not in a party.
+    party: Mapped[str | None] = mapped_column(String(10))
+    # Best Man (stag) / Maid of Honour (hen) — at most one per (wedding, party);
+    # DB-backstopped by uq_one_party_admin_per_party above. Grants party_admin
+    # powers (pin/hide messages, edit party info, always allowed to reveal).
+    party_admin: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("FALSE")
+    )
+    # Friendly label, auto-set to "Best Man"/"Maid of Honour" when party_admin
+    # is set; kept editable in case the couple wants different wording.
+    party_title: Mapped[str | None] = mapped_column(String(50))
+    # Meaningful only when role='couple': display name for this partner
+    # ("Ashley" / "Hazel"). Display only — never used for access logic.
+    partner_label: Mapped[str | None] = mapped_column(String(50))
+    # Meaningful only when role='couple': which party is *this partner's own*
+    # do. This — not partner_label — drives the party access rule.
+    associated_party: Mapped[str | None] = mapped_column(String(10))
     redeemed_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=text("CURRENT_TIMESTAMP")
@@ -746,3 +790,95 @@ class Notification(Base):
 
     wedding: Mapped[Wedding] = orm_relationship(back_populates="notifications")
     recipient_invite: Mapped[Invite] = orm_relationship()
+
+
+# ---------------------------------------------------------------------------
+# Stag & Hen party portals (Wave 3 item 14 D1) — see
+# docs/specs/PARTY_PORTALS_D1.md for the full contract, especially the
+# security-critical "Access rule" implemented in app/api/party.py.
+# ---------------------------------------------------------------------------
+
+
+class PartyReveal(Base):
+    """Per-couple-invite reveal gate for a party's content.
+
+    One row per (wedding, party, invite) that needs gating. Absence of a row
+    falls back to the wedding's party_visibility_mode default for
+    non-subjects only — subjects with no row are always locked out.
+    """
+
+    __tablename__ = "party_reveals"
+    __table_args__ = (
+        CheckConstraint("party IN ('stag', 'hen')", name="ck_party_reveals_party_valid"),
+        UniqueConstraint(
+            "wedding_id", "party", "invite_id", name="uq_party_reveals_wedding_party_invite"
+        ),
+        Index("idx_party_reveals_wedding_party", "wedding_id", "party"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), nullable=False
+    )
+    party: Mapped[str] = mapped_column(String(10), nullable=False)
+    invite_id: Mapped[int] = mapped_column(
+        ForeignKey("invites.id", ondelete="CASCADE"), nullable=False
+    )
+    revealed: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("FALSE")
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+
+class PartyMessage(Base):
+    """Party message board post (blessings-pattern): author + hidden + pin,
+    moderated by that party's admin (Best Man/Maid of Honour)."""
+
+    __tablename__ = "party_messages"
+    __table_args__ = (
+        CheckConstraint("party IN ('stag', 'hen')", name="ck_party_messages_party_valid"),
+        Index("idx_party_messages_wedding_party", "wedding_id", "party"),
+        Index("idx_party_messages_wedding_party_hidden", "wedding_id", "party", "hidden"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), nullable=False
+    )
+    party: Mapped[str] = mapped_column(String(10), nullable=False)
+    invite_id: Mapped[int] = mapped_column(
+        ForeignKey("invites.id", ondelete="CASCADE"), nullable=False
+    )
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    hidden: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("FALSE")
+    )
+    pinned: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("FALSE")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+    author: Mapped[Invite] = orm_relationship()
+
+
+class PartyInfo(Base):
+    """Free-text date/venue/plan blurb for a party, editable by that party's
+    admin. PK (wedding_id, party) — one row per party per wedding."""
+
+    __tablename__ = "party_info"
+    __table_args__ = (
+        CheckConstraint("party IN ('stag', 'hen')", name="ck_party_info_party_valid"),
+    )
+
+    wedding_id: Mapped[int] = mapped_column(
+        ForeignKey("weddings.id", ondelete="CASCADE"), primary_key=True
+    )
+    party: Mapped[str] = mapped_column(String(10), primary_key=True)
+    details: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )

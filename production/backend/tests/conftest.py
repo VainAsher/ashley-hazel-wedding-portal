@@ -137,6 +137,46 @@ def coordinator_session(
 
 
 @pytest.fixture()
+def couple_session(
+    client: TestClient,
+    db_session: Session,
+) -> Iterator[TestClient]:
+    """Return a test client authenticated as a couple-role invite.
+
+    Unlike coordinator_session/guest_session (pre-existing, no cleanup),
+    this one cleans up after itself: tests using it (invite create/update
+    endpoints) can create arbitrary additional invites in the same wedding,
+    so leaving the session invite behind risks polluting later party-admin
+    uniqueness / associated_party queries in the shared test DB.
+    """
+    code = f"PYTEST-COUPLE-{uuid4().hex[:8].upper()}"
+    invite = Invite(
+        code=code,
+        wedding_id=TEST_WEDDING_ID,
+        household_name="Pytest Couple",
+        role="couple",
+    )
+    db_session.add(invite)
+    db_session.commit()
+
+    response = client.post("/api/auth/login", json={"invite_code": code})
+    assert response.status_code == 200
+
+    try:
+        yield client
+    finally:
+        client.post("/api/auth/logout")
+        cleanup_session = SessionLocal()
+        try:
+            cleanup_session.query(Invite).filter(Invite.code == code).delete(
+                synchronize_session=False
+            )
+            cleanup_session.commit()
+        finally:
+            cleanup_session.close()
+
+
+@pytest.fixture()
 def guest_session(
     client: TestClient,
     db_session: Session,

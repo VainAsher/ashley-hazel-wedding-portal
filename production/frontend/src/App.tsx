@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
-import { HomeRedirect, RequireAdmin, RequireGuest } from './components/AuthRoutes'
+import { HomeRedirect, RequireAdmin, RequireGuest, RequireGuestOrCouple } from './components/AuthRoutes'
 import { ThemeApplier } from './hooks/useTheme'
 import { Admin } from './pages/Admin'
 import { Guests } from './pages/Guests'
@@ -61,6 +61,7 @@ const AdminMusic = lazy(() =>
 const AdminFeedback = lazy(() =>
   import('./pages/admin/Feedback').then((m) => ({ default: m.Feedback })),
 )
+const Party = lazy(() => import('./pages/Party').then((m) => ({ default: m.Party })))
 
 function guestRoute(element: React.ReactNode) {
   return <RequireGuest>{element}</RequireGuest>
@@ -105,6 +106,14 @@ function App() {
             <Route element={guestRoute(<Schedule />)} path="/schedule" />
             <Route element={guestRoute(<Blessings />)} path="/blessings" />
             <Route element={guestRoute(<Music />)} path="/music" />
+            <Route
+              element={
+                <RequireGuestOrCouple>
+                  <Party />
+                </RequireGuestOrCouple>
+              }
+              path="/party/:party"
+            />
             <Route element={adminRoute(<AdminBlessings />)} path="/admin/blessings" />
             <Route element={adminRoute(<AdminMusic />)} path="/admin/music" />
             <Route element={adminRoute(<AdminFeedback />)} path="/admin/feedback" />

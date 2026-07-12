@@ -23,6 +23,7 @@ def restore_wedding(db_session: Session) -> Iterator[None]:
         "ceremony_location": wedding.ceremony_location,
         "reception_location": wedding.reception_location,
         "theme": wedding.theme,
+        "party_visibility_mode": wedding.party_visibility_mode,
     }
     try:
         yield
@@ -61,6 +62,7 @@ class TestWeddingSettings:
             "phase",
             "theme",
             "meal_selection_open",
+            "party_visibility_mode",
         }
 
     def test_put_updates_and_persists(
@@ -264,3 +266,62 @@ class TestWeddingTypography:
         assert theme["display_font"] == "Georgia"
         assert theme["body_font"] == "Inter"
         assert theme["type_scale"] == 1.0
+
+
+class TestPartyVisibilityMode:
+    """Wave 3 item 14 D1: the "Party visibility" dial in admin Settings."""
+
+    def test_defaults_to_partner_visible(
+        self,
+        coordinator_session: TestClient,
+        db_session: Session,
+        restore_wedding: None,
+    ) -> None:
+        db_session.expire_all()
+        wedding = db_session.get(Wedding, TEST_WEDDING_ID)
+        assert wedding is not None
+        wedding.party_visibility_mode = "partner_visible"
+        db_session.commit()
+
+        response = coordinator_session.get("/api/settings/wedding")
+        assert response.json()["party_visibility_mode"] == "partner_visible"
+
+    def test_put_updates_and_persists(
+        self,
+        coordinator_session: TestClient,
+        db_session: Session,
+        restore_wedding: None,
+    ) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding", json={"party_visibility_mode": "locked"}
+        )
+        assert response.status_code == 200
+        assert response.json()["party_visibility_mode"] == "locked"
+
+        db_session.expire_all()
+        persisted = db_session.get(Wedding, TEST_WEDDING_ID)
+        assert persisted is not None
+        assert persisted.party_visibility_mode == "locked"
+
+    def test_rejects_unknown_mode(
+        self, coordinator_session: TestClient, restore_wedding: None
+    ) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding", json={"party_visibility_mode": "wide_open"}
+        )
+        assert response.status_code == 422
+
+    def test_partial_update_leaves_mode_unchanged(
+        self,
+        coordinator_session: TestClient,
+        db_session: Session,
+        restore_wedding: None,
+    ) -> None:
+        coordinator_session.put(
+            "/api/settings/wedding", json={"party_visibility_mode": "locked"}
+        )
+        response = coordinator_session.put(
+            "/api/settings/wedding", json={"ceremony_location": "The Pytest Chapel"}
+        )
+        assert response.status_code == 200
+        assert response.json()["party_visibility_mode"] == "locked"
