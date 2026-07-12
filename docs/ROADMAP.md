@@ -229,7 +229,22 @@ sign-off before release.
 **D2 — party planning board (M, after 13):** mount `TaskBoard` with
 `context='stag'|'hen'` — trivial now, `TaskBoard` already accepts a context
 prop from the Kanban V2 extraction.
-**D3 — profiles on the party pages (S, after 15).**
+
+> **Status 2026-07-12: BUILT.** Task-board access needed its own rule
+> (not the flat `require_coordinator` every route used before):
+> `context='wedding'` keeps the old couple/coordinator-only behaviour;
+> `stag`/`hen` are gated by the same `has_party_access` rule that guards a
+> party's message board — so a party member with no coordinator role can
+> run their own board, and coordinators are denied here too, for
+> consistency with the D1 message-board exclusion (flagged for the
+> couple's sign-off, same as D1's). Full backend suite 470/470, tsc
+> clean, Playwright green (a serial rerun confirmed the parallel-run
+> failures were the known dev-server flake, not regressions).
+
+**D3 — profiles on the party pages (S, after 15).** Not yet built — the
+profiles work below deliberately left `Party.tsx` untouched (to avoid a
+merge conflict with D2, built in parallel); linking a profile-card view
+into each party page is the remaining trivial follow-up.
 **Risks:** the access rule is the most privacy-sensitive logic in the app —
 needs exhaustive test coverage per the spec's truth table, tested from both
 directions (each partner truly cannot see the other's party without an
@@ -245,6 +260,15 @@ reference — avatar/role/known-for cards in the plum/gold theme); cards render 
 party area.
 **Decision confirmed 2026-07-12:** guest-visible, not party-only — a "Meet the
 wedding party" page open to every logged-in guest.
+
+> **Status 2026-07-12: BUILT.** Migration 022, `GET/PUT /api/profiles/me`,
+> `POST /api/profiles/me/photo`, `GET /api/profiles` (directory, includes
+> unfilled profiles with sensible fallbacks). Shipped as a new
+> `/wedding-party` page (editor + public directory together, always in the
+> guest nav) rather than inside the party pages — the editor's natural home
+> per the spec — specifically to avoid the merge conflict with D2's
+> parallel work on `Party.tsx`; linking it into the party pages is D3.
+> 15 backend tests + 8 Playwright; full suites green.
 
 ### 16. @mentions (couple) — **M**, after 8 (notifications) + 15 (directory)
 Parse `@Display Name` in blessings, song dedications, and party messages at render;
