@@ -37,6 +37,19 @@ interface PartySummary {
   reveal_banner: { subject_invite_id: number; subject_name: string; revealed: boolean } | null
 }
 
+interface ProfileDirectoryEntry {
+  invite_id: number
+  party: 'stag' | 'hen'
+  display_name: string
+  role_title: string | null
+  about: string | null
+  best_known_for: string | null
+  favourite_song: string | null
+  photo_path: string | null
+  photo_url: string | null
+  has_profile: boolean
+}
+
 interface PartyTask {
   id: number
   wedding_id: number
@@ -195,9 +208,23 @@ async function installPartyApi(
   page: Page,
   access: PartyAccess,
   summaries: Partial<Record<'stag' | 'hen', PartySummary>>,
+  profileEntries: ProfileDirectoryEntry[] = [],
 ) {
   await page.route('**/api/party/access', async (route) => {
     await json(route, access)
+  })
+
+  // Wave 3 item 14 D3: the party page's "Meet the ... crew" section reads
+  // the same GET /api/profiles the public directory uses (item 15), filtered
+  // client-side to this party. Default empty so existing tests (which don't
+  // care about profiles) see the section quietly absent, per its own render
+  // rule (see PartyProfiles's early-return on an empty filtered list).
+  await page.route('**/api/profiles', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue()
+      return
+    }
+    await json(route, profileEntries)
   })
 
   await page.route(/\/api\/party\/(stag|hen)\/summary$/, async (route) => {
@@ -353,6 +380,60 @@ test.describe('party page', () => {
     await expect(main.getByRole('list').getByText('Plain Guest Pete', { exact: true })).toBeVisible()
     await expect(main.getByText('Who is in for paintball?')).toBeVisible()
     await expect(main.getByText('Count me in!')).toBeVisible()
+  })
+
+  test('shows profile cards for this party only (Wave 3 item 14 D3)', async ({ page }) => {
+    await mockGuestAuth(page)
+    await installPartyApi(
+      page,
+      { stag: true, hen: false },
+      { stag: baseSummary() },
+      [
+        {
+          invite_id: 101,
+          party: 'stag',
+          display_name: 'Best Man Ben',
+          role_title: 'Best Man',
+          about: null,
+          best_known_for: 'Terrible karaoke',
+          favourite_song: null,
+          photo_path: null,
+          photo_url: null,
+          has_profile: true,
+        },
+        {
+          invite_id: 201,
+          party: 'hen',
+          display_name: 'Maid of Honour Maya',
+          role_title: 'Maid of Honour',
+          about: null,
+          best_known_for: 'Excellent playlists',
+          favourite_song: null,
+          photo_path: null,
+          photo_url: null,
+          has_profile: true,
+        },
+      ],
+    )
+    await page.goto('/party/stag')
+
+    const main = mainRegion(page)
+    await expect(main.getByRole('heading', { name: 'Meet the Stag Do crew' })).toBeVisible()
+    // The profile card renders the name as a heading (Ben also appears as a
+    // plain list item in MembersCard above — scope to the heading to avoid
+    // a strict-mode ambiguity between the two, legitimately-duplicate spots).
+    await expect(main.getByRole('heading', { name: 'Best Man Ben', exact: true })).toBeVisible()
+    await expect(main.getByText('Terrible karaoke')).toBeVisible()
+    // The hen party's profile must never leak onto the stag page.
+    await expect(main.getByText('Maid of Honour Maya')).toHaveCount(0)
+  })
+
+  test('profile section is quietly absent when no one has a profile yet', async ({ page }) => {
+    await mockGuestAuth(page)
+    await installPartyApi(page, { stag: true, hen: false }, { stag: baseSummary() }, [])
+    await page.goto('/party/stag')
+
+    await expect(mainRegion(page).getByText('Meet the Stag Do crew')).toHaveCount(0)
   })
 
   test('a non-member is denied and sees an error, not the content', async ({ page }) => {

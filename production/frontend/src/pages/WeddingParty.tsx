@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'r
 import { Music2, Users } from 'lucide-react'
 
 import { GuestLayout } from '../components/GuestLayout'
+import { ProfileAvatar, ProfileCard } from '../components/profiles/ProfileCard'
 import { Alert } from '../components/ui/alert'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
@@ -20,65 +21,6 @@ import {
 const PARTY_HEADINGS: Record<'stag' | 'hen', string> = {
   stag: 'Stag Do',
   hen: 'Hen Do',
-}
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
-
-function initials(name: string): string {
-  const trimmed = name.trim()
-  if (!trimmed) {
-    return '?'
-  }
-  return trimmed
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('')
-}
-
-function Avatar({ name, photoUrl }: { name: string; photoUrl: string | null }) {
-  if (photoUrl) {
-    return (
-      <img
-        src={`${API_BASE_URL}${photoUrl}`}
-        alt=""
-        className="h-16 w-16 flex-shrink-0 rounded-full object-cover ring-2 ring-gold"
-      />
-    )
-  }
-  return (
-    <div
-      aria-hidden="true"
-      className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full bg-plum text-lg font-semibold text-cream ring-2 ring-gold"
-    >
-      {initials(name)}
-    </div>
-  )
-}
-
-function DirectoryCard({ entry }: { entry: ProfileDirectoryEntry }) {
-  return (
-    <Card className="flex h-full flex-col">
-      <CardContent className="flex flex-1 flex-col gap-3 pt-6">
-        <div className="flex items-center gap-4">
-          <Avatar name={entry.display_name} photoUrl={entry.photo_url} />
-          <div className="min-w-0">
-            <h3 className="m-0 truncate text-base font-semibold text-gray-900">
-              {entry.display_name}
-            </h3>
-            {entry.role_title && (
-              <p className="m-0 truncate text-sm text-plum">{entry.role_title}</p>
-            )}
-          </div>
-        </div>
-        {entry.best_known_for && (
-          <p className="m-0 text-sm text-gray-600">
-            <strong>Known for:</strong> {entry.best_known_for}
-          </p>
-        )}
-      </CardContent>
-    </Card>
-  )
 }
 
 function WeddingPartyDirectory() {
@@ -133,7 +75,7 @@ function WeddingPartyDirectory() {
           <h2 className="mb-3 font-display text-2xl text-plum">{PARTY_HEADINGS[party]}</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {grouped[party].map((entry) => (
-              <DirectoryCard key={entry.invite_id} entry={entry} />
+              <ProfileCard key={entry.invite_id} entry={entry} />
             ))}
           </div>
         </section>
@@ -247,7 +189,7 @@ function MyProfileEditor() {
           )}
 
           <div className="flex items-center gap-4">
-            <Avatar name={displayName || 'Me'} photoUrl={profile.photo_url} />
+            <ProfileAvatar name={displayName || 'Me'} photoUrl={profile.photo_url} />
             <div className="grid gap-2">
               <Label htmlFor="profile-photo">Photo</Label>
               <Input

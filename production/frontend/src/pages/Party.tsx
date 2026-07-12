@@ -23,9 +23,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { ProfileCard } from '@/components/profiles/ProfileCard'
 import { TaskBoard } from '@/components/taskboard/TaskBoard'
 import { BOARD_COLUMNS, PRIORITY_OPTIONS } from '@/components/taskboard/constants'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useProfileDirectory } from '@/hooks/useProfiles'
 import {
   PartyApiError,
   useCreatePartyMessage,
@@ -634,6 +636,45 @@ function MembersCard({ party }: { party: PartyName }) {
   )
 }
 
+// ---------------------------------------------------------------------------
+// Profile cards (Wave 3 item 14 D3): the public directory (item 15,
+// src/pages/WeddingParty.tsx) has no server-side party filter by design —
+// it's meant to be fully guest-visible — so this filters the same
+// `GET /api/profiles` response down to just this party's members and
+// renders them with the shared <ProfileCard>, right here on the party's own
+// page for a fuller "meet everyone" view than the plain name list above.
+// ---------------------------------------------------------------------------
+
+function PartyProfiles({ party }: { party: PartyName }) {
+  const { data: entries, isLoading, isError } = useProfileDirectory()
+
+  if (isLoading || isError) {
+    // Quiet on load/error here — MembersCard above already carries the
+    // authoritative membership list and its own error state.
+    return null
+  }
+
+  const partyEntries = (entries ?? []).filter((entry) => entry.party === party)
+  if (partyEntries.length === 0) {
+    return null
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Meet the {PARTY_TITLE[party]} crew</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {partyEntries.map((entry) => (
+            <ProfileCard key={entry.invite_id} entry={entry} />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function MessageRow({
   message,
   isPartyAdmin,
@@ -835,6 +876,7 @@ export function Party() {
             <RevealBanner party={party} />
             <DetailsCard party={party} isPartyAdmin={summary.is_party_admin} />
             <MembersCard party={party} />
+            <PartyProfiles party={party} />
             <PlanningBoard party={party} />
             <MessageBoard party={party} isPartyAdmin={summary.is_party_admin} />
           </>
