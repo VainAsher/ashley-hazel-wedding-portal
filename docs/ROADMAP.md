@@ -203,15 +203,29 @@ matches the caterer conversation, courses can come later).
 
 **D1 — membership + shell + message board (L):** see
 `docs/specs/PARTY_PORTALS_D1.md` for the full data model, access-rule truth
-table, and API/frontend shape. Headline points: migration 021 (`invites`
-gains `party`/`party_admin`/`party_title`/`partner_label`/
-`associated_party`; new `party_reveals`, `party_messages`, `party_info`
-tables; `weddings.party_visibility_mode`); routes are `/party/stag` and
-`/party/hen` (explicit, not the single `/party` originally sketched here,
-since couple access is no longer symmetric); coordinators keep full admin
-control of the mechanics but do **not** get automatic read access to party
-content itself — flagged in the spec as the one call worth double-checking
-with the couple before it ships.
+table, and API/frontend shape.
+
+> **Status 2026-07-12: BUILT and adversarially security-tested on staging**
+> (migration 021, on main, not yet released to prod). 94 backend tests carry
+> the access-rule truth table; on top of those I ran the entire matrix live
+> against staging via direct API calls (never trusting UI hiding) — subject
+> exclusion, non-subject default access under both visibility modes, mode
+> switches taking effect immediately, reveal-toggle authorization for all
+> four actor types, guest party scoping, coordinator content-denial, and
+> Best Man/MoH single-holder enforcement all held up exactly per spec. Found
+> and fixed one real (non-security) bug along the way: a demoted Best
+> Man/MoH kept their stale title label after losing the role. Awaiting the
+> couple's release call to bundle with whatever ships next.
+
+Headline points: migration 021 (`invites` gains
+`party`/`party_admin`/`party_title`/`partner_label`/`associated_party`; new
+`party_reveals`, `party_messages`, `party_info` tables;
+`weddings.party_visibility_mode`); routes are `/party/stag` and `/party/hen`
+(explicit, not the single `/party` originally sketched here, since couple
+access is no longer symmetric); coordinators keep full admin control of the
+mechanics but do **not** get automatic read access to party content itself —
+this call held up under testing but is still worth the couple's explicit
+sign-off before release.
 **D2 — party planning board (M, after 13):** mount `TaskBoard` with
 `context='stag'|'hen'` — trivial now, `TaskBoard` already accepts a context
 prop from the Kanban V2 extraction.
