@@ -93,3 +93,13 @@ Add a row to the right table. Keep it short. Use:
   relationship added (the only one missing); the migration-011 index-name
   "drift" was already resolved in the model, stale INDEXING_STRATEGY.md note
   corrected.*
+- **Task `assigned_to` is a free-text/FK mismatch.** *Found 2026-07-12 during
+  the Kanban V2 staging test.* The `tasks.assigned_to` column is an int FK to
+  `wedding_party.id`, but the admin Timeline UI has always collected it as a
+  plain text name — so a raw non-existent id (e.g. from a script or future
+  API client) causes a 500 (FK violation) instead of a clean 4xx. Low
+  severity: the UI itself only ever sends values the Select derives from
+  already-observed assignee strings, so it doesn't manifest in normal use.
+  *Candidate: proper fix arrives naturally with the Wave 3 wedding-party
+  directory (items 14/15) — resolve `assigned_to` against real party members
+  then, and validate/400 on the API in the meantime.*
