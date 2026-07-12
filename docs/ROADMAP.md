@@ -224,8 +224,8 @@ Headline points: migration 021 (`invites` gains
 (explicit, not the single `/party` originally sketched here, since couple
 access is no longer symmetric); coordinators keep full admin control of the
 mechanics but do **not** get automatic read access to party content itself —
-this call held up under testing but is still worth the couple's explicit
-sign-off before release.
+**confirmed by the couple 2026-07-12 ("its ok coordinators to see or not
+see")**, stands as built.
 **D2 — party planning board (M, after 13):** mount `TaskBoard` with
 `context='stag'|'hen'` — trivial now, `TaskBoard` already accepts a context
 prop from the Kanban V2 extraction.
@@ -241,10 +241,15 @@ prop from the Kanban V2 extraction.
 > clean, Playwright green (a serial rerun confirmed the parallel-run
 > failures were the known dev-server flake, not regressions).
 
-**D3 — profiles on the party pages (S, after 15).** Not yet built — the
-profiles work below deliberately left `Party.tsx` untouched (to avoid a
-merge conflict with D2, built in parallel); linking a profile-card view
-into each party page is the remaining trivial follow-up.
+**D3 — profiles on the party pages (S, after 15).**
+
+> **Status 2026-07-12: BUILT.** A "Meet the {Stag Do|Hen Do} crew" section
+> now renders on each party's own page, reusing a shared `ProfileCard`
+> extracted out of the item 15 page so both surfaces share one
+> implementation. Party-scoped correctly (a Stag member never sees a Hen
+> profile card), section absent entirely when the party has no filled-in
+> profiles yet.
+
 **Risks:** the access rule is the most privacy-sensitive logic in the app —
 needs exhaustive test coverage per the spec's truth table, tested from both
 directions (each partner truly cannot see the other's party without an
@@ -277,7 +282,29 @@ wedding-party + couple elsewhere — do NOT expose the full guest list to guests
 On create, backend extracts mentions → notification rows (item 8's table) → bell.
 Store nothing new beyond notifications; mentions are derived at save time.
 
+> **Status 2026-07-12: BUILT** (full contract in `docs/specs/MENTIONS.md`).
+> No new migration — mentions are parsed fresh at both save time (fan-out) and
+> render time (highlight) against a live directory, never stored. Scoping
+> rule enforced server-side and independently verified: general scope
+> (blessings, song dedications) = wedding-party members + couple invites that
+> have a `partner_label` set; party scope (Stag/Hen messages) = that party's
+> members only, authorized via the same `has_party_access` check every other
+> party endpoint uses. 24 dedicated backend tests (longest-match extraction,
+> both scopes, self-mention exclusion, cross-party isolation) + full suites
+> green (494 backend, Playwright serial-clean after the usual dev-server
+> parallel-load flake on the first pass).
+
 ---
+
+## Wave 3 — complete
+
+All six items (13 Kanban V2, 14 D1/D2/D3 party portals, 15 profiles, 16
+mentions) are built and merged to `main`. 13 and 14 D1 are live in
+production (v1.2.1, v1.3.0); D2, D3, 15, and 16 are on `main` awaiting the
+next release cut. Wave 4 is next — see below; all of it is currently
+gated on couple decisions rather than ready-to-build engineering (the
+viewport-paging spike, video approach, and external comms channels all
+need a couple call before there's a clear build target).
 
 ## Wave 4 — the big design programme + long tail
 
