@@ -882,3 +882,35 @@ class PartyInfo(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
+
+
+class MemberProfile(Base):
+    """Wedding-party mini profile (Wave 3 item 15).
+
+    One row per eligible invite (any invite with `party IS NOT NULL`), created
+    lazily on first save — no row means "hasn't filled theirs in yet", which
+    the directory endpoint falls back to the guest's name/party title for
+    rather than treating as an error. Guest-visible, not party-only: see
+    docs/specs/WEDDING_PARTY_PROFILES.md.
+    """
+
+    __tablename__ = "member_profiles"
+    __table_args__ = (
+        UniqueConstraint("invite_id", name="uq_member_profiles_invite_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    invite_id: Mapped[int] = mapped_column(
+        ForeignKey("invites.id", ondelete="CASCADE"), nullable=False
+    )
+    display_name: Mapped[str | None] = mapped_column(String(100))
+    role_title: Mapped[str | None] = mapped_column(String(100))
+    about: Mapped[str | None] = mapped_column(Text)
+    best_known_for: Mapped[str | None] = mapped_column(String(200))
+    favourite_song: Mapped[str | None] = mapped_column(String(200))
+    photo_path: Mapped[str | None] = mapped_column(String(500))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+    invite: Mapped[Invite] = orm_relationship()

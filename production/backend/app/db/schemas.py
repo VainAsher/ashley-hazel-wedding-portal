@@ -1368,3 +1368,72 @@ class PartyRevealResponse(BaseModel):
     party: str
     invite_id: int
     revealed: bool
+
+
+# ---------------------------------------------------------------------------
+# Wedding-party mini profiles (Wave 3 item 15)
+# ---------------------------------------------------------------------------
+
+ABOUT_MAX_LENGTH = 1000
+
+
+class MemberProfileUpdate(BaseModel):
+    """PUT /api/profiles/me body. Field length caps mirror the columns;
+    `about` is bounded server-side even though the column is TEXT."""
+
+    display_name: str | None = Field(default=None, max_length=100)
+    role_title: str | None = Field(default=None, max_length=100)
+    about: str | None = Field(default=None, max_length=ABOUT_MAX_LENGTH)
+    best_known_for: str | None = Field(default=None, max_length=200)
+    favourite_song: str | None = Field(default=None, max_length=200)
+
+    @field_validator("display_name", "role_title", "about", "best_known_for", "favourite_song")
+    @classmethod
+    def blank_to_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+
+class MemberProfileResponse(BaseModel):
+    """GET/PUT /api/profiles/me response — the caller's own profile, whether
+    or not they've saved one yet (an unsaved-but-eligible profile is all
+    None fields, not a 404; 404 is reserved for ineligible invites)."""
+
+    invite_id: int
+    display_name: str | None = None
+    role_title: str | None = None
+    about: str | None = None
+    best_known_for: str | None = None
+    favourite_song: str | None = None
+    photo_path: str | None = None
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def photo_url(self) -> str | None:
+        return f"/uploads/{self.photo_path}" if self.photo_path else None
+
+
+class ProfileDirectoryEntry(BaseModel):
+    """One card on the public 'Meet the wedding party' directory. Members
+    who haven't filled in a profile yet still appear here, falling back to
+    their guest name and party title so the page isn't full of gaps."""
+
+    invite_id: int
+    party: str
+    display_name: str
+    role_title: str | None = None
+    about: str | None = None
+    best_known_for: str | None = None
+    favourite_song: str | None = None
+    photo_path: str | None = None
+    has_profile: bool
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def photo_url(self) -> str | None:
+        return f"/uploads/{self.photo_path}" if self.photo_path else None
