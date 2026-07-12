@@ -23,9 +23,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { MentionHighlightedText } from '@/components/mentions/MentionHighlight'
+import { MentionTextarea } from '@/components/mentions/MentionTextarea'
 import { ProfileCard } from '@/components/profiles/ProfileCard'
 import { TaskBoard } from '@/components/taskboard/TaskBoard'
 import { BOARD_COLUMNS, PRIORITY_OPTIONS } from '@/components/taskboard/constants'
+import { useMentionsDirectory, type MentionDirectoryEntry } from '@/hooks/useMentions'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useProfileDirectory } from '@/hooks/useProfiles'
 import {
@@ -680,11 +683,13 @@ function MessageRow({
   isPartyAdmin,
   onModerate,
   moderating,
+  mentionDirectory,
 }: {
   message: PartyMessage
   isPartyAdmin: boolean
   onModerate: (message: PartyMessage, patch: { hidden?: boolean; pinned?: boolean }) => void
   moderating: boolean
+  mentionDirectory: MentionDirectoryEntry[]
 }) {
   return (
     <Card>
@@ -723,7 +728,9 @@ function MessageRow({
         )}
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-gray-700 m-0 whitespace-pre-wrap">{message.message}</p>
+        <p className="text-sm text-gray-700 m-0 whitespace-pre-wrap">
+          <MentionHighlightedText text={message.message} directory={mentionDirectory} />
+        </p>
       </CardContent>
     </Card>
   )
@@ -733,6 +740,7 @@ function MessageBoard({ party, isPartyAdmin }: { party: PartyName; isPartyAdmin:
   const { data: summary, isLoading, isError, error } = usePartySummary(party)
   const createMutation = useCreatePartyMessage(party)
   const moderateMutation = useModeratePartyMessage(party)
+  const { data: mentionDirectory } = useMentionsDirectory(party)
 
   const [message, setMessage] = useState('')
   const [submitError, setSubmitError] = useState<string | null>(null)
@@ -782,13 +790,14 @@ function MessageBoard({ party, isPartyAdmin }: { party: PartyName; isPartyAdmin:
             <Label htmlFor="party-message-textarea" className="sr-only">
               Message
             </Label>
-            <textarea
+            <MentionTextarea
               id="party-message-textarea"
+              scope={party}
               value={message}
-              onChange={(event) => setMessage(event.target.value)}
+              onChange={setMessage}
               rows={3}
               maxLength={1000}
-              placeholder="Say something to the group..."
+              placeholder="Say something to the group... (@ to mention someone)"
               className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-base resize-vertical"
             />
             <div className="flex justify-end">
@@ -831,6 +840,7 @@ function MessageBoard({ party, isPartyAdmin }: { party: PartyName; isPartyAdmin:
             isPartyAdmin={isPartyAdmin}
             onModerate={(target, patch) => void handleModerate(target, patch)}
             moderating={moderateMutation.isPending}
+            mentionDirectory={mentionDirectory ?? []}
           />
         ))}
     </div>

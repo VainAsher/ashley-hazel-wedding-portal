@@ -5,12 +5,15 @@ import { Heart, Music2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { GuestLayout } from '../components/GuestLayout'
 import { Jukebox } from '../components/Jukebox'
+import { MentionHighlightedText } from '../components/mentions/MentionHighlight'
+import { MentionTextarea } from '../components/mentions/MentionTextarea'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { Alert } from '../components/ui/alert'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
+import { useMentionsDirectory, type MentionDirectoryEntry } from '../hooks/useMentions'
 import {
   MusicApiError,
   useSongWall,
@@ -28,7 +31,13 @@ function songDisplayTitle(song: SongWallItem): string {
   return song.artist ? `${song.title} — ${song.artist}` : song.title
 }
 
-function SongCard({ song }: { song: SongWallItem }) {
+function SongCard({
+  song,
+  mentionDirectory,
+}: {
+  song: SongWallItem
+  mentionDirectory: MentionDirectoryEntry[]
+}) {
   const toggleReaction = useToggleReaction()
 
   return (
@@ -71,7 +80,9 @@ function SongCard({ song }: { song: SongWallItem }) {
       </CardHeader>
       {song.dedication && (
         <CardContent>
-          <p className="text-sm text-gray-700 italic m-0 whitespace-pre-wrap">{song.dedication}</p>
+          <p className="text-sm text-gray-700 italic m-0 whitespace-pre-wrap">
+            <MentionHighlightedText text={song.dedication} directory={mentionDirectory} />
+          </p>
         </CardContent>
       )}
     </Card>
@@ -121,6 +132,7 @@ export function Music() {
   usePageTitle('Dancefloor')
   const { data: wall, isLoading, isError, error } = useSongWall()
   const submitMutation = useSubmitSongRequest()
+  const { data: mentionDirectory } = useMentionsDirectory('general')
 
   const [title, setTitle] = useState('')
   const [artist, setArtist] = useState('')
@@ -250,13 +262,14 @@ export function Music() {
 
                 <div className="grid gap-2">
                   <Label htmlFor="song-dedication">Dedication</Label>
-                  <textarea
+                  <MentionTextarea
                     id="song-dedication"
+                    scope="general"
                     value={dedication}
-                    onChange={(event) => setDedication(event.target.value)}
+                    onChange={setDedication}
                     rows={3}
                     maxLength={500}
-                    placeholder="A dedication or message (optional)"
+                    placeholder="A dedication or message (optional, @ to mention someone)"
                     className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-base resize-vertical focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   <p className="text-xs text-gray-600 m-0">
@@ -302,7 +315,7 @@ export function Music() {
         {!isLoading && !isError && songList.length > 0 && (
           <section aria-label="Song wall" className="grid gap-4">
             {songList.map((song) => (
-              <SongCard key={song.id} song={song} />
+              <SongCard key={song.id} song={song} mentionDirectory={mentionDirectory ?? []} />
             ))}
           </section>
         )}

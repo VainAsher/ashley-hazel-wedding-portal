@@ -13,6 +13,11 @@ interface Blessing {
   created_at: string
 }
 
+interface MentionEntry {
+  invite_id: number
+  display_name: string
+}
+
 const existing: Blessing[] = [
   {
     id: 1,
@@ -20,6 +25,14 @@ const existing: Blessing[] = [
     message: 'Wishing you a lifetime of love.',
     created_at: '2026-05-01T10:00:00Z',
   },
+]
+
+// @mentions (Wave 3 item 16): the general-scope directory the Blessings
+// composer/wall match against -- wedding-party members + labelled couple,
+// never the full guest list (see docs/specs/MENTIONS.md).
+const mentionDirectory: MentionEntry[] = [
+  { invite_id: 201, display_name: 'Alex Best Man' },
+  { invite_id: 202, display_name: 'Jordan Maid' },
 ]
 
 function json(route: Route, body: unknown, status = 200) {
@@ -78,6 +91,11 @@ test.beforeEach(async ({ page }) => {
       wedding_phase: 'live',
     })
   })
+
+  // The MentionTextarea (message composer) fetches this once per mount.
+  await page.route('**/api/mentions/directory*', async (route) => {
+    await json(route, mentionDirectory)
+  })
 })
 
 test.afterEach(async ({ page }) => {
@@ -126,4 +144,39 @@ test('shows the empty state when there are no blessings', async ({ page }) => {
   await page.goto('/blessings')
 
   await expect(mainRegion(page).getByText('No blessings yet')).toBeVisible()
+})
+
+// ---------------------------------------------------------------------------
+// @mentions (Wave 3 item 16)
+// ---------------------------------------------------------------------------
+
+test('autocomplete shows filtered suggestions and inserts a mention on click', async ({
+  page,
+}) => {
+  await installBlessingsApi(page, [])
+  await page.goto('/blessings')
+
+  const messageField = page.getByLabel('Message')
+  await messageField.fill('Big shoutout to @Alex')
+
+  await expect(page.getByRole('option', { name: 'Alex Best Man' })).toBeVisible()
+  await expect(page.getByRole('option', { name: 'Jordan Maid' })).toHaveCount(0)
+
+  await page.getByRole('option', { name: 'Alex Best Man' }).click()
+  await expect(messageField).toHaveValue('Big shoutout to @Alex Best Man ')
+})
+
+test('renders a highlighted mention on the blessings wall', async ({ page }) => {
+  await installBlessingsApi(page, [
+    {
+      id: 1,
+      author_name: 'Aunt May',
+      message: 'So happy for @Alex Best Man and the happy couple!',
+      created_at: '2026-05-01T10:00:00Z',
+    },
+  ])
+  await page.goto('/blessings')
+
+  const highlighted = blessingsRegion(page).locator('span.text-gold')
+  await expect(highlighted).toHaveText('@Alex Best Man')
 })

@@ -4,6 +4,8 @@ import { Heart } from 'lucide-react'
 
 import { fetchCurrentUser } from '../api/auth'
 import { GuestLayout } from '../components/GuestLayout'
+import { MentionHighlightedText } from '../components/mentions/MentionHighlight'
+import { MentionTextarea } from '../components/mentions/MentionTextarea'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { Alert } from '../components/ui/alert'
 import { Button } from '../components/ui/button'
@@ -16,6 +18,7 @@ import {
   useCreateBlessing,
   type Blessing,
 } from '../hooks/useBlessings'
+import { useMentionsDirectory, type MentionDirectoryEntry } from '../hooks/useMentions'
 
 function formatDate(value: string): string {
   const parsed = new Date(value)
@@ -29,7 +32,13 @@ function formatDate(value: string): string {
   })
 }
 
-function BlessingCard({ blessing }: { blessing: Blessing }) {
+function BlessingCard({
+  blessing,
+  mentionDirectory,
+}: {
+  blessing: Blessing
+  mentionDirectory: MentionDirectoryEntry[]
+}) {
   return (
     <Card>
       <CardHeader>
@@ -37,7 +46,9 @@ function BlessingCard({ blessing }: { blessing: Blessing }) {
         <CardDescription>{formatDate(blessing.created_at)}</CardDescription>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-gray-700 m-0 whitespace-pre-wrap">{blessing.message}</p>
+        <p className="text-sm text-gray-700 m-0 whitespace-pre-wrap">
+          <MentionHighlightedText text={blessing.message} directory={mentionDirectory} />
+        </p>
       </CardContent>
     </Card>
   )
@@ -47,6 +58,7 @@ export function Blessings() {
   usePageTitle('Blessings')
   const { data: blessings, isLoading, isError, error } = useBlessings()
   const createMutation = useCreateBlessing()
+  const { data: mentionDirectory } = useMentionsDirectory('general')
 
   const [authorName, setAuthorName] = useState('')
   const [message, setMessage] = useState('')
@@ -136,13 +148,14 @@ export function Blessings() {
 
               <div className="grid gap-2">
                 <Label htmlFor="blessing-message">Message</Label>
-                <textarea
+                <MentionTextarea
                   id="blessing-message"
+                  scope="general"
                   value={message}
-                  onChange={(event) => setMessage(event.target.value)}
+                  onChange={setMessage}
                   rows={4}
                   maxLength={1000}
-                  placeholder="Share your well wishes..."
+                  placeholder="Share your well wishes... (@ to mention someone)"
                   className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-base resize-vertical focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </div>
@@ -187,7 +200,11 @@ export function Blessings() {
         {!isLoading && !isError && blessingList.length > 0 && (
           <section aria-label="Blessings" className="grid gap-4">
             {blessingList.map((blessing) => (
-              <BlessingCard key={blessing.id} blessing={blessing} />
+              <BlessingCard
+                key={blessing.id}
+                blessing={blessing}
+                mentionDirectory={mentionDirectory ?? []}
+              />
             ))}
           </section>
         )}
