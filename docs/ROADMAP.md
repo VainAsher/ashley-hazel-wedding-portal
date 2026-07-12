@@ -299,12 +299,13 @@ Store nothing new beyond notifications; mentions are derived at save time.
 ## Wave 3 — complete
 
 All six items (13 Kanban V2, 14 D1/D2/D3 party portals, 15 profiles, 16
-mentions) are built and merged to `main`. 13 and 14 D1 are live in
-production (v1.2.1, v1.3.0); D2, D3, 15, and 16 are on `main` awaiting the
-next release cut. Wave 4 is next — see below; all of it is currently
-gated on couple decisions rather than ready-to-build engineering (the
-viewport-paging spike, video approach, and external comms channels all
-need a couple call before there's a clear build target).
+mentions) are built, merged to `main`, and **live in production as of
+v1.4.0 (2026-07-13)** — 13 and 14 D1 shipped earlier as v1.2.1/v1.3.0; D2,
+D3, 15, and 16 shipped together in this release. Wave 4 is next — see
+below; all of it is currently gated on couple decisions rather than
+ready-to-build engineering (the viewport-paging spike, video approach, and
+external comms channels all need a couple call before there's a clear
+build target).
 
 ## Wave 4 — the big design programme + long tail
 
