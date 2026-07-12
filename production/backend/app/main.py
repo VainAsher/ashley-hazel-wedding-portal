@@ -25,6 +25,7 @@ from app.api import (
     notifications,
     party,
     portal,
+    profiles,
     settings as settings_api,
     tasks,
     vendors,
@@ -83,6 +84,7 @@ app.include_router(menu.router)
 app.include_router(menu.portal_router)
 app.include_router(portal.router)
 app.include_router(party.router)
+app.include_router(profiles.router)
 
 # Serve uploaded gallery media. The directory lives on a Docker volume
 # (uploads_data -> /app/uploads) so files survive deploys; nginx proxies

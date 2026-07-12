@@ -62,6 +62,9 @@ const AdminFeedback = lazy(() =>
   import('./pages/admin/Feedback').then((m) => ({ default: m.Feedback })),
 )
 const Party = lazy(() => import('./pages/Party').then((m) => ({ default: m.Party })))
+const WeddingParty = lazy(() =>
+  import('./pages/WeddingParty').then((m) => ({ default: m.WeddingParty })),
+)
 
 function guestRoute(element: React.ReactNode) {
   return <RequireGuest>{element}</RequireGuest>
@@ -106,6 +109,7 @@ function App() {
             <Route element={guestRoute(<Schedule />)} path="/schedule" />
             <Route element={guestRoute(<Blessings />)} path="/blessings" />
             <Route element={guestRoute(<Music />)} path="/music" />
+            <Route element={guestRoute(<WeddingParty />)} path="/wedding-party" />
             <Route
               element={
                 <RequireGuestOrCouple>

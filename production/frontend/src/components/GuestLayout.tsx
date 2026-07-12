@@ -23,6 +23,7 @@ const ROUTE_BACKGROUNDS: Record<string, string> = {
   '/blessings': '/backgrounds/bg-01-winter-selfie.jpg',
   '/music': '/backgrounds/bg-05-evening-sky.jpg',
   '/gallery': '/backgrounds/bg-05-evening-sky.jpg',
+  '/wedding-party': '/backgrounds/bg-02-registry-office.jpg',
   '/party/stag': '/backgrounds/bg-04-woodland-walk.jpg',
   '/party/hen': '/backgrounds/bg-01-winter-selfie.jpg',
 }
@@ -45,6 +46,9 @@ export function GuestLayout({ children }: GuestLayoutProps) {
     { label: 'Blessings', href: '/blessings' },
     { label: 'Dancefloor', href: '/music' },
     { label: 'Gallery', href: '/gallery' },
+    // Unlike Stag Do/Hen Do below, this has no gating -- the "Meet the
+    // wedding party" directory is open to every logged-in guest.
+    { label: 'Wedding Party', href: '/wedding-party' },
     ...(partyAccess?.stag ? [{ label: 'Stag Do', href: '/party/stag' }] : []),
     ...(partyAccess?.hen ? [{ label: 'Hen Do', href: '/party/hen' }] : []),
   ]
