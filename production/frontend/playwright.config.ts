@@ -6,6 +6,10 @@ const isWindows = process.platform === 'win32'
 
 export default defineConfig({
   testDir: './tests/browser',
+  // CI runners share CPU across parallel workers hitting one dev server;
+  // one retry absorbs that environment noise without masking a real bug —
+  // local runs stay at 0 so a genuine regression fails immediately.
+  retries: process.env.CI ? 1 : 0,
   use: {
     baseURL,
     screenshot: 'only-on-failure',

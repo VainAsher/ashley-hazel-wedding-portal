@@ -6,8 +6,10 @@ import {
   MeasuringStrategy,
   PointerSensor,
   closestCorners,
+  rectIntersection,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
@@ -167,6 +169,40 @@ export function TaskBoard({
       return id as TaskStatus
     }
     return STATUSES.find((status) => localColumns[status]?.includes(Number(id)))
+  }
+
+  // dnd-kit's own docs flag this exact pitfall for multi-container boards:
+  // running `closestCorners` over every droppable at once (4 column
+  // containers + every card) lets same-sized neighbouring columns
+  // occasionally out-score the intended one on raw corner distance —
+  // most visible on keyboard moves, where there's no real pointer position
+  // anchoring the drag, and it got worse the busier the machine ran (extra
+  // reflows nudge rects by a few px, enough to flip a close call). Resolving
+  // in two phases removes the ambiguity: which COLUMN first, by rect overlap
+  // (deterministic — our keyboard coordinateGetter always anchors the active
+  // item's translated rect inside the intended column), then which CARD
+  // within it, by corner distance.
+  const collisionDetectionStrategy: CollisionDetection = (args) => {
+    const containerHits = rectIntersection({
+      ...args,
+      droppableContainers: args.droppableContainers.filter((container) =>
+        (STATUSES as readonly string[]).includes(String(container.id)),
+      ),
+    })
+    const containerId = containerHits[0]?.id
+    if (containerId === undefined) {
+      return closestCorners(args)
+    }
+
+    const cardsInContainer = localColumnsRef.current[containerId as TaskStatus] ?? []
+    const cardHits = closestCorners({
+      ...args,
+      droppableContainers: args.droppableContainers.filter((container) =>
+        cardsInContainer.includes(Number(container.id)),
+      ),
+    })
+
+    return cardHits.length > 0 ? cardHits : containerHits
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -348,7 +384,7 @@ export function TaskBoard({
 
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={collisionDetectionStrategy}
         measuring={MEASURING_CONFIG}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
