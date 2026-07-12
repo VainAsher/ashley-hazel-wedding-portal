@@ -26,6 +26,7 @@ from app.db.schemas import (
 )
 from app.logging import get_logger
 from app.utils import music_metadata, music_previews
+from app.utils.mentions import fan_out_mentions, general_scope_directory
 
 
 router = APIRouter(prefix="/api/music", tags=["music"])
@@ -177,6 +178,23 @@ async def create_song_request(
         "song_request_submitted",
         extra={"song_request_id": db_request.id, "status": request_status},
     )
+
+    # Only the dedication is scanned for mentions -- title/artist never are
+    # (docs/specs/MENTIONS.md).
+    if db_request.dedication:
+        directory = general_scope_directory(db, current_user.wedding_id)
+        fan_out_mentions(
+            db,
+            wedding_id=current_user.wedding_id,
+            author_invite_id=current_user.invite_id,
+            author_display_name=db_request.requested_by,
+            text=db_request.dedication,
+            directory=directory,
+            context_phrase="a song dedication",
+            link_path="/music",
+        )
+        db.commit()
+
     return db_request
 
 

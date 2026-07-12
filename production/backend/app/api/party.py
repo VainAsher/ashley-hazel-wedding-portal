@@ -51,6 +51,7 @@ from app.db.schemas import (
     PartySummaryResponse,
 )
 from app.logging import get_logger
+from app.utils.mentions import fan_out_mentions, party_scope_directory
 
 
 router = APIRouter(prefix="/api/party", tags=["party"])
@@ -337,6 +338,21 @@ async def create_party_message(
         "party_message_created",
         extra={"wedding_id": current_user.wedding_id, "party": party, "message_id": message.id},
     )
+
+    do_name = "Stag Do" if party == "stag" else "Hen Do"
+    directory = party_scope_directory(db, current_user.wedding_id, party)
+    fan_out_mentions(
+        db,
+        wedding_id=current_user.wedding_id,
+        author_invite_id=invite.id,
+        author_display_name=_author_display_name(invite),
+        text=message.message,
+        directory=directory,
+        context_phrase=f"a {do_name} message",
+        link_path=f"/party/{party}",
+    )
+    db.commit()
+
     return PartyMessageResponse(
         id=message.id,
         author_name=_author_display_name(invite),

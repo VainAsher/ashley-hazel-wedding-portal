@@ -69,6 +69,18 @@ const wallEntries: SongRequest[] = [
   }),
 ]
 
+interface MentionEntry {
+  invite_id: number
+  display_name: string
+}
+
+// @mentions (Wave 3 item 16): the general-scope directory the dedication
+// field's composer/wall match against (see docs/specs/MENTIONS.md).
+const mentionDirectory: MentionEntry[] = [
+  { invite_id: 301, display_name: 'Alex Best Man' },
+  { invite_id: 302, display_name: 'Jordan Maid' },
+]
+
 function json(route: Route, body: unknown, status = 200) {
   return route.fulfill({
     body: JSON.stringify(body),
@@ -186,6 +198,11 @@ test.beforeEach(async ({ page }) => {
   await cleanupPageState(page)
   await initializeErrorTracking(page)
   await installAuthMe(page, 'live')
+
+  // The MentionTextarea (dedication field) fetches this once per mount.
+  await page.route('**/api/mentions/directory*', async (route) => {
+    await json(route, mentionDirectory)
+  })
 })
 
 test.afterEach(async ({ page }) => {
@@ -279,6 +296,42 @@ test('a blank title shows an inline error and does not post', async ({ page }) =
 
   await expect(page.getByText('Please enter a song title.')).toBeVisible()
   expect(api.posts).toEqual([])
+})
+
+// ---------------------------------------------------------------------------
+// @mentions (Wave 3 item 16)
+// ---------------------------------------------------------------------------
+
+test('dedication autocomplete shows filtered suggestions and inserts a mention on click', async ({
+  page,
+}) => {
+  await installMusicApi(page, [])
+  await page.goto('/music')
+
+  const dedicationField = page.getByLabel('Dedication')
+  await dedicationField.fill('For @Alex')
+
+  await expect(page.getByRole('option', { name: 'Alex Best Man' })).toBeVisible()
+  await expect(page.getByRole('option', { name: 'Jordan Maid' })).toHaveCount(0)
+
+  await page.getByRole('option', { name: 'Alex Best Man' }).click()
+  await expect(dedicationField).toHaveValue('For @Alex Best Man ')
+})
+
+test('renders a highlighted mention in a dedication on the song wall', async ({ page }) => {
+  await installMusicApi(page, [
+    songRequest({
+      id: 51,
+      title: 'Perfect',
+      artist: 'Ed Sheeran',
+      dedication: 'For @Alex Best Man, our favourite dance partner!',
+      requested_by: 'Aunt May',
+    }),
+  ])
+  await page.goto('/music')
+
+  const highlighted = songWall(page).locator('span.text-gold')
+  await expect(highlighted).toHaveText('@Alex Best Man')
 })
 
 test('hides the form and shows the closed message outside the live phase', async ({ page }) => {

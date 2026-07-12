@@ -50,6 +50,11 @@ interface ProfileDirectoryEntry {
   has_profile: boolean
 }
 
+interface MentionEntry {
+  invite_id: number
+  display_name: string
+}
+
 interface PartyTask {
   id: number
   wedding_id: number
@@ -209,9 +214,21 @@ async function installPartyApi(
   access: PartyAccess,
   summaries: Partial<Record<'stag' | 'hen', PartySummary>>,
   profileEntries: ProfileDirectoryEntry[] = [],
+  // @mentions (Wave 3 item 16): the message board's party-scoped directory,
+  // keyed by party -- default empty so existing tests (which don't care
+  // about mentions) see no autocomplete suggestions.
+  mentionDirectories: Partial<Record<'stag' | 'hen', MentionEntry[]>> = {},
 ) {
   await page.route('**/api/party/access', async (route) => {
     await json(route, access)
+  })
+
+  await page.route('**/api/mentions/directory*', async (route) => {
+    const url = new URL(route.request().url())
+    const scope = url.searchParams.get('scope')
+    const entries =
+      scope === 'stag' || scope === 'hen' ? mentionDirectories[scope] ?? [] : []
+    await json(route, entries)
   })
 
   // Wave 3 item 14 D3: the party page's "Meet the ... crew" section reads
@@ -455,6 +472,59 @@ test.describe('party page', () => {
     await main.getByRole('button', { name: 'Post message' }).click()
 
     await expect(main.getByText('See you all there!')).toBeVisible()
+  })
+
+  // -------------------------------------------------------------------------
+  // @mentions (Wave 3 item 16): party-scoped -- the composer only offers
+  // this party's own members, never the other party's roster.
+  // -------------------------------------------------------------------------
+
+  test('message composer autocomplete is scoped to this party only', async ({ page }) => {
+    await mockGuestAuth(page)
+    await installPartyApi(
+      page,
+      { stag: true, hen: false },
+      { stag: baseSummary() },
+      [],
+      { stag: [{ invite_id: 401, display_name: 'Best Man Ben' }] },
+    )
+    await page.goto('/party/stag')
+
+    const main = mainRegion(page)
+    await main.locator('#party-message-textarea').fill('Cheers @Best')
+
+    await expect(page.getByRole('option', { name: 'Best Man Ben' })).toBeVisible()
+    await page.getByRole('option', { name: 'Best Man Ben' }).click()
+    await expect(main.locator('#party-message-textarea')).toHaveValue('Cheers @Best Man Ben ')
+  })
+
+  test('renders a highlighted mention on the message board', async ({ page }) => {
+    await mockGuestAuth(page)
+    await installPartyApi(
+      page,
+      { stag: true, hen: false },
+      {
+        stag: baseSummary({
+          messages: [
+            {
+              id: 1,
+              author_name: 'Plain Guest Pete',
+              author_invite_id: 102,
+              message: 'Cheers @Best Man Ben, legendary night!',
+              hidden: false,
+              pinned: false,
+              created_at: '2026-06-10T10:00:00Z',
+            },
+          ],
+        }),
+      },
+      [],
+      { stag: [{ invite_id: 101, display_name: 'Best Man Ben' }] },
+    )
+    await page.goto('/party/stag')
+
+    const highlighted = mainRegion(page).locator('span.text-gold')
+    await expect(highlighted).toHaveText('@Best Man Ben')
   })
 })
 

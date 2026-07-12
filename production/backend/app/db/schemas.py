@@ -1418,6 +1418,14 @@ class MemberProfileResponse(BaseModel):
         return f"/uploads/{self.photo_path}" if self.photo_path else None
 
 
+class MentionDirectoryEntry(BaseModel):
+    """One entry in `GET /api/mentions/directory` -- the composer's
+    autocomplete source. See docs/specs/MENTIONS.md's scoping rule."""
+
+    invite_id: int
+    display_name: str
+
+
 class ProfileDirectoryEntry(BaseModel):
     """One card on the public 'Meet the wedding party' directory. Members
     who haven't filled in a profile yet still appear here, falling back to

@@ -13,6 +13,7 @@ from app.db.schemas import (
     BlessingResponse,
 )
 from app.logging import get_logger
+from app.utils.mentions import fan_out_mentions, general_scope_directory
 
 
 def get_blessing_or_404(db: Session, blessing_id: int, wedding_id: int) -> Blessing:
@@ -73,6 +74,20 @@ async def create_blessing(
 
     db.refresh(db_blessing)
     logger.info("blessing_created", extra={"blessing_id": db_blessing.id})
+
+    directory = general_scope_directory(db, current_user.wedding_id)
+    fan_out_mentions(
+        db,
+        wedding_id=current_user.wedding_id,
+        author_invite_id=current_user.invite_id,
+        author_display_name=db_blessing.author_name,
+        text=db_blessing.message,
+        directory=directory,
+        context_phrase="a blessing",
+        link_path="/blessings",
+    )
+    db.commit()
+
     return db_blessing
 
 
