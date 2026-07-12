@@ -32,7 +32,9 @@ def clear_previous_party_admin(
     Proactively clears any current holder before a new one is assigned, in
     the same transaction as the caller's commit (this function does not
     commit itself) — the partial unique index on invites is a DB-level
-    backstop that should never actually fire because of this.
+    backstop that should never actually fire because of this. Also clears
+    party_title: it's meaningless without holding the role, and leaving it
+    behind reads as a stale "Best Man" label on someone no longer admin.
     """
     query = db.query(Invite).filter(
         Invite.wedding_id == wedding_id,
@@ -41,7 +43,10 @@ def clear_previous_party_admin(
     )
     if exclude_invite_id is not None:
         query = query.filter(Invite.id != exclude_invite_id)
-    query.update({Invite.party_admin: False}, synchronize_session=False)
+    query.update(
+        {Invite.party_admin: False, Invite.party_title: None},
+        synchronize_session=False,
+    )
 
 
 @router.post("", response_model=InviteResponse, status_code=status.HTTP_201_CREATED)

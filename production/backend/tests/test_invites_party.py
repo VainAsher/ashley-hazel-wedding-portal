@@ -333,6 +333,10 @@ class TestBestManSingleHolderEnforcement:
         second_invite = db_session.get(Invite, second["id"])
         assert first_invite is not None and first_invite.party_admin is False
         assert second_invite is not None and second_invite.party_admin is True
+        # The demoted holder's title is cleared too — "Best Man" is
+        # meaningless (and confusing) once they no longer hold the role.
+        assert first_invite.party_title is None
+        assert second_invite.party_title == "Best Man"
 
     def test_assigning_new_party_admin_clears_previous_holder_on_update(
         self, couple_session: TestClient, db_session: Session, invite_ids: list[int]
