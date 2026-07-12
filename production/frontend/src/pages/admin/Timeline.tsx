@@ -1,10 +1,8 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 
 import { AdminLayout } from '@/components/AdminLayout'
 import { Alert } from '@/components/ui/alert'
-import { Badge, type BadgeProps } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -22,10 +20,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { TaskBoard } from '@/components/taskboard/TaskBoard'
+import { BOARD_COLUMNS, PRIORITY_OPTIONS } from '@/components/taskboard/constants'
 import {
   TaskApiError,
   useCreateTask,
   useDeleteTask,
+  useMoveTask,
   useTasks,
   useUpdateTask,
   type Task,
@@ -33,32 +34,6 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from '@/hooks/useTasks'
-
-const STATUS_COLUMNS: { value: TaskStatus; label: string }[] = [
-  { value: 'not_started', label: 'Not started' },
-  { value: 'in_progress', label: 'In progress' },
-  { value: 'blocked', label: 'Blocked' },
-  { value: 'done', label: 'Done' },
-]
-
-const STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
-  { value: 'not_started', label: 'Not started' },
-  { value: 'in_progress', label: 'In progress' },
-  { value: 'blocked', label: 'Blocked' },
-  { value: 'done', label: 'Done' },
-]
-
-const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-]
-
-const PRIORITY_VARIANT: Record<TaskPriority, BadgeProps['variant']> = {
-  low: 'neutral',
-  medium: 'info',
-  high: 'danger',
-}
 
 type DialogMode = 'create' | 'edit'
 
@@ -71,11 +46,11 @@ interface TaskFormState {
   assigned_to: string
 }
 
-function emptyFormState(): TaskFormState {
+function emptyFormState(status: TaskStatus = 'not_started'): TaskFormState {
   return {
     title: '',
     description: '',
-    status: 'not_started',
+    status,
     priority: 'medium',
     due_date: '',
     assigned_to: '',
@@ -116,67 +91,58 @@ function buildPayload(form: TaskFormState): TaskPayload {
   }
 }
 
-function priorityLabel(priority: TaskPriority): string {
-  return PRIORITY_OPTIONS.find((option) => option.value === priority)?.label ?? priority
+function payloadFromTask(task: Task, overrides: Partial<TaskPayload> = {}): TaskPayload {
+  return {
+    title: task.title,
+    description: task.description,
+    status: task.status,
+    priority: task.priority,
+    due_date: task.due_date,
+    assigned_to: task.assigned_to,
+    ...overrides,
+  }
 }
 
-function sortByDueDate(a: Task, b: Task): number {
-  if (!a.due_date && !b.due_date) {
-    return 0
-  }
-  if (!a.due_date) {
-    return 1
-  }
-  if (!b.due_date) {
-    return -1
-  }
-  return a.due_date.localeCompare(b.due_date)
-}
-
+/**
+ * Kanban V2 (docs/specs/KANBAN_V2.md): this page is now a thin shell — all
+ * board rendering + drag & drop lives in <TaskBoard>, extracted so the same
+ * component can later power Stag & Hen planning (Wave 3 item 14 D2). The
+ * admin Timeline always feeds it the 'wedding' context.
+ */
 export function Timeline() {
   const { data: tasks, isLoading, isError, error } = useTasks()
   const createMutation = useCreateTask()
   const updateMutation = useUpdateTask()
   const deleteMutation = useDeleteTask()
+  const moveMutation = useMoveTask()
 
   const [dialogMode, setDialogMode] = useState<DialogMode | null>(null)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
-  const [form, setForm] = useState<TaskFormState>(emptyFormState)
+  const [form, setForm] = useState<TaskFormState>(() => emptyFormState())
   const [formError, setFormError] = useState<string | null>(null)
 
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [boardError, setBoardError] = useState<string | null>(null)
 
   const taskList = tasks ?? []
   const taskCount = taskList.length
 
   const isSaving = createMutation.isPending || updateMutation.isPending
 
-  const dialogTitle = useMemo(
-    () => (dialogMode === 'edit' ? 'Edit Task' : 'Add Task'),
-    [dialogMode],
-  )
-
-  const columns = useMemo(() => {
-    return STATUS_COLUMNS.map((column) => ({
-      ...column,
-      tasks: taskList
-        .filter((task) => task.status === column.value)
-        .sort(sortByDueDate),
-    }))
-  }, [taskList])
+  const dialogTitle = dialogMode === 'edit' ? 'Edit Task' : 'Add Task'
 
   const updateField = <K extends keyof TaskFormState>(key: K, value: TaskFormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }))
   }
 
-  const openCreateDialog = () => {
+  const openCreateDialog = (status: TaskStatus = 'not_started') => {
     setFeedback(null)
     setFormError(null)
     setEditingTask(null)
-    setForm(emptyFormState())
+    setForm(emptyFormState(status))
     setDialogMode('create')
   }
 
@@ -246,6 +212,42 @@ export function Timeline() {
     }
   }
 
+  const handleMove = (taskId: number, target: { status: TaskStatus; position: number }) => {
+    setBoardError(null)
+    moveMutation.mutate(
+      { id: taskId, payload: target },
+      {
+        onError: (err) => {
+          setBoardError(err instanceof TaskApiError ? err.message : 'Failed to move task')
+        },
+      },
+    )
+  }
+
+  const handlePriorityChange = (task: Task, priority: TaskPriority) => {
+    setBoardError(null)
+    updateMutation.mutate(
+      { id: task.id, payload: payloadFromTask(task, { priority }) },
+      {
+        onError: (err) => {
+          setBoardError(err instanceof TaskApiError ? err.message : 'Failed to update priority')
+        },
+      },
+    )
+  }
+
+  const handleAssigneeChange = (task: Task, assignee: string | null) => {
+    setBoardError(null)
+    updateMutation.mutate(
+      { id: task.id, payload: payloadFromTask(task, { assigned_to: assignee }) },
+      {
+        onError: (err) => {
+          setBoardError(err instanceof TaskApiError ? err.message : 'Failed to update assignee')
+        },
+      },
+    )
+  }
+
   return (
     <AdminLayout
       title="Timeline"
@@ -257,7 +259,7 @@ export function Timeline() {
             <h2 className="text-xl font-semibold text-gray-900 m-0">Task board</h2>
             <p className="text-sm text-gray-600 m-0 mt-1">{taskCount} tasks</p>
           </div>
-          <Button type="button" onClick={openCreateDialog}>
+          <Button type="button" onClick={() => openCreateDialog()}>
             Add Task
           </Button>
         </section>
@@ -268,20 +270,7 @@ export function Timeline() {
           </Alert>
         )}
 
-        {isLoading && (
-          <div
-            role="status"
-            className="text-sm text-gray-600 border border-gray-200 rounded-md p-4"
-          >
-            Loading tasks...
-          </div>
-        )}
-
-        {isError && !isLoading && (
-          <Alert variant="destructive">
-            {error instanceof Error ? error.message : 'Failed to load tasks'}
-          </Alert>
-        )}
+        {boardError && <Alert variant="destructive">{boardError}</Alert>}
 
         {!isLoading && !isError && taskCount === 0 && (
           <div className="text-sm text-gray-600 border border-gray-200 rounded-md p-4">
@@ -289,79 +278,19 @@ export function Timeline() {
           </div>
         )}
 
-        {!isLoading && !isError && taskCount > 0 && (
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {columns.map((column) => (
-              <div
-                key={column.value}
-                className="flex flex-col gap-3"
-                aria-label={`${column.label} column`}
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-900 m-0">{column.label}</h3>
-                  <Badge variant="neutral" aria-label={`${column.tasks.length} tasks`}>
-                    {column.tasks.length}
-                  </Badge>
-                </div>
-
-                <div className="grid gap-3">
-                  {column.tasks.length === 0 ? (
-                    <p className="text-sm text-gray-500 m-0 border border-dashed border-gray-200 rounded-md p-3">
-                      No tasks.
-                    </p>
-                  ) : (
-                    column.tasks.map((task) => (
-                      <Card key={task.id}>
-                        <CardContent className="p-3 grid gap-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="font-medium text-gray-900 m-0">{task.title}</p>
-                            <Badge variant={PRIORITY_VARIANT[task.priority]}>
-                              {priorityLabel(task.priority)}
-                            </Badge>
-                          </div>
-
-                          {task.description && (
-                            <p className="text-sm text-gray-600 m-0">{task.description}</p>
-                          )}
-
-                          <p className="text-xs text-gray-500 m-0">
-                            Due: {task.due_date ?? 'No due date'}
-                          </p>
-
-                          {task.assigned_to && (
-                            <p className="text-xs text-gray-500 m-0">
-                              Assigned to: {task.assigned_to}
-                            </p>
-                          )}
-
-                          <div className="flex flex-wrap gap-2 pt-1">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              aria-label={`Edit ${task.title}`}
-                              onClick={() => openEditDialog(task)}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              size="sm"
-                              aria-label={`Delete ${task.title}`}
-                              onClick={() => requestDelete(task)}
-                            >
-                              Delete
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
-                  )}
-                </div>
-              </div>
-            ))}
-          </section>
+        {(isLoading || isError || taskCount > 0) && (
+          <TaskBoard
+            tasks={taskList}
+            isLoading={isLoading}
+            isError={isError}
+            errorMessage={error instanceof Error ? error.message : 'Failed to load tasks'}
+            onCreateTask={openCreateDialog}
+            onEditTask={openEditDialog}
+            onDeleteTask={requestDelete}
+            onMove={handleMove}
+            onPriorityChange={handlePriorityChange}
+            onAssigneeChange={handleAssigneeChange}
+          />
         )}
       </div>
 
@@ -409,7 +338,7 @@ export function Timeline() {
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
-                    {STATUS_OPTIONS.map((option) => (
+                    {BOARD_COLUMNS.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
                       </SelectItem>
