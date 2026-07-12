@@ -169,6 +169,14 @@ matches the caterer conversation, courses can come later).
 
 ## Wave 3 — the parties (biggest programme; order matters)
 
+> **Item 13 status 2026-07-12: SHIPPED to production as v1.2.1.** Built via
+> docs/specs/KANBAN_V2.md; CI caught a real keyboard-drag collision bug
+> before release (fixed, see commit `ae54b7a`), so the tag moved from
+> `v1.2.0` (never deployed) to `v1.2.1`. Rollback ready: pre-release dump
+> `wedding_prod-20260712-105217.sql.gz` + rollback.sh re-ups image `1d98fac`
+> (migration 020 additive, old image schema-safe). `TaskBoard` is extracted
+> and ready to mount for stag/hen (item 14 D2) once party portals land.
+
 ### 13. Kanban v2 (couple) — **L** · prerequisite for the party portals
 - **Generalise**: extract the Timeline board into a reusable `TaskBoard` component;
   migration: `tasks.context VARCHAR(20) DEFAULT 'wedding'` + `tasks.position INT`

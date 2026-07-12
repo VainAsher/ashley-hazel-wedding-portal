@@ -1,5 +1,8 @@
 # Kanban V2 — Task Board contract (ROADMAP Wave 3 item 13)
 
+> **Status 2026-07-12: SHIPPED to production as v1.2.1.** See
+> docs/FEEDBACK_BACKLOG.md and docs/ROADMAP.md for the release record.
+
 Agreed 2026-07-12. The Timeline task board grows into a feature-rich, genuinely
 intuitive kanban — and gets extracted into a reusable `TaskBoard` component,
 because the same board will power the Stag & Hen planning areas (Wave 3 item
