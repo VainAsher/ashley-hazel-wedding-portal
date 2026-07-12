@@ -65,14 +65,20 @@ have reviewed these and ticked the sign-off checklist below.
 - [ ] The retention rule above is understood and agreed by the couple.
 - [ ] Couple sign-off: ____________________  Date: __________
 
-## Current status (v1.1.0-rc1)
+## Current status (v1.2.1; Stag/Hen party portals validated on `main`, pending release)
 
 **Production is live and holds real wedding data** (guests, RSVPs/dietary
-requirements, photos, blessings, and Dancefloor song requests + dedications) in the
-isolated `wedding-prod` stack. **Staging holds synthetic/demo data only** (seeded by
-`008_seed_test_data.sql`: "Demo Guest", "Alice Anderson", … and the `DEMO-*` invite
-codes; 008 is fenced out of prod). The rule above still governs everything outside
-production: development, testing, screenshots, and docs use staging + synthetic data
-only. New guest-visible fields since v1.0: song-request **dedications and requester
-names appear publicly** to logged-in guests on the song wall (same class as
-blessings).
+requirements, photos, blessings, Dancefloor song requests + dedications + reactions,
+in-app notification content, feedback submissions, and — once Stag/Hen portals ship —
+wedding-party message-board content) in the isolated `wedding-prod` stack. **Staging
+holds synthetic/demo data only** (seeded by `008_seed_test_data.sql`: "Demo Guest",
+"Alice Anderson", … and the `DEMO-*` invite codes; 008 is fenced out of prod). The
+rule above still governs everything outside production: development, testing,
+screenshots, and docs use staging + synthetic data only.
+
+New guest-visible fields since v1.0: song-request **dedications and requester names
+appear publicly** to logged-in guests on the song wall (same class as blessings).
+Stag/Hen party message-board content is a **narrower** disclosure than the rest of the
+app by design — visible only to that party's members and (once revealed) the relevant
+partner, not to the couple by default or to coordinators at all; see
+`docs/specs/PARTY_PORTALS_D1.md` for the full access rule.

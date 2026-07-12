@@ -2,11 +2,13 @@
 
 [![Tests](https://github.com/VainAsher/ashley-hazel-wedding-portal/actions/workflows/test.yml/badge.svg)](https://github.com/VainAsher/ashley-hazel-wedding-portal/actions/workflows/test.yml)
 
-A full-stack wedding portal: a guest-facing site (RSVP, schedule, blessings,
-Dancefloor song requests, photo gallery) and an admin planning dashboard (guests,
-budget, vendors, events, timeline, communications, music curation, invitations,
-theme, settings). **Status: live in production since v1.0.0 (2026-06-26); current
-version `1.1.0-rc1`.**
+A full-stack wedding portal: a guest-facing site (RSVP + meal selection, schedule,
+blessings, Dancefloor song requests/reactions/now-playing, photo gallery, in-app
+notifications, Stag/Hen party portals) and an admin planning dashboard (guests, budget,
+vendors, events, a drag-and-drop task board, communications, music curation,
+invitations, theme/typography, menu builder, feedback triage, settings). **Status:
+live in production since v1.0.0 (2026-06-26); current version `1.2.1`**, with Stag/Hen
+party portals built, tested, and awaiting release.
 
 > The original static prototype at the repo root (`index.html`, `app.js`,
 > `styles.css`, `data/fixture.js`) is the **canonical visual identity** — its
@@ -16,27 +18,36 @@ version `1.1.0-rc1`.**
 ## Stack
 
 - **Backend** — Python / FastAPI + SQLAlchemy, PostgreSQL, session-cookie auth with three
-  roles (`guest`, `coordinator`, `couple`), plus `/health` (liveness) and `/health/ready`
+  roles (`guest`, `coordinator`, `couple` — couple invites now carry an individual
+  identity for the Stag/Hen access rules), plus `/health` (liveness) and `/health/ready`
   (DB-readiness) endpoints (`production/backend`)
-- **Frontend** — React + TypeScript + Vite, React Query, Radix/shadcn UI, Tailwind (`production/frontend`)
+- **Frontend** — React + TypeScript + Vite, React Query, Radix/shadcn UI, Tailwind,
+  `@dnd-kit` for the Kanban board (`production/frontend`)
 - **Database** — PostgreSQL with SQL migrations (`production/database`)
 - **Delivery** — Docker Compose, Nginx (serves the SPA + proxies `/api` and `/uploads`), GitHub Actions CI/CD to a staging host via a Cloudflare Tunnel
 
 ## Features
 
-**Guest portal** (invite-code login, themed with the couple's photos): Dashboard
-(personal welcome, countdown + key details), RSVP (dietary requirements + plus-one;
-meal selection opens when the menu is finalised), Schedule (ceremony + events),
-Blessings guestbook, **Dancefloor** (song requests with dedications + the approved
-song wall), and a Gallery with lightbox/slideshow viewing and guest photo submission.
+**Guest portal** (invite-code login behind a Save-The-Date envelope reveal, themed with
+the couple's photos): Dashboard (personal welcome, countdown, key details, an
+onboarding checklist, and a Messages card), RSVP (dietary requirements + plus-one, with
+meal pickers once the couple open selection), Schedule, Blessings guestbook,
+**Dancefloor** (song requests with dedications, the approved song wall with ♥
+reactions, a 30-second-preview jukebox, and a "currently playing" spotlight), a Gallery
+with lightbox/slideshow viewing and guest photo submission, in-app **notifications**
+(bell + unread badge), an in-site **feedback** button, and — for flagged wedding-party
+members — private **Stag/Hen party portals** (details, members, message board).
 
 **Admin dashboard** (coordinator/couple): Budget (line items + summary), Vendors, Events,
-Timeline (task board), RSVP overview, Invitations (invite-code generation, couple-only),
-Communications, Gallery moderation, **Music curation** (approve/reject/block song
-requests, merge duplicates, pin/reorder the playlist, export a **DJ pack** as CSV or
-text), Blessings moderation, and Settings — the **wedding phase lifecycle**
-(Planning → Live → Event → Archived) that gates guest responses, plus **Guest Site
-Theme** dials (colours + photo-tint strength, applied live, no deploy).
+a **drag-and-drop Timeline** task board (keyboard-accessible, inline priority/assignee,
+due-date chips, search/filter), RSVP overview, Invitations (invite-code generation +
+Stag/Hen flagging + Best Man/Maid of Honour, couple-only), Communications (real in-app
+delivery), Gallery moderation, **Music curation** (approve/reject/block, merge
+duplicates, pin/reorder, now-playing, export a **DJ pack**), Blessings moderation, a
+**Feedback triage queue**, and Settings — the **wedding phase lifecycle** (Planning →
+Live → Event → Archived), **Guest Site Theme + typography** dials, a **Menu builder**
+with guest meal-selection toggle, and the **Stag/Hen party-visibility** dial —
+everything applied live, no deploy needed.
 
 ## Running locally
 

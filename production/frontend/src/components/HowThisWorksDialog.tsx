@@ -33,7 +33,8 @@ const PAGES: { name: string; blurb: string }[] = [
   },
   {
     name: 'Dancefloor',
-    blurb: 'Request a song — once the couple approve it, it joins the song wall.',
+    blurb:
+      'Request a song, ♥ react to your favourites on the wall, and see what’s playing right now.',
   },
   {
     name: 'Gallery',
@@ -71,6 +72,16 @@ export function HowThisWorksDialog() {
         <p className="m-0 rounded-xl border border-gold/40 bg-cream/60 px-3 py-2 text-xs leading-relaxed text-plum">
           A small heads-up: RSVP and song requests open when Ashley &amp; Hazel flip the site
           live — if you see a "not open yet" note, check back a little closer to the day.
+          Meal choices appear on RSVP once the menu's finalised, too.
+        </p>
+        <p className="m-0 text-xs text-muted-foreground">
+          The <strong>bell icon</strong> up top lights up when the couple send you a
+          message, and the <strong>💬 Feedback</strong> button in the corner is there
+          any time something's not working or you've got an idea.
+        </p>
+        <p className="m-0 text-xs text-muted-foreground">
+          If you're part of the wedding party, keep an eye out for a <strong>Stag Do</strong>
+          or <strong>Hen Do</strong> link too — a private space just for that group.
         </p>
         <p className="m-0 text-xs text-muted-foreground">
           Your RSVP details are only ever visible to the couple and their coordinators.

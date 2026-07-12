@@ -1,7 +1,7 @@
 # Production Runbook — Ashley & Hazel Wedding Portal
 
-> **Status (2026-07-10):** production has been live since 2026-06-26 (v1.0.0; now
-> v1.1.0-rc1, phase `live`). The one-time setup/go-live sections below are kept as the
+> **Status (2026-07-12):** production has been live since 2026-06-26 (v1.0.0; now
+> v1.2.1, phase `live`). The one-time setup/go-live sections below are kept as the
 > record and for rebuild scenarios; day-to-day ops live in
 > `docs/guides/IT_ADMIN_GUIDE.md`.
 

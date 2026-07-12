@@ -6,7 +6,7 @@ Operating, deploying, and maintaining the portal. Pairs with
 
 ## At a glance
 - **App:** React + Vite SPA (served by nginx) → FastAPI (Python) → PostgreSQL 16, all in Docker.
-- **Repo:** `github.com/VainAsher/ashley-hazel-wedding-portal` (branch `main`). Live since **v1.0.0** (2026-06-26); current **v1.1.0-rc1**.
+- **Repo:** `github.com/VainAsher/ashley-hazel-wedding-portal` (branch `main`). Live since **v1.0.0** (2026-06-26); current production **v1.2.1**, with Stag/Hen party portals (migration 021) built and validated on `main` awaiting its release cut.
 - **Public URL:** `https://ashley-and.hazel-of-halifax.com` (TLS at the Cloudflare edge).
 
 ## Homelab topology
@@ -68,13 +68,18 @@ ssh deploy@192.168.0.32 'docker exec wedding-prod-backend python -c "import urll
 ## Backups & restore
 - **VM-level:** PBS snapshots the whole VM (recovery path already exists).
 - **Database (logical):** `production/scripts/backup.sh` runs `pg_dump` of `wedding_prod`,
-  gzips to `/home/deploy/wedding-prod-backups`, keeps 14 days, optional offsite to NAS.
-  **Schedule it** (cron on `.32`):
+  gzips to `/home/deploy/wedding-prod-backups`, keeps 14 days, optional offsite to NAS
+  (waits on the NAS resize). **Scheduled and running**: a cron on `.32`
+  (`deploy` user) fires it nightly:
   ```
   0 3 * * * cd /home/deploy/wedding-prod/production && bash scripts/backup.sh >> /home/deploy/wedding-prod-backups/backup.log 2>&1
   ```
 - **Restore drill:** `production/scripts/restore.sh <dump.sql.gz>` restores into a
   throwaway DB (`wedding_restore_test`) — prove backups work without touching live.
+  Last drilled successfully 2026-07-11 (row counts matched live exactly). Do this
+  again periodically, especially before a big release.
+- **Before any release:** take a fresh manual backup first (`bash scripts/backup.sh`)
+  so there's a known-good restore point independent of the nightly cron's timing.
 
 ## Bulk data loads (no UI importer yet)
 There's no CSV import in the app, so bulk guest/photo loads are done directly:
@@ -103,6 +108,16 @@ currently **`live`** (guest RSVP + Dancefloor song requests open). Migration `00
 **Adding a migration?** Numbered SQL in `production/database/migrations/` is applied
 automatically by `deploy.sh`, but CI initialises its test DBs from an **explicit list**
 — add the new file to BOTH psql lists in `.github/workflows/test.yml` or CI fails.
+Current highest: **021** (`021_party_portals.sql`).
+
+**Frontend dependencies:** the project was dependency-free beyond the framework
+basics until Kanban V2 added `@dnd-kit/core` + `@dnd-kit/sortable` (drag-and-drop,
+pinned exact versions) — the only third-party runtime dependency so far, deliberately
+chosen for its small size and built-in keyboard accessibility.
+
+**Mobile pass:** `production/frontend/scripts/mobile-pass.mjs` is a reusable Pixel-5
+screenshot + horizontal-overflow audit across every guest/admin page against a running
+staging instance — rerun it after any layout-affecting change.
 
 ## Troubleshooting
 - **Backend crash-loops / frontend down:** check `docker logs wedding-prod-backend` —
