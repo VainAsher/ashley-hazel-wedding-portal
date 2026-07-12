@@ -10,8 +10,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.db.models import Task, Wedding
-from tests.fixtures.guests import TEST_WEDDING_ID
+from app.db.models import Guest, Invite, Task, Wedding
+from tests.fixtures.guests import TEST_WEDDING_ID, unique_guest_email
 
 
 @pytest.fixture
@@ -26,6 +26,39 @@ def test_task_create_payload():
         "assigned_to": None,
         "category": "invitations",
     }
+
+
+@pytest.fixture
+def stag_member_session(client: TestClient, db_session: Session) -> TestClient:
+    """A guest-role session flagged into the stag party (Wave 3 item 14 D2):
+    used to exercise `context='stag'` task creation/listing now that those
+    boards are gated by party membership, not `require_coordinator`. See
+    tests/test_tasks_party.py for the full party-scoping access matrix."""
+    guest = Guest(
+        wedding_id=TEST_WEDDING_ID,
+        name="Pytest Stag Member (tasks)",
+        email=unique_guest_email("tasks-stag"),
+        relationship="friend",
+    )
+    db_session.add(guest)
+    db_session.commit()
+    db_session.refresh(guest)
+
+    code = f"PYTEST-TASKS-STAG-{uuid4().hex[:8].upper()}"
+    invite = Invite(
+        code=code,
+        wedding_id=TEST_WEDDING_ID,
+        guest_id=guest.id,
+        household_name="Pytest Stag Member (tasks)",
+        role="guest",
+        party="stag",
+    )
+    db_session.add(invite)
+    db_session.commit()
+
+    response = client.post("/api/auth/login", json={"invite_code": code})
+    assert response.status_code == status.HTTP_200_OK
+    return client
 
 
 def create_task(coordinator_session: TestClient, **overrides: object) -> dict:
@@ -290,9 +323,12 @@ class TestTaskContext:
         task = create_task(coordinator_session, title=f"Pytest ctx default {uuid4().hex[:6]}")
         assert task["context"] == "wedding"
 
-    def test_create_task_with_stag_context(self, coordinator_session):
+    def test_create_task_with_stag_context(self, stag_member_session):
+        """A stag-party member (not a coordinator) manages their own board —
+        see tests/test_tasks_party.py for the full authorization matrix this
+        implies (coordinators do NOT get this by default)."""
         task = create_task(
-            coordinator_session,
+            stag_member_session,
             title=f"Pytest ctx stag {uuid4().hex[:6]}",
             context="stag",
         )
@@ -309,18 +345,56 @@ class TestTaskContext:
         response = coordinator_session.post("/api/tasks", json=payload)
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    def test_list_tasks_filters_by_context(self, coordinator_session):
+    def test_wedding_context_list_excludes_stag_tasks(
+        self, coordinator_session, db_session: Session
+    ):
+        """Wedding-context tasks stay coordinator-managed; a stag-context task
+        (inserted directly, not via a second session — coordinator_session and
+        a guest/stag session interfere if both log in on the same shared
+        `client` within one test, so this uses only one HTTP session) must
+        never leak into the coordinator's wedding-board listing."""
         wedding_title = f"Pytest ctx-list wedding {uuid4().hex[:6]}"
         stag_title = f"Pytest ctx-list stag {uuid4().hex[:6]}"
         create_task(coordinator_session, title=wedding_title, context="wedding")
-        create_task(coordinator_session, title=stag_title, context="stag")
+        db_session.add(
+            Task(
+                wedding_id=TEST_WEDDING_ID,
+                title=stag_title,
+                status="not_started",
+                priority="medium",
+                context="stag",
+                position=0,
+            )
+        )
+        db_session.commit()
 
         wedding_titles = {t["title"] for t in coordinator_session.get("/api/tasks").json()}
         assert wedding_title in wedding_titles
         assert stag_title not in wedding_titles
 
+    def test_stag_context_list_excludes_wedding_tasks(
+        self, stag_member_session, db_session: Session
+    ):
+        """Mirror of the above from the stag party's own board (Wave 3 item
+        14 D2) — a wedding-context task (inserted directly, see note above)
+        must never leak into the stag member's `?context=stag` listing."""
+        wedding_title = f"Pytest ctx-list wedding {uuid4().hex[:6]}"
+        stag_title = f"Pytest ctx-list stag {uuid4().hex[:6]}"
+        db_session.add(
+            Task(
+                wedding_id=TEST_WEDDING_ID,
+                title=wedding_title,
+                status="not_started",
+                priority="medium",
+                context="wedding",
+                position=0,
+            )
+        )
+        db_session.commit()
+        create_task(stag_member_session, title=stag_title, context="stag")
+
         stag_titles = {
-            t["title"] for t in coordinator_session.get("/api/tasks?context=stag").json()
+            t["title"] for t in stag_member_session.get("/api/tasks?context=stag").json()
         }
         assert stag_title in stag_titles
         assert wedding_title not in stag_titles

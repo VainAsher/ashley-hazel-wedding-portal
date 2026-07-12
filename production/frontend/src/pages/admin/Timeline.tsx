@@ -88,6 +88,11 @@ function buildPayload(form: TaskFormState): TaskPayload {
     priority: form.priority,
     due_date: optionalText(form.due_date),
     assigned_to: optionalText(form.assigned_to),
+    // The admin Timeline always writes the wedding board (Kanban V2 /
+    // docs/specs/KANBAN_V2.md) — explicit rather than relying on the
+    // server's default, now that party boards (D2) also share this payload
+    // shape and must set their own context.
+    context: 'wedding',
   }
 }
 

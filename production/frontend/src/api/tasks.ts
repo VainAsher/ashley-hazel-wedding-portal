@@ -26,6 +26,12 @@ export interface TaskPayload {
   priority: TaskPriority
   due_date: string | null
   assigned_to: string | null
+  // Which board this task belongs to. The server defaults to 'wedding' when
+  // omitted, which is only correct for the admin Timeline — callers writing
+  // to a party board (Wave 3 item 14 D2) MUST set this explicitly, or their
+  // task silently lands on the wedding board instead (and, since the D2
+  // authorization rewrite, gets rejected outright for a non-coordinator).
+  context?: TaskContext
 }
 
 export interface TaskMovePayload {

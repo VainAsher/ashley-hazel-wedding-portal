@@ -37,8 +37,124 @@ interface PartySummary {
   reveal_banner: { subject_invite_id: number; subject_name: string; revealed: boolean } | null
 }
 
+interface PartyTask {
+  id: number
+  wedding_id: number
+  title: string
+  description: string | null
+  status: 'not_started' | 'in_progress' | 'done' | 'blocked'
+  priority: 'low' | 'medium' | 'high'
+  context: 'stag' | 'hen'
+  position: number | null
+  due_date: string | null
+  assigned_to: string | null
+  category: string | null
+}
+
 function json(route: Route, body: unknown, status = 200) {
   return route.fulfill({ body: JSON.stringify(body), contentType: 'application/json', status })
+}
+
+/**
+ * Wave 3 item 14 D2: the planning board mounted on the party page talks to
+ * the same `/api/tasks` surface as the admin Timeline (tests/browser/
+ * timeline.spec.ts), just filtered by `?context=stag|hen`. This mock keeps
+ * each party's tasks in a separate bucket so the cross-party isolation test
+ * below has something real to assert against — a stray leak here would be
+ * the same class of bug Kanban V2/D1 tests exhaustively for elsewhere.
+ */
+function installPartyTaskApi(page: Page, initial: Partial<Record<'stag' | 'hen', PartyTask[]>> = {}) {
+  let nextId = 9000
+  const tasksByContext: Record<'stag' | 'hen', PartyTask[]> = {
+    stag: initial.stag ? [...initial.stag] : [],
+    hen: initial.hen ? [...initial.hen] : [],
+  }
+
+  return page.route(/\/api\/tasks(?:\/\d+(?:\/move)?)?(?:\?.*)?$/, async (route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    const method = request.method()
+    const moveMatch = url.pathname.match(/\/api\/tasks\/(\d+)\/move$/)
+    const detailMatch = !moveMatch && url.pathname.match(/\/api\/tasks\/(\d+)$/)
+
+    const findContext = (taskId: number): 'stag' | 'hen' | null => {
+      if (tasksByContext.stag.some((t) => t.id === taskId)) return 'stag'
+      if (tasksByContext.hen.some((t) => t.id === taskId)) return 'hen'
+      return null
+    }
+
+    if (url.pathname.endsWith('/api/tasks') && method === 'GET') {
+      const context = (url.searchParams.get('context') as 'stag' | 'hen' | null) ?? 'stag'
+      await json(route, tasksByContext[context] ?? [])
+      return
+    }
+
+    if (url.pathname.endsWith('/api/tasks') && method === 'POST') {
+      const payload = request.postDataJSON() as Partial<PartyTask>
+      const context = (payload.context as 'stag' | 'hen') ?? 'stag'
+      const task: PartyTask = {
+        id: nextId,
+        wedding_id: 1,
+        title: payload.title ?? 'Untitled',
+        description: payload.description ?? null,
+        status: payload.status ?? 'not_started',
+        priority: payload.priority ?? 'medium',
+        context,
+        position: tasksByContext[context].length,
+        due_date: payload.due_date ?? null,
+        assigned_to: payload.assigned_to ?? null,
+        category: null,
+      }
+      nextId += 1
+      tasksByContext[context] = [...tasksByContext[context], task]
+      await json(route, task, 201)
+      return
+    }
+
+    if (moveMatch) {
+      const taskId = Number(moveMatch[1])
+      const context = findContext(taskId)
+      if (!context) {
+        await json(route, { detail: 'Task not found' }, 404)
+        return
+      }
+      const payload = request.postDataJSON() as { status: PartyTask['status']; position: number }
+      tasksByContext[context] = tasksByContext[context].map((task) =>
+        task.id === taskId ? { ...task, status: payload.status, position: payload.position } : task,
+      )
+      const updated = tasksByContext[context].find((task) => task.id === taskId)
+      await json(route, updated)
+      return
+    }
+
+    if (detailMatch && method === 'PATCH') {
+      const taskId = Number(detailMatch[1])
+      const context = findContext(taskId)
+      if (!context) {
+        await json(route, { detail: 'Task not found' }, 404)
+        return
+      }
+      const payload = request.postDataJSON() as Partial<PartyTask>
+      tasksByContext[context] = tasksByContext[context].map((task) =>
+        task.id === taskId ? { ...task, ...payload, id: taskId } : task,
+      )
+      const updated = tasksByContext[context].find((task) => task.id === taskId)
+      await json(route, updated)
+      return
+    }
+
+    if (detailMatch && method === 'DELETE') {
+      const taskId = Number(detailMatch[1])
+      const context = findContext(taskId)
+      if (context) {
+        tasksByContext[context] = tasksByContext[context].filter((task) => task.id !== taskId)
+      }
+      await json(route, { status: 'deleted', id: taskId })
+      return
+    }
+
+    await json(route, { detail: 'Not found' }, 404)
+  })
 }
 
 function baseSummary(overrides: Partial<PartySummary> = {}): PartySummary {
@@ -340,5 +456,133 @@ test.describe('party-admin moderation', () => {
     await expect(
       mainRegion(page).getByRole('button', { name: /Pin message/ }),
     ).toHaveCount(0)
+  })
+})
+
+test.describe('planning board (Wave 3 item 14 D2)', () => {
+  test('renders on the stag party page', async ({ page }) => {
+    await mockGuestAuth(page)
+    await installPartyApi(page, { stag: true, hen: false }, { stag: baseSummary() })
+    await installPartyTaskApi(page, {
+      stag: [
+        {
+          id: 9001,
+          wedding_id: 1,
+          title: 'Book the minibus',
+          description: null,
+          status: 'not_started',
+          priority: 'medium',
+          context: 'stag',
+          position: 0,
+          due_date: null,
+          assigned_to: null,
+          category: null,
+        },
+      ],
+    })
+    await page.goto('/party/stag')
+
+    const main = mainRegion(page)
+    await expect(main.getByRole('heading', { name: 'Planning board' })).toBeVisible()
+    await expect(main.getByLabel('Not started column').getByText('Book the minibus')).toBeVisible()
+  })
+
+  test('renders on the hen party page', async ({ page }) => {
+    await page.route('**/api/auth/me', async (route) => {
+      await json(route, {
+        id: 7,
+        name: 'Maid of Honour Mia',
+        role: 'guest',
+        wedding_id: 1,
+        invite_id: 201,
+        guest_id: 7,
+        wedding_phase: 'live',
+      })
+    })
+    await installPartyApi(
+      page,
+      { stag: false, hen: true },
+      { hen: baseSummary({ party: 'hen', is_party_admin: true }) },
+    )
+    await installPartyTaskApi(page)
+    await page.goto('/party/hen')
+
+    const main = mainRegion(page)
+    await expect(main.getByRole('heading', { name: 'Planning board' })).toBeVisible()
+    await expect(main.getByText('No tasks yet')).toBeVisible()
+  })
+
+  test('a party member can add a task and move it between columns', async ({ page }) => {
+    await mockGuestAuth(page)
+    await installPartyApi(page, { stag: true, hen: false }, { stag: baseSummary() })
+    await installPartyTaskApi(page)
+    await page.goto('/party/stag')
+
+    const main = mainRegion(page)
+    await main.getByRole('button', { name: 'Add Task', exact: true }).click()
+
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByRole('heading', { name: 'Add Task' })).toBeVisible()
+    await dialog.getByLabel('Title').fill('Sort out the fancy dress')
+    await dialog.getByRole('button', { name: 'Add Task' }).click()
+
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Task added successfully.' }),
+    ).toBeVisible()
+    const notStarted = main.getByLabel('Not started column')
+    await expect(notStarted.getByText('Sort out the fancy dress')).toBeVisible()
+
+    // Move it forward via the compact ← → buttons (the accessible/mobile
+    // fallback per docs/specs/KANBAN_V2.md) rather than drag & drop.
+    await main
+      .getByRole('button', { name: 'Move Sort out the fancy dress to next column' })
+      .click()
+
+    const inProgress = main.getByLabel('In progress column')
+    await expect(inProgress.getByText('Sort out the fancy dress')).toBeVisible()
+  })
+
+  test('cross-party isolation: a stag member never sees hen tasks and vice versa', async ({
+    page,
+  }) => {
+    await mockGuestAuth(page)
+    await installPartyApi(page, { stag: true, hen: false }, { stag: baseSummary() })
+    await installPartyTaskApi(page, {
+      stag: [
+        {
+          id: 9101,
+          wedding_id: 1,
+          title: 'Stag-only task',
+          description: null,
+          status: 'not_started',
+          priority: 'medium',
+          context: 'stag',
+          position: 0,
+          due_date: null,
+          assigned_to: null,
+          category: null,
+        },
+      ],
+      hen: [
+        {
+          id: 9102,
+          wedding_id: 1,
+          title: 'Hen-only task',
+          description: null,
+          status: 'not_started',
+          priority: 'medium',
+          context: 'hen',
+          position: 0,
+          due_date: null,
+          assigned_to: null,
+          category: null,
+        },
+      ],
+    })
+    await page.goto('/party/stag')
+
+    const main = mainRegion(page)
+    await expect(main.getByText('Stag-only task')).toBeVisible()
+    await expect(main.getByText('Hen-only task')).toHaveCount(0)
   })
 })

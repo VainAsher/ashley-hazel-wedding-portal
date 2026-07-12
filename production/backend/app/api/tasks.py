@@ -1,13 +1,58 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.api.auth import require_coordinator
+from app.api.auth import ROLE_COORDINATOR, ROLE_COUPLE, require_guest
+from app.api.party import has_party_access
 from app.api.schemas_auth import UserResponse
 from app.db.database import get_db
-from app.db.models import Task, TaskContext
+from app.db.models import Invite, Task, TaskContext
 from app.db.schemas import TaskCreate, TaskMove, TaskResponse, TaskUpdate
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
+
+
+def _current_invite(db: Session, current_user: UserResponse) -> Invite:
+    invite = db.get(Invite, current_user.invite_id)
+    if invite is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    return invite
+
+
+def _authorize_task_context(context: TaskContext, invite: Invite, db: Session) -> None:
+    """Kanban V2 (docs/specs/KANBAN_V2.md) mounted a per-party board (Wave 3
+    item 14 D2), so a single "coordinator-only" gate is no longer right for
+    every task: the wedding board stays coordinator/couple-only exactly as
+    before, but a stag/hen board is that party's own planning tool and needs
+    to be usable by party members who hold no coordinator role at all.
+
+    `context='wedding'`: unchanged Kanban V2 behaviour — couple or
+    coordinator only.
+
+    `context in ('stag', 'hen')`: gated by the exact same `has_party_access`
+    rule (docs/specs/PARTY_PORTALS_D1.md) that guards that party's message
+    board, details and membership — NOT `require_coordinator`. Per the D1
+    spec, coordinators deliberately do not get automatic access to a party's
+    own content by default (kept out of the message board, details and
+    membership on purpose, to protect the "private space for the party"
+    promise); this task board is part of that same content, so a
+    coordinator with no party role is denied here too, for consistency with
+    that decision. (Flagged in the D2 rollout notes for the couple to
+    confirm — easy to reverse if they'd rather coordinators keep visibility
+    into party planning specifically.)
+    """
+    if context == TaskContext.wedding:
+        if invite.role not in (ROLE_COUPLE, ROLE_COORDINATOR):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+        return
+
+    if not has_party_access(invite, context.value, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized",
+        )
 
 
 def _column_query(db: Session, wedding_id: int, context: TaskContext, task_status: str):
@@ -49,9 +94,11 @@ def _resequence_column(
 async def list_tasks(
     context: TaskContext = Query(default=TaskContext.wedding),
     db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(require_coordinator),
+    current_user: UserResponse = Depends(require_guest),
 ) -> list[Task]:
     """List tasks for the current user's wedding, ordered for the board."""
+    invite = _current_invite(db, current_user)
+    _authorize_task_context(context, invite, db)
     return (
         db.query(Task)
         .filter(Task.wedding_id == current_user.wedding_id, Task.context == context)
@@ -64,7 +111,7 @@ async def list_tasks(
 async def create_task(
     task: TaskCreate,
     db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(require_coordinator),
+    current_user: UserResponse = Depends(require_guest),
 ) -> Task:
     """Create a new task for the current wedding. New cards append to the
     end of their column."""
@@ -75,6 +122,9 @@ async def create_task(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot create tasks for other weddings",
         )
+
+    invite = _current_invite(db, current_user)
+    _authorize_task_context(task.context, invite, db)
 
     position = _end_of_column_position(db, task.wedding_id, task.context, task.status)
 
@@ -100,7 +150,7 @@ async def create_task(
 async def get_task(
     task_id: int,
     db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(require_coordinator),
+    current_user: UserResponse = Depends(require_guest),
 ) -> Task:
     """Get a specific task."""
     task = db.query(Task).filter(Task.id == task_id).first()
@@ -116,6 +166,9 @@ async def get_task(
             detail="Insufficient permissions",
         )
 
+    invite = _current_invite(db, current_user)
+    _authorize_task_context(task.context, invite, db)
+
     return task
 
 
@@ -124,7 +177,7 @@ async def move_task(
     task_id: int,
     move: TaskMove,
     db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(require_coordinator),
+    current_user: UserResponse = Depends(require_guest),
 ) -> Task:
     """Move a card to a column slot in one call (drag & drop, or the ← →
     move buttons paired with a position), resequencing neighbours.
@@ -138,6 +191,9 @@ async def move_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found",
         )
+
+    invite = _current_invite(db, current_user)
+    _authorize_task_context(task.context, invite, db)
 
     source_status = task.status
     source_context = task.context
@@ -173,7 +229,7 @@ async def update_task(
     task_id: int,
     task_update: TaskUpdate,
     db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(require_coordinator),
+    current_user: UserResponse = Depends(require_guest),
 ) -> Task:
     """Update a task."""
     task = db.query(Task).filter(Task.id == task_id).first()
@@ -189,7 +245,19 @@ async def update_task(
             detail="Insufficient permissions",
         )
 
+    invite = _current_invite(db, current_user)
+    _authorize_task_context(task.context, invite, db)
+
     update_data = task_update.model_dump(exclude_unset=True)
+
+    # A context change is itself a privileged move (e.g. it must not let a
+    # stag member "promote" their task onto the coordinator-only wedding
+    # board, or a coordinator drop a wedding task onto a party board they
+    # have no access to) — authorize the destination context too.
+    new_context = update_data.get("context")
+    if new_context is not None and new_context != task.context:
+        _authorize_task_context(new_context, invite, db)
+
     for field, value in update_data.items():
         setattr(task, field, value)
 
@@ -203,7 +271,7 @@ async def update_task(
 async def delete_task(
     task_id: int,
     db: Session = Depends(get_db),
-    current_user: UserResponse = Depends(require_coordinator),
+    current_user: UserResponse = Depends(require_guest),
 ) -> None:
     """Delete a task."""
     task = db.query(Task).filter(Task.id == task_id).first()
@@ -218,6 +286,9 @@ async def delete_task(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Insufficient permissions",
         )
+
+    invite = _current_invite(db, current_user)
+    _authorize_task_context(task.context, invite, db)
 
     db.delete(task)
     db.commit()
