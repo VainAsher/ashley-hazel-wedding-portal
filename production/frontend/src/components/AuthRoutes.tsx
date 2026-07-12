@@ -113,6 +113,34 @@ export function RequireGuest({ children }: { children: ReactNode }) {
   return <>{children}</>
 }
 
+// Wave 3 item 14 D1: party pages are reachable by 'guest' role (regular
+// wedding party members) AND 'couple' role (the couple themselves — a
+// non-subject partner needs to view their partner's party and reveal it).
+// Coordinators never get automatic party content access (see
+// docs/specs/PARTY_PORTALS_D1.md), so they're sent to the admin surfaces
+// they actually use instead of a guest-chrome page that would just 403.
+export function RequireGuestOrCouple({ children }: { children: ReactNode }) {
+  const { error, loading, user } = useAuthState()
+
+  if (loading) {
+    return <LoadingRoute />
+  }
+
+  if (error) {
+    return <AuthError message={error} />
+  }
+
+  if (!user) {
+    return <Navigate replace to="/invite" />
+  }
+
+  if (user.role === 'coordinator') {
+    return <Navigate replace to="/admin" />
+  }
+
+  return <>{children}</>
+}
+
 export function RequireAdmin({ children }: { children: ReactNode }) {
   const { error, loading, user } = useAuthState()
 

@@ -51,6 +51,18 @@ export async function cleanupPageState(page: Page): Promise<void> {
       }),
     )
 
+    // GuestLayout fetches this on every guest page to decide whether to show
+    // the Stag Do / Hen Do nav links (Wave 3 item 14 D1). Default to "no
+    // access" so specs stay console-error-free and don't see nav entries
+    // they didn't ask for; party.spec.ts registers its own route, which wins.
+    await page.route('**/api/party/access', (route) =>
+      route.fulfill({
+        body: JSON.stringify({ stag: false, hen: false }),
+        contentType: 'application/json',
+        status: 200,
+      }),
+    )
+
     // Clear cookies and local storage
     await page.context().clearCookies()
     await page.evaluate(() => {

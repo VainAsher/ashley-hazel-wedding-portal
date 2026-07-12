@@ -13,10 +13,35 @@ from app.api.auth import require_couple
 
 router = APIRouter(prefix="/api/invites", tags=["invites"])
 
+# Wave 3 item 14 D1: Best Man (stag) / Maid of Honour (hen) — friendly title
+# auto-set when party_admin is flagged and no explicit title was supplied.
+# Kept editable afterwards so the couple can use different wording.
+DEFAULT_PARTY_TITLE = {"stag": "Best Man", "hen": "Maid of Honour"}
+
 
 def generate_invite_code(length: int = 10) -> str:
     """Generate a cryptographically random invite code."""
     return secrets.token_urlsafe(length)[:length].upper()
+
+
+def clear_previous_party_admin(
+    db: Session, wedding_id: int, party: str, exclude_invite_id: int | None = None
+) -> None:
+    """Best Man/Maid of Honour is single-select per (wedding, party).
+
+    Proactively clears any current holder before a new one is assigned, in
+    the same transaction as the caller's commit (this function does not
+    commit itself) — the partial unique index on invites is a DB-level
+    backstop that should never actually fire because of this.
+    """
+    query = db.query(Invite).filter(
+        Invite.wedding_id == wedding_id,
+        Invite.party == party,
+        Invite.party_admin.is_(True),
+    )
+    if exclude_invite_id is not None:
+        query = query.filter(Invite.id != exclude_invite_id)
+    query.update({Invite.party_admin: False}, synchronize_session=False)
 
 
 @router.post("", response_model=InviteResponse, status_code=status.HTTP_201_CREATED)
@@ -53,7 +78,21 @@ def create_invite(
         role=invite.role,
         guest_id=invite.guest_id,
         household_name=invite.household_name,
+        party=invite.party,
+        party_admin=invite.party_admin,
+        party_title=invite.party_title,
+        partner_label=invite.partner_label,
+        associated_party=invite.associated_party,
     )
+
+    if invite.party_admin and invite.party is not None:
+        # Clear the previous holder in the same transaction as the insert
+        # below (single flush, one commit) so the DB never observes two
+        # simultaneous holders for this party.
+        clear_previous_party_admin(db, invite.wedding_id, invite.party)
+        if not new_invite.party_title:
+            new_invite.party_title = DEFAULT_PARTY_TITLE.get(invite.party)
+
     db.add(new_invite)
     db.commit()
     db.refresh(new_invite)
@@ -123,6 +162,32 @@ def update_invite(
         invite.guest_id = invite_update.guest_id
     if invite_update.household_name is not None:
         invite.household_name = invite_update.household_name
+
+    update_data = invite_update.model_dump(
+        exclude_unset=True,
+        include={"party", "party_title", "partner_label", "associated_party"},
+    )
+    for field, value in update_data.items():
+        setattr(invite, field, value)
+
+    if invite_update.party_admin is not None:
+        target_party = update_data.get("party", invite.party)
+        if invite_update.party_admin:
+            if target_party is None:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="party_admin requires a party",
+                )
+            # Clear the previous holder in the same transaction as this
+            # update's commit below.
+            clear_previous_party_admin(
+                db, invite.wedding_id, target_party, exclude_invite_id=invite.id
+            )
+            invite.party_admin = True
+            if not invite.party_title:
+                invite.party_title = DEFAULT_PARTY_TITLE.get(target_party)
+        else:
+            invite.party_admin = False
 
     db.commit()
     db.refresh(invite)

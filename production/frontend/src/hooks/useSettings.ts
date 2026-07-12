@@ -14,6 +14,7 @@ export type {
   WeddingSettingsPayload,
   WeddingPhase,
   WeddingThemeSettings,
+  PartyVisibilityMode,
 } from '@/api/settings'
 export { SettingsApiError } from '@/api/settings'
 

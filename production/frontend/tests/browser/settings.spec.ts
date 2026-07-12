@@ -9,6 +9,7 @@ interface WeddingSettings {
   ceremony_location: string | null
   reception_location: string | null
   meal_selection_open: boolean
+  party_visibility_mode: 'partner_visible' | 'locked'
 }
 
 const initialSettings: WeddingSettings = {
@@ -19,6 +20,7 @@ const initialSettings: WeddingSettings = {
   ceremony_location: 'Rose Garden',
   reception_location: 'Grand Hall',
   meal_selection_open: false,
+  party_visibility_mode: 'partner_visible',
 }
 
 function json(route: Route, body: unknown, status = 200) {
@@ -224,4 +226,29 @@ test('rejects an invalid hex colour before saving', async ({ page }) => {
 
   await expect(main.getByText('Use a six-digit hex colour, e.g. #f6c445')).toBeVisible()
   await expect(main.getByRole('button', { name: 'Save theme' })).toBeDisabled()
+})
+
+test('renders the Party Visibility card with the current mode selected', async ({ page }) => {
+  await page.goto('/admin/settings')
+
+  const main = mainRegion(page)
+  await expect(main.getByRole('heading', { name: 'Party Visibility' })).toBeVisible()
+
+  const group = main.getByRole('radiogroup', { name: 'Party visibility' })
+  await expect(group.getByRole('radio', { name: /Partner visible/ })).toBeChecked()
+  await expect(group.getByRole('radio', { name: /Locked/ })).not.toBeChecked()
+})
+
+test('switches party visibility to locked and saves it', async ({ page }) => {
+  await page.goto('/admin/settings')
+
+  const main = mainRegion(page)
+  const group = main.getByRole('radiogroup', { name: 'Party visibility' })
+  await group.getByRole('radio', { name: /Locked/ }).click()
+
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Party visibility saved.' }),
+  ).toBeVisible()
+  expect(putPayloads).toContainEqual({ party_visibility_mode: 'locked' })
+  await expect(group.getByRole('radio', { name: /Locked/ })).toBeChecked()
 })

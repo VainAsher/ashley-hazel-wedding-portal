@@ -2,7 +2,7 @@ import re
 from datetime import date, datetime, time
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator, model_validator
 
 from app.db.models import RsvpStatus, TaskStatus, TaskPriority, TaskContext
 
@@ -188,11 +188,32 @@ class TaskResponse(TaskBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+PARTY_VALUES = {"stag", "hen"}
+
+
+def _validate_party_value(value: str | None) -> str | None:
+    if value is None:
+        return None
+    party = value.strip().lower()
+    if party not in PARTY_VALUES:
+        allowed = ", ".join(sorted(PARTY_VALUES))
+        raise ValueError(f"Party must be one of: {allowed}")
+    return party
+
+
 class InviteCreate(BaseModel):
     wedding_id: int = Field(gt=0)
     role: str = Field(min_length=1, max_length=20)
     guest_id: int | None = None
     household_name: str | None = Field(default=None, max_length=255)
+    # Guest "wedding party" flags (Wave 3 item 14 D1). Only meaningful for
+    # role='guest'; validated together below.
+    party: str | None = None
+    party_admin: bool = False
+    party_title: str | None = Field(default=None, max_length=50)
+    # Couple individual-identity fields. Only meaningful for role='couple'.
+    partner_label: str | None = Field(default=None, max_length=50)
+    associated_party: str | None = None
 
     @field_validator("role")
     @classmethod
@@ -202,10 +223,58 @@ class InviteCreate(BaseModel):
             raise ValueError(f"Role must be one of {valid_roles}")
         return value.lower()
 
+    @field_validator("party", "associated_party")
+    @classmethod
+    def party_must_be_valid(cls, value: str | None) -> str | None:
+        return _validate_party_value(value)
+
+    @field_validator("party_title", "partner_label")
+    @classmethod
+    def blank_optional_text_to_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+    @model_validator(mode="after")
+    def party_fields_match_role(self) -> "InviteCreate":
+        if self.role != "guest" and (self.party is not None or self.party_admin):
+            raise ValueError("party/party_admin are only valid for guest invites")
+        if self.role != "couple" and (
+            self.partner_label is not None or self.associated_party is not None
+        ):
+            raise ValueError(
+                "partner_label/associated_party are only valid for couple invites"
+            )
+        if self.party_admin and self.party is None:
+            raise ValueError("party_admin requires a party")
+        return self
+
 
 class InviteUpdate(BaseModel):
     guest_id: int | None = None
     household_name: str | None = None
+    # Guest "wedding party" flags (Wave 3 item 14 D1). Explicit null clears
+    # the field (e.g. removing someone from a party).
+    party: str | None = None
+    party_admin: bool | None = None
+    party_title: str | None = Field(default=None, max_length=50)
+    # Couple individual-identity fields.
+    partner_label: str | None = Field(default=None, max_length=50)
+    associated_party: str | None = None
+
+    @field_validator("party", "associated_party")
+    @classmethod
+    def party_must_be_valid(cls, value: str | None) -> str | None:
+        return _validate_party_value(value)
+
+    @field_validator("party_title", "partner_label")
+    @classmethod
+    def blank_optional_text_to_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
 
 
 class InviteResponse(BaseModel):
@@ -215,6 +284,11 @@ class InviteResponse(BaseModel):
     role: str
     guest_id: int | None
     household_name: str | None
+    party: str | None = None
+    party_admin: bool = False
+    party_title: str | None = None
+    partner_label: str | None = None
+    associated_party: str | None = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -449,6 +523,9 @@ class WeddingTheme(BaseModel):
         return value
 
 
+PARTY_VISIBILITY_MODES = {"partner_visible", "locked"}
+
+
 class WeddingSettingsResponse(BaseModel):
     id: int
     couple_names: str
@@ -459,6 +536,9 @@ class WeddingSettingsResponse(BaseModel):
     phase: str
     theme: WeddingTheme | None = None
     meal_selection_open: bool = False
+    # Cross-grant default for the non-subject partner's access to their
+    # partner's stag/hen party (Wave 3 item 14 D1 "Party visibility" dial).
+    party_visibility_mode: str = "partner_visible"
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -474,6 +554,7 @@ class WeddingSettingsUpdate(BaseModel):
     theme: WeddingTheme | None = None
     # Menu builder switch: opens guest meal selection in RSVP.
     meal_selection_open: bool | None = None
+    party_visibility_mode: str | None = None
 
     @field_validator("couple_names")
     @classmethod
@@ -495,6 +576,17 @@ class WeddingSettingsUpdate(BaseModel):
             allowed = ", ".join(sorted(WEDDING_PHASES))
             raise ValueError(f"Phase must be one of: {allowed}")
         return phase
+
+    @field_validator("party_visibility_mode")
+    @classmethod
+    def party_visibility_mode_must_be_valid(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        mode = value.strip().lower()
+        if mode not in PARTY_VISIBILITY_MODES:
+            allowed = ", ".join(sorted(PARTY_VISIBILITY_MODES))
+            raise ValueError(f"Party visibility mode must be one of: {allowed}")
+        return mode
 
 
 class BudgetCategorySummary(BaseModel):
@@ -1178,3 +1270,101 @@ class NotificationListResponse(BaseModel):
 
     items: list[NotificationResponse]
     unread_count: int
+
+
+# ---------------------------------------------------------------------------
+# Stag & Hen party portals (Wave 3 item 14 D1) — see
+# docs/specs/PARTY_PORTALS_D1.md. Access is enforced by
+# app/api/party.py::has_party_access; these are the request/response shapes.
+# ---------------------------------------------------------------------------
+
+
+class PartyAccessResponse(BaseModel):
+    """Nav-hint booleans only — every content endpoint independently
+    re-checks the access rule; never trust this for authorization."""
+
+    stag: bool
+    hen: bool
+
+
+class PartyMemberResponse(BaseModel):
+    invite_id: int
+    name: str
+    party_admin: bool
+    party_title: str | None = None
+
+
+class PartyInfoResponse(BaseModel):
+    details: str | None = None
+    updated_at: datetime | None = None
+
+
+class PartyInfoUpdate(BaseModel):
+    details: str | None = None
+
+    @field_validator("details")
+    @classmethod
+    def blank_details_to_none(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
+
+class PartyMessageCreate(BaseModel):
+    message: str = Field(min_length=1)
+
+    @field_validator("message")
+    @classmethod
+    def message_must_not_be_blank(cls, value: str) -> str:
+        message = value.strip()
+        if not message:
+            raise ValueError("Message is required")
+        return message
+
+
+class PartyMessageModerate(BaseModel):
+    """PATCH body — either field may be sent alone (e.g. pin without
+    touching hidden, or vice versa)."""
+
+    hidden: bool | None = None
+    pinned: bool | None = None
+
+
+class PartyMessageResponse(BaseModel):
+    id: int
+    author_name: str
+    author_invite_id: int
+    message: str
+    hidden: bool
+    pinned: bool
+    created_at: datetime
+
+
+class PartyRevealBanner(BaseModel):
+    """Present only when the viewer is the non-subject couple member for
+    this party — everything the reveal banner + toggle needs to render."""
+
+    subject_invite_id: int
+    subject_name: str
+    revealed: bool
+
+
+class PartySummaryResponse(BaseModel):
+    party: str
+    is_party_admin: bool
+    info: PartyInfoResponse
+    members: list[PartyMemberResponse]
+    messages: list[PartyMessageResponse]
+    reveal_banner: PartyRevealBanner | None = None
+
+
+class PartyRevealUpdate(BaseModel):
+    invite_id: int = Field(gt=0)
+    revealed: bool
+
+
+class PartyRevealResponse(BaseModel):
+    party: str
+    invite_id: int
+    revealed: bool

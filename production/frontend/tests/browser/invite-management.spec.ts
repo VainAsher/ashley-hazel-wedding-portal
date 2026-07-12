@@ -12,6 +12,8 @@ interface AuthUser {
   guest_id: number | null
 }
 
+type PartyValue = 'stag' | 'hen' | null
+
 interface Invite {
   id: number
   code: string
@@ -20,6 +22,11 @@ interface Invite {
   guest_id: number | null
   household_name: string | null
   created_at: string
+  party?: PartyValue
+  party_admin?: boolean
+  party_title?: string | null
+  partner_label?: string | null
+  associated_party?: PartyValue
 }
 
 interface Guest {
@@ -135,9 +142,17 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
 
     // Handle POST /api/invites - generate new invite
     if (route.request().method() === 'POST') {
-      let body: { wedding_id?: number; role?: string } = {}
+      let body: {
+        wedding_id?: number
+        role?: string
+        party?: PartyValue
+        party_admin?: boolean
+        party_title?: string | null
+        partner_label?: string | null
+        associated_party?: PartyValue
+      } = {}
       try {
-        body = route.request().postDataJSON() as { wedding_id: number; role: string }
+        body = route.request().postDataJSON()
       } catch (e) {
         const postData = route.request().postData()
         if (postData) {
@@ -149,6 +164,11 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
         return await json(route, { detail: 'Missing wedding_id or role' }, 400)
       }
 
+      const PARTY_ADMIN_TITLE: Record<'stag' | 'hen', string> = {
+        stag: 'Best Man',
+        hen: 'Maid of Honour',
+      }
+
       const newInvite: Invite = {
         id: Math.max(...invitesCopy.map(i => i.id), 0) + 1,
         code: `NEW-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
@@ -157,18 +177,39 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
         guest_id: null,
         household_name: null,
         created_at: new Date().toISOString(),
+        party: body.party ?? null,
+        party_admin: body.party_admin ?? false,
+        party_title:
+          body.party_title ?? (body.party_admin && body.party ? PARTY_ADMIN_TITLE[body.party] : null),
+        partner_label: body.partner_label ?? null,
+        associated_party: body.associated_party ?? null,
+      }
+      // Best Man/MoH single-holder: clear any previous holder for this party.
+      if (newInvite.party_admin && newInvite.party) {
+        for (const existing of invitesCopy) {
+          if (existing.party === newInvite.party) {
+            existing.party_admin = false
+          }
+        }
       }
       invitesCopy.unshift(newInvite)
       return await json(route, newInvite, 201)
     }
 
-    // Handle PATCH /api/invites/:id - link guest to invite
+    // Handle PATCH /api/invites/:id - link guest / edit wedding party fields
     const patchMatch = url.pathname.match(/\/api\/invites\/(\d+)$/)
     if (route.request().method() === 'PATCH' && patchMatch) {
       const id = parseInt(patchMatch[1])
-      let body: { guest_id?: number } = {}
+      let body: {
+        guest_id?: number
+        party?: PartyValue
+        party_admin?: boolean
+        party_title?: string | null
+        partner_label?: string | null
+        associated_party?: PartyValue
+      } = {}
       try {
-        body = route.request().postDataJSON() as { guest_id?: number }
+        body = route.request().postDataJSON()
       } catch (e) {
         // If body parsing fails, try to extract from postData
         const postData = route.request().postData()
@@ -180,6 +221,25 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
       if (invite) {
         if (body.guest_id !== undefined) {
           invite.guest_id = body.guest_id
+        }
+        if ('party' in body) {
+          invite.party = body.party ?? null
+        }
+        if ('partner_label' in body) {
+          invite.partner_label = body.partner_label ?? null
+        }
+        if ('associated_party' in body) {
+          invite.associated_party = body.associated_party ?? null
+        }
+        if ('party_admin' in body) {
+          invite.party_admin = body.party_admin ?? false
+          if (invite.party_admin && invite.party) {
+            for (const existing of invitesCopy) {
+              if (existing.id !== invite.id && existing.party === invite.party) {
+                existing.party_admin = false
+              }
+            }
+          }
         }
         return await json(route, invite)
       } else {
@@ -591,4 +651,67 @@ test('link guest button is disabled when no guests available', async ({ page }) 
   const linkButton = firstRow.locator('button', { hasText: '🔗' })
   // Link button should NOT be visible when all guests are linked
   await expect(linkButton).not.toBeVisible()
+})
+
+// Wave 3 item 14 D1: wedding party fields on the invite generate/edit flows.
+test.describe('wedding party fields', () => {
+  test('generating a guest invite with a party shows it in the table', async ({ page }) => {
+    const roleSelect = page.getByLabel('Role')
+    await roleSelect.selectOption('guest')
+
+    await page.getByRole('radiogroup', { name: 'Wedding party' }).getByLabel('Stag Do').check()
+    await page.getByRole('button', { name: 'Generate Code' }).click()
+
+    await expect(page.getByText(/Invite code generated:/)).toBeVisible()
+    await expect(page.getByRole('row', { name: /NEW-/ }).getByText('Stag Do')).toBeVisible()
+  })
+
+  test('checking Best Man shows the "will replace" note when a holder exists', async ({ page }) => {
+    // Re-mock with DEMO-001 already holding Best Man for stag, then reload —
+    // mockInvites fully re-registers the route (every method branch returns
+    // explicitly), so this is safe unlike a route.fallback() chain.
+    await mockInvites(page, [
+      { ...existingInvites[0], party: 'stag', party_admin: true, party_title: 'Best Man' },
+      existingInvites[1],
+      existingInvites[2],
+    ])
+    await page.reload()
+    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible()
+    await expect(page.locator('tbody tr').first()).toBeVisible()
+
+    const roleSelect = page.getByLabel('Role')
+    await roleSelect.selectOption('guest')
+    await page.getByRole('radiogroup', { name: 'Wedding party' }).getByLabel('Stag Do').check()
+    await page.getByLabel(/Make this guest the Best Man/).check()
+
+    await expect(page.getByText(/this will replace/)).toBeVisible()
+  })
+
+  test('generating a couple invite with identity fields shows them in the table', async ({ page }) => {
+    const roleSelect = page.getByLabel('Role')
+    await roleSelect.selectOption('couple')
+
+    await page.getByLabel('Partner label').fill('Ashley')
+    await page.getByLabel('Their own party').selectOption('stag')
+    await page.getByRole('button', { name: 'Generate Code' }).click()
+
+    await expect(page.getByText(/Invite code generated:/)).toBeVisible()
+    await expect(page.getByRole('row', { name: /NEW-/ }).getByText('Ashley')).toBeVisible()
+  })
+
+  test('editing wedding party details via the party editor modal', async ({ page }) => {
+    await expect(page.locator('table tbody')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('DEMO-001')).toBeVisible({ timeout: 5000 })
+
+    const demoRow = page.locator('tbody tr', { has: page.locator('text=DEMO-001') })
+    await demoRow.locator('button[title="Edit wedding party details"]').click()
+
+    const dialog = page.getByRole('dialog', { name: 'Edit Wedding Party Details' })
+    await expect(dialog).toBeVisible()
+    await dialog.getByRole('radiogroup', { name: 'Wedding party' }).getByLabel('Hen Do').check()
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+
+    await expect(dialog).not.toBeVisible()
+    await expect(demoRow.getByText('Hen Do')).toBeVisible()
+  })
 })
