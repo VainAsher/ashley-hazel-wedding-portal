@@ -126,6 +126,16 @@ mounts the deck already scrolled to that index — `PagedGuestDeck` takes
 - Explicitly NOT retested: Dancefloor/Gallery/WeddingParty/Party specs
   (untouched code path, existing suites are the proof).
 
+## Cleanup: the Phase 0 spike is superseded, not kept alongside
+The spike's job was to get a go/no-go decision — it got "go." Once Phase 1
+lands, remove `production/frontend/src/pages/PreviewPaged.tsx`, the old
+spike-era `production/frontend/src/components/PagedDeck.tsx` (its proven
+mechanics live on, adapted, inside the new `PagedGuestDeck`), the `/preview`
+route in `App.tsx`, and `tests/browser/preview-paged.spec.ts` (superseded by
+the new paged-mode tests against the real routes). Leaving a redundant
+admin-only `/preview` route sitting next to the real thing is just dead code
+once guests are actually using paged navigation.
+
 ## Out of scope
 Item 18's real per-page composition/background work, any change to
 Dancefloor/Gallery/Wedding Party/Party pages, any change to admin pages.
