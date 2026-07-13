@@ -206,3 +206,105 @@ test('without reduced motion, the deck uses smooth scrolling', async ({ page }) 
   )
   expect(scrollBehavior).toBe('smooth')
 })
+
+// Couple feedback (2026-07-13): mobile should get a burger menu instead of
+// the live nav's wrap-to-second-row treatment, and the desktop composition
+// should compress each page closer to one viewport. Both viewports are set
+// explicitly here (rather than relying on the project's device) so these
+// assertions are deterministic regardless of which project runs them.
+
+test('mobile: the live per-page nav is hidden and a burger menu takes over', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mockCurrentUser(page, coordinatorUser)
+  await mockPreviewPageApis(page)
+
+  await page.goto('/preview')
+
+  // All 4 pages stay mounted (one nav per page), so scope to the active
+  // (Dashboard) slide specifically rather than an ambiguous page-wide query.
+  // The nav row rendered by each embedded page's own (unmodified)
+  // GuestLayout is hidden at mobile widths -- CSS scoped to this route
+  // only, per the spec's "don't touch GuestLayout" rule.
+  await expect(
+    page.getByTestId('paged-deck-slide-dashboard').getByRole('navigation', { name: 'Guest pages' }),
+  ).toBeHidden()
+
+  const burgerButton = page.getByRole('button', { name: 'Open page menu' })
+  await expect(burgerButton).toBeVisible()
+
+  await burgerButton.click()
+  const menu = page.getByRole('menu', { name: 'Preview pages' })
+  await expect(menu).toBeVisible()
+  await expect(menu.getByRole('menuitem')).toHaveCount(4)
+
+  const announcer = page.getByTestId('paged-deck-announcer')
+  await menu.getByRole('menuitem', { name: 'Schedule' }).click()
+  await expect(page.getByTestId('paged-deck-slide-schedule')).toBeInViewport()
+  await expect(announcer).toHaveText('Page 3 of 4: Schedule')
+  // The menu closes itself after a selection.
+  await expect(menu).toBeHidden()
+})
+
+test('desktop: the burger menu is not shown and the live nav stays visible', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await mockCurrentUser(page, coordinatorUser)
+  await mockPreviewPageApis(page)
+
+  await page.goto('/preview')
+
+  // Scope to the active (Dashboard) slide -- all 4 pages stay mounted, each
+  // with its own nav, so an unscoped query is ambiguous.
+  await expect(
+    page.getByTestId('paged-deck-slide-dashboard').getByRole('navigation', { name: 'Guest pages' }),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Open page menu' })).toBeHidden()
+})
+
+test('the dot page indicator in the banner tracks the current page', async ({ page }) => {
+  await mockCurrentUser(page, coordinatorUser)
+  await mockPreviewPageApis(page)
+
+  await page.goto('/preview')
+
+  const banner = page.getByRole('status')
+  const dots = banner.locator('span.rounded-full')
+  await expect(dots).toHaveCount(4)
+  await expect(dots.nth(0)).toHaveClass(/bg-black(?!\/)/)
+
+  await page.getByRole('button', { name: 'Next page' }).click()
+  await expect(page.getByTestId('paged-deck-slide-rsvp')).toBeInViewport()
+  await expect(dots.nth(1)).toHaveClass(/bg-black(?!\/)/)
+  await expect(dots.nth(0)).toHaveClass(/bg-black\/25/)
+})
+
+test('FeedbackWidget stays viewport-fixed on every mounted page', async ({ page }) => {
+  // Regression test: an earlier version of the auto-fit-to-viewport scaling
+  // applied `transform: scale()` to each ENTIRE embedded page (not just its
+  // <main>), which makes that scaled ancestor the CSS containing block for
+  // any `position: fixed` descendant -- GuestLayout's floating Feedback
+  // button stopped resolving "fixed" against the real viewport and visibly
+  // detached to a second position while off-screen (caught in couple
+  // review as two "Feedback" pills painting at different spots at once).
+  // Scaling is now scoped to <main> only, a sibling of the widget in
+  // GuestLayout, so every one of the 4 mounted copies (one per page, all
+  // stay mounted per the inert design) must resolve to the exact same real
+  // viewport position -- not a DOM-count check, since 4 mounted copies are
+  // expected by design.
+  await mockCurrentUser(page, coordinatorUser)
+  await mockPreviewPageApis(page)
+
+  await page.goto('/preview')
+
+  const feedbackButtons = page.getByRole('button', { name: /feedback/i })
+  await expect(feedbackButtons).toHaveCount(4)
+
+  const positions = await feedbackButtons.evaluateAll((elements) =>
+    elements.map((element) => {
+      const rect = element.getBoundingClientRect()
+      return { x: Math.round(rect.x), y: Math.round(rect.y) }
+    }),
+  )
+  for (const position of positions.slice(1)) {
+    expect(position).toEqual(positions[0])
+  }
+})
