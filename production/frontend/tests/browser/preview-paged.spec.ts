@@ -308,3 +308,27 @@ test('FeedbackWidget stays viewport-fixed on every mounted page', async ({ page 
     expect(position).toEqual(positions[0])
   }
 })
+
+test('mobile: auto-fit shrinking is disabled, content keeps full width', async ({ page }) => {
+  // Regression test: CSS `transform: scale()` shrinks width and height by
+  // the SAME factor. On a narrow phone viewport, compressing height enough
+  // to fit also compresses width down to a thin column with big empty side
+  // margins (caught in couple review: "content margins seem quite large
+  // ... small thin area in the middle"). The desktop single-viewport ask
+  // never applied to mobile in the first place, so FitToSlide now skips
+  // scaling below the same breakpoint used for the burger-menu switch.
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mockCurrentUser(page, coordinatorUser)
+  await mockPreviewPageApis(page)
+
+  await page.goto('/preview')
+
+  const dashboardSlide = page.getByTestId('paged-deck-slide-dashboard')
+  const main = dashboardSlide.locator('main')
+  const mainWidth = await main.evaluate((element) => element.getBoundingClientRect().width)
+  // Full viewport width, not shrunk toward MIN_FIT_SCALE (~62%).
+  expect(mainWidth).toBeGreaterThan(370)
+
+  const transform = await main.evaluate((element) => window.getComputedStyle(element).transform)
+  expect(transform).toBe('none')
+})

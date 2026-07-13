@@ -38,13 +38,24 @@ interface PagedDeckProps {
 // accepted for content that can't reasonably be compressed).
 const MIN_FIT_SCALE = 0.62
 
+// Below this viewport width, skip the auto-fit shrink entirely (matches the
+// `sm` breakpoint already used for the mobile nav/burger-menu switch). The
+// couple's own single-viewport ask was specifically about desktop screen
+// real estate; on a narrow phone screen there's no width to spare, so
+// CSS `scale()` compressing height ALSO compresses width by the same
+// factor, leaving big empty side margins and a thin column of tiny content
+// (caught in review: "content margins seem quite large ... small thin area
+// in the middle"). Mobile keeps the plain internal-scroll fallback instead.
+const MOBILE_BREAKPOINT_PX = 640
+
 /**
  * Measures each embedded page's `<main>` against the available height and
  * shrinks JUST that element (CSS `transform: scale`) so a normal, unmodified
  * page composes into one screen instead of needing to scroll. Rough-pass
- * only: this is a blanket shrink, not the real per-page composition work
- * (item 18) — some pages will still hit MIN_FIT_SCALE and keep an internal
- * scrollbar, same as before.
+ * only, and desktop-only (see MOBILE_BREAKPOINT_PX) — this is a blanket
+ * shrink, not the real per-page composition work (item 18) — some pages
+ * will still hit MIN_FIT_SCALE and keep an internal scrollbar, same as
+ * before.
  *
  * Scoped to `<main>` specifically, NOT the whole page tree: a CSS `transform`
  * on an ancestor makes that ancestor the containing block for any
@@ -83,12 +94,21 @@ function FitToSlide({ children }: { children: ReactNode }) {
       main.style.transform = 'none'
       main.style.marginBottom = ''
 
+      const isMobileViewport =
+        typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT_PX
+
       const headerHeight = header?.getBoundingClientRect().height ?? 0
       const footerHeight = footer?.getBoundingClientRect().height ?? 0
       const availableHeight = outer.clientHeight - headerHeight - footerHeight
       const contentHeight = main.scrollHeight
 
-      if (reduceMotion || contentHeight === 0 || availableHeight <= 0 || contentHeight <= availableHeight) {
+      if (
+        reduceMotion ||
+        isMobileViewport ||
+        contentHeight === 0 ||
+        availableHeight <= 0 ||
+        contentHeight <= availableHeight
+      ) {
         return
       }
 
