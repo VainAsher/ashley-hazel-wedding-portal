@@ -23,6 +23,16 @@ THUMBNAIL_WIDTH = 480
 THUMBNAIL_QUALITY = 80
 THUMBNAIL_SOURCE_TYPES = {"image/jpeg", "image/png"}
 
+# Video support is direct-upload-only: no transcoding, no thumbnail frame
+# extraction (Pillow can't do video). MP4 is the only accepted video type;
+# .mov, .webm, etc. are rejected with the same 400 as any unsupported image.
+ALLOWED_VIDEO_TYPE = "video/mp4"
+
+# App-level size cap. Nginx has its own (higher) ceiling in front of this so
+# oversized requests get a clean 413 from here rather than a raw connection
+# reset at the proxy.
+MAX_UPLOAD_BYTES = 150 * 1024 * 1024
+
 
 def get_uploads_dir() -> str:
     # Read lazily so tests can override UPLOADS_DIR at runtime.
@@ -82,16 +92,24 @@ def get_gallery_item_or_404(
 async def save_upload(
     file: UploadFile, wedding_id: int
 ) -> tuple[str, str, int, str | None]:
-    """Validate an image upload and persist it under the uploads dir.
+    """Validate an image/video upload and persist it under the uploads dir.
 
     Returns (relative_path, content_type, file_size, thumb_path); thumb_path
-    is None when no thumbnail could be generated. Raises 400 for non-images.
+    is None when no thumbnail could be generated (always the case for video).
+    Raises 400 for unsupported types, 413 for payloads over the size cap.
     """
     content_type = file.content_type or ""
-    if not content_type.startswith("image/"):
+    if not (content_type.startswith("image/") or content_type == ALLOWED_VIDEO_TYPE):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only image uploads are allowed",
+            detail="Only image uploads or MP4 video uploads are allowed",
+        )
+
+    data = await file.read()
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File exceeds the 150MB upload limit",
         )
 
     ext = Path(file.filename or "").suffix
@@ -102,7 +120,6 @@ async def save_upload(
     wedding_dir = uploads_dir / str(wedding_id)
     wedding_dir.mkdir(parents=True, exist_ok=True)
 
-    data = await file.read()
     destination = wedding_dir / stored_name
     destination.write_bytes(data)
 

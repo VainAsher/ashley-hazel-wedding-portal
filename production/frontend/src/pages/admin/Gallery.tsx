@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 
-import { ImageIcon } from 'lucide-react'
+import { ImageIcon, Play } from 'lucide-react'
 
 import { AdminLayout } from '@/components/AdminLayout'
 import { Alert } from '@/components/ui/alert'
@@ -203,14 +203,18 @@ export function Gallery() {
             {uploadError && <Alert variant="destructive">{uploadError}</Alert>}
 
             <div className="grid gap-2">
-              <Label htmlFor="gallery-file">Image</Label>
+              <Label htmlFor="gallery-file">Image or video</Label>
               <Input
                 ref={fileInputRef}
                 id="gallery-file"
                 type="file"
-                accept="image/*"
+                accept="image/*,video/mp4"
                 onChange={handleFileChange}
+                aria-describedby="gallery-file-hint"
               />
+              <p id="gallery-file-hint" className="m-0 text-xs text-gray-500">
+                Photos or short videos (MP4), up to 150 MB.
+              </p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -296,6 +300,7 @@ export function Gallery() {
           >
             {visiblePhotos.map((photo) => {
               const isRowPending = pendingId === photo.id && updateMutation.isPending
+              const isVideo = photo.content_type?.startsWith('video/') ?? false
               return (
                 <Card
                   key={photo.id}
@@ -303,11 +308,17 @@ export function Gallery() {
                     photo.status === 'pending' ? ' ring-2 ring-amber-400' : ''
                   }`}
                 >
-                  <img
-                    src={photo.thumb_url ?? photo.url}
-                    alt={photoLabel(photo)}
-                    className="aspect-square w-full object-cover"
-                  />
+                  {isVideo ? (
+                    <div className="flex aspect-square w-full items-center justify-center bg-gray-900">
+                      <Play className="h-10 w-10 text-white" aria-hidden="true" />
+                    </div>
+                  ) : (
+                    <img
+                      src={photo.thumb_url ?? photo.url}
+                      alt={photoLabel(photo)}
+                      className="aspect-square w-full object-cover"
+                    />
+                  )}
                   <div className="flex flex-1 flex-col gap-2 p-3">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className="text-sm font-semibold text-gray-900 m-0">

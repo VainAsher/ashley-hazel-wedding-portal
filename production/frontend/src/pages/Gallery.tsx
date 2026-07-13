@@ -80,6 +80,7 @@ function GalleryGrid({
       {photos.map((photo, index) => {
         const label = displayLabel(photo)
         const caption = photo.caption?.trim()
+        const isVideo = photo.content_type?.startsWith('video/') ?? false
 
         return (
           <Card key={photo.id} className="flex flex-col overflow-hidden">
@@ -90,13 +91,19 @@ function GalleryGrid({
                 className="block w-full cursor-zoom-in border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 aria-label={`View photo full size: ${altText(photo)}`}
               >
-                <img
-                  src={photo.thumb_url ?? photo.url}
-                  alt={altText(photo)}
-                  loading="lazy"
-                  decoding="async"
-                  className="aspect-square w-full object-cover"
-                />
+                {isVideo ? (
+                  <div className="flex aspect-square w-full items-center justify-center bg-gray-900">
+                    <Play className="h-10 w-10 text-white" aria-hidden="true" />
+                  </div>
+                ) : (
+                  <img
+                    src={photo.thumb_url ?? photo.url}
+                    alt={altText(photo)}
+                    loading="lazy"
+                    decoding="async"
+                    className="aspect-square w-full object-cover"
+                  />
+                )}
               </button>
               {(label || caption) && (
                 <figcaption className="flex flex-1 flex-col gap-1 p-3">
@@ -132,13 +139,17 @@ function Lightbox({
     [index, onNavigate, photos.length],
   )
 
+  const currentIsVideo = photos[index]?.content_type?.startsWith('video/') ?? false
+
   useEffect(() => {
-    if (!isPlaying) {
+    // Don't auto-advance mid-playback while a video slide is showing —
+    // only advance the slideshow timer for photo slides.
+    if (!isPlaying || currentIsVideo) {
       return
     }
     const timer = setInterval(() => goTo(1), SLIDESHOW_INTERVAL_MS)
     return () => clearInterval(timer)
-  }, [isPlaying, goTo])
+  }, [isPlaying, currentIsVideo, goTo])
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'ArrowRight') {
@@ -157,6 +168,7 @@ function Lightbox({
 
   const label = displayLabel(photo)
   const caption = photo.caption?.trim()
+  const isVideo = photo.content_type?.startsWith('video/') ?? false
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -172,11 +184,23 @@ function Lightbox({
         </DialogDescription>
 
         <div className="flex min-h-[50vh] items-center justify-center">
-          <img
-            src={photo.url}
-            alt={altText(photo)}
-            className="mx-auto max-h-[78vh] w-auto max-w-full object-contain"
-          />
+          {isVideo ? (
+            <video
+              key={photo.id}
+              src={photo.url}
+              controls
+              autoPlay={false}
+              className="mx-auto max-h-[78vh] w-auto max-w-full object-contain"
+            >
+              Sorry, your browser can&apos;t play this video.
+            </video>
+          ) : (
+            <img
+              src={photo.url}
+              alt={altText(photo)}
+              className="mx-auto max-h-[78vh] w-auto max-w-full object-contain"
+            />
+          )}
         </div>
 
         <div className="flex items-center justify-between gap-2">
@@ -312,12 +336,12 @@ export function Gallery() {
                   ref={fileInputRef}
                   id="guest-gallery-file"
                   type="file"
-                  accept="image/*"
+                  accept="image/*,video/mp4"
                   onChange={handleFileChange}
                   aria-describedby="guest-gallery-file-hint"
                 />
                 <p id="guest-gallery-file-hint" className="m-0 text-xs text-gray-500">
-                  Photos only (JPG, PNG, or similar), up to 25 MB. Videos aren't supported yet.
+                  Photos or short videos (MP4), up to 150 MB.
                 </p>
               </div>
 
