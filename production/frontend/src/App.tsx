@@ -65,6 +65,11 @@ const Party = lazy(() => import('./pages/Party').then((m) => ({ default: m.Party
 const WeddingParty = lazy(() =>
   import('./pages/WeddingParty').then((m) => ({ default: m.WeddingParty })),
 )
+// Phase 0 viewport-paging spike (Wave 4 item 17, docs/specs/VIEWPORT_PAGING_SPIKE.md):
+// a throwaway, admin-gated prototype route -- not part of the live guest experience.
+const PreviewPaged = lazy(() =>
+  import('./pages/PreviewPaged').then((m) => ({ default: m.PreviewPaged })),
+)
 
 function guestRoute(element: React.ReactNode) {
   return <RequireGuest>{element}</RequireGuest>
@@ -132,6 +137,7 @@ function App() {
             <Route element={adminRoute(<Vendors />)} path="/admin/vendors" />
             <Route element={adminRoute(<Gallery />)} path="/admin/gallery" />
             <Route element={adminRoute(<Settings />)} path="/admin/settings" />
+            <Route element={adminRoute(<PreviewPaged />)} path="/preview" />
             <Route element={<Navigate replace to="/invite" />} path="*" />
           </Routes>
         </Suspense>

@@ -1,0 +1,216 @@
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
+
+import { Button } from './ui/button'
+import { cn } from '@/lib/utils'
+
+export interface PagedDeckPage {
+  /** Stable key for the slide (also used in the aria-live announcement). */
+  id: string
+  /** Human-readable name announced on page change, e.g. "RSVP". */
+  label: string
+  content: ReactNode
+}
+
+interface PagedDeckProps {
+  pages: PagedDeckPage[]
+}
+
+/**
+ * Viewport-fit horizontal "paged deck" — Phase 0 spike (Wave 4 item 17).
+ *
+ * One child per page, each `100vw` / `100dvh`, laid out in a flex row with
+ * CSS scroll-snap so native touch swipe works for free. Desktop gets
+ * hover-visible arrow buttons and ArrowLeft/ArrowRight keyboard navigation;
+ * every page change is announced via an aria-live region for screen readers.
+ *
+ * This is a throwaway prototype shell (see docs/specs/VIEWPORT_PAGING_SPIKE.md)
+ * — it intentionally does not touch GuestLayout or any guest page.
+ */
+export function PagedDeck({ pages }: PagedDeckProps) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const slideRefs = useRef<Array<HTMLDivElement | null>>([])
+  const [currentIndex, setCurrentIndex] = useState(0)
+
+  const scrollToIndex = useCallback(
+    (index: number) => {
+      const clamped = Math.max(0, Math.min(index, pages.length - 1))
+      const slide = slideRefs.current[clamped]
+      if (!slide) {
+        return
+      }
+      // prefers-reduced-motion: jump directly instead of smooth-scrolling.
+      const reduceMotion =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      slide.scrollIntoView({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+        block: 'nearest',
+        inline: 'start',
+      })
+    },
+    [pages.length],
+  )
+
+  const goToPrevious = useCallback(() => scrollToIndex(currentIndex - 1), [currentIndex, scrollToIndex])
+  const goToNext = useCallback(() => scrollToIndex(currentIndex + 1), [currentIndex, scrollToIndex])
+
+  // Native touch swipe (and any other direct scroll) never calls
+  // scrollToIndex, so the scroll position itself is the source of truth for
+  // "which page are we on" — used for the arrow buttons and the aria-live
+  // announcement.
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) {
+      return
+    }
+
+    let frame: number | null = null
+    const handleScroll = () => {
+      if (frame !== null) {
+        return
+      }
+      frame = window.requestAnimationFrame(() => {
+        frame = null
+        const width = container.clientWidth || 1
+        const index = Math.round(container.scrollLeft / width)
+        const clamped = Math.max(0, Math.min(index, pages.length - 1))
+        setCurrentIndex((previous) => (previous === clamped ? previous : clamped))
+      })
+    }
+
+    container.addEventListener('scroll', handleScroll, { passive: true })
+    return () => {
+      container.removeEventListener('scroll', handleScroll)
+      if (frame !== null) {
+        window.cancelAnimationFrame(frame)
+      }
+    }
+  }, [pages.length])
+
+  // All 4 pages stay mounted (so swiping is instant, not a re-render), but
+  // each is a FULL page including its own header/nav/footer -- without this,
+  // Tab would walk off the visible slide straight into an off-screen page's
+  // form fields, and screen readers would announce 4 duplicate "Logout"
+  // buttons / nav landmarks. `inert` removes an off-screen slide from both
+  // the tab order and the accessibility tree entirely, recursively, which
+  // plain `tabIndex`/`aria-hidden` on the wrapper alone cannot do.
+  useEffect(() => {
+    slideRefs.current.forEach((slide, index) => {
+      if (!slide) {
+        return
+      }
+      if (index === currentIndex) {
+        slide.removeAttribute('inert')
+      } else {
+        slide.setAttribute('inert', '')
+      }
+    })
+  }, [currentIndex])
+
+  // Keyboard nav is registered at the document level (rather than as an
+  // onKeyDown on the scroller) so it keeps working no matter what currently
+  // has focus -- including right after clicking an arrow button, which sits
+  // outside the scroller in the DOM and would otherwise swallow the event.
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') {
+        return
+      }
+
+      const target = event.target as HTMLElement | null
+      const tag = target?.tagName
+      // Don't hijack arrow keys while the guest is typing/selecting inside
+      // one of the real pages (RSVP's form fields, dropdowns, etc.).
+      const isEditableContext =
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        target?.isContentEditable ||
+        target?.closest('[role="listbox"], [role="combobox"], [role="dialog"], [role="slider"]') !=
+          null
+
+      if (isEditableContext) {
+        return
+      }
+
+      event.preventDefault()
+      if (event.key === 'ArrowRight') {
+        goToNext()
+      } else {
+        goToPrevious()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [goToNext, goToPrevious])
+
+  const currentPage = pages[currentIndex]
+
+  return (
+    <div className="group relative h-[100dvh] w-full overflow-hidden bg-black">
+      {/* Screen-reader-only page-change announcement. */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only" data-testid="paged-deck-announcer">
+        {currentPage
+          ? `Page ${currentIndex + 1} of ${pages.length}: ${currentPage.label}`
+          : ''}
+      </div>
+
+      <div
+        ref={containerRef}
+        role="group"
+        aria-roledescription="carousel"
+        aria-label="Prototype preview pages"
+        tabIndex={0}
+        data-testid="paged-deck"
+        className={cn(
+          'flex h-[100dvh] w-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden',
+          'scroll-smooth motion-reduce:scroll-auto',
+          'outline-none',
+        )}
+      >
+        {pages.map((page, index) => (
+          <div
+            key={page.id}
+            ref={(node) => {
+              slideRefs.current[index] = node
+            }}
+            role="group"
+            aria-roledescription="slide"
+            aria-label={`${index + 1} of ${pages.length}: ${page.label}`}
+            data-testid={`paged-deck-slide-${page.id}`}
+            className="h-[100dvh] w-screen flex-shrink-0 snap-start overflow-y-auto"
+          >
+            {page.content}
+          </div>
+        ))}
+      </div>
+
+      {currentIndex > 0 && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={goToPrevious}
+          aria-label="Previous page"
+          className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 text-white opacity-0 transition-opacity hover:bg-black/60 hover:text-white focus-visible:opacity-100 group-hover:opacity-100"
+        >
+          <ChevronLeft aria-hidden="true" />
+        </Button>
+      )}
+      {currentIndex < pages.length - 1 && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={goToNext}
+          aria-label="Next page"
+          className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 text-white opacity-0 transition-opacity hover:bg-black/60 hover:text-white focus-visible:opacity-100 group-hover:opacity-100"
+        >
+          <ChevronRight aria-hidden="true" />
+        </Button>
+      )}
+    </div>
+  )
+}
