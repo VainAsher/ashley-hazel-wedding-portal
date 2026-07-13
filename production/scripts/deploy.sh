@@ -214,8 +214,8 @@ checkout_revision() {
     return 0
   fi
   cd "$APP_DIR"
-  log "Fetching origin/$DEPLOY_BRANCH"
-  run git fetch origin "$DEPLOY_BRANCH"
+  log "Fetching origin/$DEPLOY_BRANCH and tags"
+  run git fetch origin "$DEPLOY_BRANCH" --tags
   log "Checking out $DEPLOY_REVISION"
   run git checkout --force "$DEPLOY_REVISION"
 }
