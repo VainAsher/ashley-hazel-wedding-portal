@@ -124,8 +124,14 @@ test('shows the prototype-only banner', async ({ page }) => {
   // to make room for the page name (exact responsive behaviour is covered
   // by the two width-specific banner tests below, since two spans both
   // containing "Prototype" -- one CSS-hidden depending on viewport --
-  // would make a getByText() lookup here ambiguous).
-  const banner = page.getByRole('status')
+  // would make a getByText() lookup here ambiguous). Scoped by testid, not
+  // getByRole('status'): the embedded pages have their own role="status"
+  // loading skeletons (Dashboard/Schedule/Blessings), which are still
+  // genuinely on screen for a brief window after navigation -- against a
+  // real backend in CI that window is long enough to hit a strict-mode
+  // "resolved to 4 elements" violation the mocked-instant local run never
+  // surfaced.
+  const banner = page.getByTestId('preview-banner')
   await expect(banner).toBeVisible()
   await expect(banner).toContainText('Prototype')
 })
@@ -301,7 +307,9 @@ test('the dot page indicator in the banner tracks the current page', async ({ pa
 
   await page.goto('/preview')
 
-  const banner = page.getByRole('status')
+  // Scoped by testid, not getByRole('status') -- see the note in "shows the
+  // prototype-only banner" above.
+  const banner = page.getByTestId('preview-banner')
   const dots = banner.locator('span.rounded-full')
   await expect(dots).toHaveCount(4)
   await expect(dots.nth(0)).toHaveClass(/bg-black(?!\/)/)
