@@ -88,6 +88,26 @@ export function PagedDeck({ pages }: PagedDeckProps) {
     }
   }, [pages.length])
 
+  // All 4 pages stay mounted (so swiping is instant, not a re-render), but
+  // each is a FULL page including its own header/nav/footer -- without this,
+  // Tab would walk off the visible slide straight into an off-screen page's
+  // form fields, and screen readers would announce 4 duplicate "Logout"
+  // buttons / nav landmarks. `inert` removes an off-screen slide from both
+  // the tab order and the accessibility tree entirely, recursively, which
+  // plain `tabIndex`/`aria-hidden` on the wrapper alone cannot do.
+  useEffect(() => {
+    slideRefs.current.forEach((slide, index) => {
+      if (!slide) {
+        return
+      }
+      if (index === currentIndex) {
+        slide.removeAttribute('inert')
+      } else {
+        slide.setAttribute('inert', '')
+      }
+    })
+  }, [currentIndex])
+
   // Keyboard nav is registered at the document level (rather than as an
   // onKeyDown on the scroller) so it keeps working no matter what currently
   // has focus -- including right after clicking an arrow button, which sits
