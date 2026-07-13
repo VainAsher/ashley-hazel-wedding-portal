@@ -319,8 +319,21 @@ target).
 > won't-do (full contract: `docs/specs/EMAIL_COMMS.md`). Households remodel
 > (item 20) is **not wanted** — skip entirely, CSV import alone stays parked
 > until asked for. Item 17's Phase 0 spike starts now, in parallel with 19
-> and 21 (full contract: `docs/specs/VIEWPORT_PAGING_SPIKE.md`). All three
-> are IN BUILD as of 2026-07-13.
+> and 21 (full contract: `docs/specs/VIEWPORT_PAGING_SPIKE.md`).
+>
+> **Status 2026-07-13: all three BUILT and merged to `main`**, built in
+> parallel via three agents in isolated worktrees, each independently
+> re-verified before merge (never trusting a self-report): item 17's
+> `/preview` spike shipped with one real fix found during verification — the
+> agent's build mounted all 4 pages simultaneously without isolating
+> off-screen slides, so Tab order leaked into invisible pages' form fields
+> and 4 `NotificationsBell` pollers ran at once; fixed with `inert` on
+> inactive slides, re-verified via a diagnostic Playwright probe. Item 19
+> (video upload) and item 21 (email via Resend) each passed independent
+> re-verification with no changes needed (46 and 15 new tests respectively,
+> full backend 507/507 on the final merged tree, `tsc` clean). CI green on
+> all three merge commits. **Not yet released** — on `main` only, awaiting
+> the next release cut.
 
 ### 17. Viewport-fit paged layout (couple) — **XL** · spike before committing
 The riskiest item: "fills a viewport, no scrolling" collides with long content
@@ -350,7 +363,8 @@ screenshots — design work, not plumbing.
 > **Decision confirmed 2026-07-13:** direct `.mp4` upload (Option B), not
 > external links. Guests and couple both can upload, matching current
 > gallery permissions; 150MB cap; no transcoding. Full contract:
-> `docs/specs/VIDEO_UPLOAD.md`. IN BUILD.
+> `docs/specs/VIDEO_UPLOAD.md`. BUILT and merged to `main` 2026-07-13,
+> awaiting release.
 
 Direct `.mp4` upload (size cap 150MB, nginx budget bump on the `/api/gallery`
 route specifically, `<video>` in lightbox, no transcoding — desktop-uploaded
@@ -370,8 +384,9 @@ already in). ~~Households (L): real remodel...~~ **skipped per couple decision.*
 
 > **Decision confirmed 2026-07-13:** add email via Resend on top of the
 > existing in-app bell (item 8); WhatsApp/SMS remain won't-do. Full contract:
-> `docs/specs/EMAIL_COMMS.md`. IN BUILD — note actual sending stays inert
-> until the couple supplies a real Resend API key as a deploy secret.
+> `docs/specs/EMAIL_COMMS.md`. BUILT and merged to `main` 2026-07-13,
+> awaiting release — note actual sending stays inert until the couple
+> supplies a real Resend API key as a deploy secret.
 
 Email via SMTP/Resend: couple's API key in env, per-audience fan-out reusing
 the existing Communications audience targeting, unsubscribe not needed at
