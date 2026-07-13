@@ -49,24 +49,38 @@ const MIN_FIT_SCALE = 0.62
 const MOBILE_BREAKPOINT_PX = 640
 
 /**
- * Measures each embedded page's `<main>` against the available height and
- * shrinks JUST that element (CSS `transform: scale`) so a normal, unmodified
- * page composes into one screen instead of needing to scroll. Rough-pass
- * only, and desktop-only (see MOBILE_BREAKPOINT_PX) — this is a blanket
- * shrink, not the real per-page composition work (item 18) — some pages
- * will still hit MIN_FIT_SCALE and keep an internal scrollbar, same as
- * before.
+ * Pins each embedded page's `<header>`/`<footer>` to the true viewport (so
+ * they read as static chrome instead of sliding away with the rest of the
+ * page during a swipe) and, on desktop, shrinks JUST `<main>` (CSS
+ * `transform: scale`) to approximate a single-viewport composition.
+ * Rough-pass only, and the shrink is desktop-only (see
+ * MOBILE_BREAKPOINT_PX) — this is a blanket shrink, not the real per-page
+ * composition work (item 18); some pages will still hit MIN_FIT_SCALE and
+ * keep an internal scrollbar.
  *
- * Scoped to `<main>` specifically, NOT the whole page tree: a CSS `transform`
- * on an ancestor makes that ancestor the containing block for any
- * `position: fixed` descendant (a CSS spec quirk), which broke
- * GuestLayout's `<FeedbackWidget>` (position: fixed) the first time this was
+ * Pinning header/footer works for free because every mounted page renders
+ * pixel-identical chrome (same wedding data, same nav, same footer links) —
+ * `position: fixed` escapes each slide's own horizontal position entirely
+ * and anchors to the true viewport, so all 4 copies land on the exact same
+ * screen coordinates. The one that happens to be on top is indistinguishable
+ * from the other three, so it reads as ONE seamless static header/footer
+ * rather than requiring "hide 3, show 1" logic.
+ *
+ * The scale-to-fit transform is scoped to `<main>` specifically, NOT the
+ * whole page tree: a CSS `transform` on an ancestor makes that ancestor the
+ * containing block for any `position: fixed` descendant (a CSS spec quirk),
+ * which broke `<FeedbackWidget>` (position: fixed) the first time this was
  * built wrapping everything — its "fixed" position started resolving
- * relative to the scaled wrapper instead of the real viewport, so it visibly
- * detached from its usual bottom-right corner (caught during couple review:
- * two "Feedback" pills painting at different screen positions). `<main>` and
- * `<FeedbackWidget>` are siblings inside GuestLayout, not ancestor/descendant,
- * so scaling `<main>` alone leaves the widget's real fixed positioning intact.
+ * relative to the scaled wrapper instead of the real viewport, so it
+ * visibly detached from its usual bottom-right corner (caught during
+ * couple review: two "Feedback" pills painting at different screen
+ * positions). `<main>` and `<FeedbackWidget>` are siblings inside
+ * GuestLayout, not ancestor/descendant, so scaling `<main>` alone leaves
+ * the widget's real fixed positioning intact. The compensating padding for
+ * the now-pinned header/footer lives on `outer` (this component's own
+ * wrapper), NOT on `<main>`, for the same reason: padding inside the
+ * scaled element would shrink along with the transform and stop matching
+ * the fixed header/footer's real height.
  */
 function FitToSlide({ children }: { children: ReactNode }) {
   const outerRef = useRef<HTMLDivElement>(null)
@@ -93,13 +107,42 @@ function FitToSlide({ children }: { children: ReactNode }) {
       // back into the next measurement.
       main.style.transform = 'none'
       main.style.marginBottom = ''
+      outer.style.paddingTop = ''
+      outer.style.paddingBottom = ''
+
+      const headerHeight = header?.getBoundingClientRect().height ?? 0
+      const footerHeight = footer?.getBoundingClientRect().height ?? 0
+      // PreviewPaged's own "Prototype" banner is a separate fixed element,
+      // outside this component's DOM subtree entirely, also pinned to
+      // `top: 0` -- without this offset the pinned header would render
+      // directly underneath it (both anchored at real y=0) rather than
+      // below it, clipping the header's own title text.
+      const bannerHeight =
+        document.querySelector('[data-testid="preview-banner"]')?.getBoundingClientRect().height ?? 0
+
+      // Pin to the real viewport on every viewport size -- this is a
+      // separate concern from the desktop-only shrink below.
+      if (header) {
+        header.style.position = 'fixed'
+        header.style.top = `${bannerHeight}px`
+        header.style.left = '0'
+        header.style.right = '0'
+      }
+      if (footer) {
+        footer.style.position = 'fixed'
+        footer.style.bottom = '0'
+        footer.style.left = '0'
+        footer.style.right = '0'
+      }
+      // Reserve the space header/footer used to occupy in normal flow, on
+      // `outer` rather than `main` (see the component doc comment above).
+      outer.style.paddingTop = `${bannerHeight + headerHeight}px`
+      outer.style.paddingBottom = `${footerHeight}px`
 
       const isMobileViewport =
         typeof window !== 'undefined' && window.innerWidth < MOBILE_BREAKPOINT_PX
 
-      const headerHeight = header?.getBoundingClientRect().height ?? 0
-      const footerHeight = footer?.getBoundingClientRect().height ?? 0
-      const availableHeight = outer.clientHeight - headerHeight - footerHeight
+      const availableHeight = outer.clientHeight - bannerHeight - headerHeight - footerHeight
       const contentHeight = main.scrollHeight
 
       if (

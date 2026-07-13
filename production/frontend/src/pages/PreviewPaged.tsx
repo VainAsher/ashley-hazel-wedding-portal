@@ -1,4 +1,4 @@
-import { useRef, useState, type RefObject } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { Menu, X } from 'lucide-react'
 
 import { PagedDeck, type PagedDeckHandle, type PagedDeckPage } from '../components/PagedDeck'
@@ -43,11 +43,50 @@ function MobileNavOverride() {
   )
 }
 
+// Every mounted page's <header> is pinned to the same real screen position
+// by FitToSlide (see PagedDeck.tsx), so querying for just one gives the
+// header's true on-screen bottom edge. A plain useEffect (not
+// useLayoutEffect) is deliberate here: React runs every useLayoutEffect in
+// a commit before any useEffect in that same commit, so this always reads
+// the header AFTER FitToSlide has already pinned and offset it below the
+// banner -- avoiding a hardcoded pixel guess that silently drifted out of
+// sync the moment the header's own height changed (caught in review: the
+// burger button ended up overlapping the header's Logout button once the
+// header was pushed down to clear the banner).
+function useFixedHeaderBottom(): number {
+  const [bottom, setBottom] = useState(0)
+
+  useEffect(() => {
+    const recompute = () => {
+      const header = document.querySelector('header')
+      setBottom(header ? header.getBoundingClientRect().bottom : 0)
+    }
+    recompute()
+
+    const header = document.querySelector('header')
+    const observer = new ResizeObserver(recompute)
+    if (header) {
+      observer.observe(header)
+    }
+    window.addEventListener('resize', recompute)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', recompute)
+    }
+  }, [])
+
+  return bottom
+}
+
 function BurgerMenu({ deckRef }: { deckRef: RefObject<PagedDeckHandle | null> }) {
   const [open, setOpen] = useState(false)
+  const headerBottom = useFixedHeaderBottom()
 
   return (
-    <div className="fixed right-3 top-11 z-[70] sm:hidden">
+    <div
+      className="fixed right-3 z-[70] sm:hidden"
+      style={{ top: headerBottom > 0 ? headerBottom + 8 : 44 }}
+    >
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -103,9 +142,18 @@ export function PreviewPaged() {
           itself overlapped that content on every page. */}
       <div
         role="status"
-        className="fixed inset-x-0 top-0 z-[60] flex items-center justify-center gap-3 bg-yellow-300 px-3 py-1 text-center text-xs font-semibold uppercase tracking-wide text-black"
+        data-testid="preview-banner"
+        className="fixed inset-x-0 top-0 z-[60] flex items-center justify-center gap-2 bg-yellow-300 px-3 py-1 text-center text-xs font-semibold uppercase tracking-wide text-black"
       >
-        <span>Prototype — internal review only</span>
+        <span className="hidden sm:inline">Prototype — internal review only</span>
+        <span className="sm:hidden">Prototype</span>
+        <span aria-hidden="true">·</span>
+        {/* Couple feedback (2026-07-13): with the arrows/dots/hint, there
+            was still nothing naming WHICH page is showing -- this is that,
+            live-updated from PagedDeck's onIndexChange. */}
+        <span data-testid="preview-current-page-name" className="font-bold">
+          {PREVIEW_PAGES[activeIndex]?.label}
+        </span>
         <span className="flex gap-1" aria-hidden="true">
           {PREVIEW_PAGES.map((page, index) => (
             <span

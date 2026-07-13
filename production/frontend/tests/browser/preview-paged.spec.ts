@@ -119,7 +119,42 @@ test('shows the prototype-only banner', async ({ page }) => {
 
   await page.goto('/preview')
 
+  // "Prototype" is always shown somewhere in the banner; the fuller
+  // disclaimer text collapses to just that word below the `sm` breakpoint
+  // to make room for the page name (exact responsive behaviour is covered
+  // by the two width-specific banner tests below, since two spans both
+  // containing "Prototype" -- one CSS-hidden depending on viewport --
+  // would make a getByText() lookup here ambiguous).
+  const banner = page.getByRole('status')
+  await expect(banner).toBeVisible()
+  await expect(banner).toContainText('Prototype')
+})
+
+test('desktop: banner shows the full disclaimer text and the current page name', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await mockCurrentUser(page, coordinatorUser)
+  await mockPreviewPageApis(page)
+
+  await page.goto('/preview')
+
   await expect(page.getByText('Prototype — internal review only')).toBeVisible()
+  await expect(page.getByTestId('preview-current-page-name')).toHaveText('Dashboard')
+
+  await page.getByRole('button', { name: 'Next page' }).click()
+  await expect(page.getByTestId('preview-current-page-name')).toHaveText('RSVP')
+})
+
+test('mobile: banner collapses to "Prototype" and still shows the current page name', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mockCurrentUser(page, coordinatorUser)
+  await mockPreviewPageApis(page)
+
+  await page.goto('/preview')
+
+  await expect(page.getByText('Prototype — internal review only')).toBeHidden()
+  await expect(page.getByTestId('preview-current-page-name')).toHaveText('Dashboard')
 })
 
 test('arrow buttons, keyboard, and aria-live walk through all 4 pages', async ({ page }) => {
@@ -358,4 +393,33 @@ test('mobile: the arrow buttons stay visible permanently, not just during the sw
   await page.waitForTimeout(3500)
   await expect(nextButton).toHaveCSS('opacity', '1')
   await expect(page.getByRole('button', { name: 'Previous page' })).toHaveCSS('opacity', '1')
+})
+
+test('header and footer stay pinned to the viewport while paging between slides', async ({ page }) => {
+  // Couple feedback (2026-07-13): "would be awesome if header and footer
+  // remained static during swipes and it was just the central content that
+  // swiped." Each embedded page renders pixel-identical chrome (same
+  // wedding data, nav, footer links), so FitToSlide pins every mounted
+  // copy's header/footer to `position: fixed` -- they all land on the same
+  // real screen coordinates regardless of which slide is scrolled into
+  // view, so the header/footer never visibly move during a swipe.
+  await mockCurrentUser(page, coordinatorUser)
+  await mockPreviewPageApis(page)
+
+  await page.goto('/preview')
+
+  const dashboardHeader = page.getByTestId('paged-deck-slide-dashboard').locator('header')
+  const boxBefore = await dashboardHeader.boundingBox()
+  await expect(dashboardHeader).toHaveCSS('position', 'fixed')
+
+  await page.getByRole('button', { name: 'Next page' }).click()
+  await expect(page.getByTestId('paged-deck-slide-rsvp')).toBeInViewport()
+
+  // The (now off-screen) Dashboard header must not have moved at all --
+  // still fixed at the exact same real screen position.
+  const boxAfter = await dashboardHeader.boundingBox()
+  expect(boxAfter).toEqual(boxBefore)
+
+  const rsvpFooter = page.getByTestId('paged-deck-slide-rsvp').locator('footer')
+  await expect(rsvpFooter).toHaveCSS('position', 'fixed')
 })
