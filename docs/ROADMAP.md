@@ -354,6 +354,15 @@ target).
 > for another look.
 
 ### 17. Viewport-fit paged layout (couple) — **XL** · spike before committing
+
+> **Decision confirmed 2026-07-13: GO.** Couple reviewed the Phase 0 `/preview`
+> spike on staging through several rounds of feedback (burger menu on
+> mobile, swipe hint, auto-fit-to-viewport, static header/footer, page-name
+> label) and signed off: "this is perfect, please accept this." Phase 0 is
+> done; Phase 1 (the real rollout to Dashboard/RSVP/Schedule/Blessings
+> inside `GuestLayout`, with a route-level fallback) is next but NOT yet
+> started — needs its own spec per house process before build begins.
+
 The riskiest item: "fills a viewport, no scrolling" collides with long content
 (86-photo gallery, growing song wall) and mobile keyboards. Plan:
 - **Phase 0 spike (M):** build ONE paged prototype on staging behind `/preview` —
