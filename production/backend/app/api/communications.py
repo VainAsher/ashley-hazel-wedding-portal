@@ -1,5 +1,7 @@
+import html
 from datetime import datetime, timezone
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -11,6 +13,7 @@ from app.api.auth import (
     require_coordinator,
 )
 from app.api.schemas_auth import UserResponse
+from app.config import get_settings
 from app.db.database import get_db
 from app.db.models import Communication, Guest, Invite, Notification, RsvpStatus, Wedding
 from app.db.schemas import (
@@ -26,6 +29,11 @@ logger = get_logger(__name__)
 
 # notifications.title is VARCHAR(200); communication subjects go up to 255.
 NOTIFICATION_TITLE_MAX = 200
+
+# Resend's batch send endpoint; accepts up to 100 individual emails per call.
+RESEND_BATCH_URL = "https://api.resend.com/emails/batch"
+RESEND_BATCH_CHUNK_SIZE = 100
+RESEND_TIMEOUT_SECONDS = 10.0
 
 # The original RSVP-based audiences target guest invites by RSVP status.
 AUDIENCE_RSVP_STATUS = {
@@ -57,6 +65,76 @@ def audience_invites(db: Session, wedding_id: int, audience: str) -> list[Invite
         )
     # "all": every invite in the wedding, no extra filter.
     return query.all()
+
+
+def email_recipients_for(invites: list[Invite]) -> list[tuple[str, str]]:
+    """Resolve invites to (email, display_name) pairs eligible for email.
+
+    Invites with no linked guest, or whose guest has no email on file,
+    cannot receive email today (same limitation as RSVP reminders) — they
+    are simply excluded here; they already received the in-app notification.
+    """
+    return [
+        (invite.guest.email, invite.guest.name)
+        for invite in invites
+        if invite.guest is not None and invite.guest.email is not None
+    ]
+
+
+def communication_email_html(subject: str, body: str | None) -> str:
+    """Build a minimal HTML email body from a communication's subject/body."""
+    safe_body = html.escape(body or "").replace("\n", "<br>")
+    return f"<h1>{html.escape(subject)}</h1><p>{safe_body}</p>"
+
+
+def send_email_batch(
+    recipients: list[tuple[str, str]], subject: str, html_body: str
+) -> int:
+    """POST one email per recipient to Resend's batch endpoint.
+
+    `recipients` is a list of (email, display_name) pairs. Resend's batch
+    endpoint accepts up to 100 emails per call; this chunks accordingly so
+    the code doesn't silently break if the guest list grows, even though
+    this wedding's guest list fits in a single call today. Returns the
+    number of recipients in chunks Resend accepted (2xx response). Never
+    raises on a non-2xx response or a network failure — the caller treats
+    this as best-effort and callers should still guard the call themselves.
+    """
+    settings = get_settings()
+    accepted = 0
+    for start in range(0, len(recipients), RESEND_BATCH_CHUNK_SIZE):
+        chunk = recipients[start : start + RESEND_BATCH_CHUNK_SIZE]
+        payload = [
+            {
+                "from": settings.email_from_address,
+                "to": [f"{name} <{email}>" if name else email],
+                "subject": subject,
+                "html": html_body,
+            }
+            for email, name in chunk
+        ]
+        try:
+            response = httpx.post(
+                RESEND_BATCH_URL,
+                json=payload,
+                headers={"Authorization": f"Bearer {settings.resend_api_key}"},
+                timeout=RESEND_TIMEOUT_SECONDS,
+            )
+            if 200 <= response.status_code < 300:
+                accepted += len(chunk)
+            else:
+                logger.warning(
+                    "resend_batch_send_failed",
+                    extra={
+                        "status_code": response.status_code,
+                        "chunk_size": len(chunk),
+                    },
+                )
+        except Exception:  # noqa: BLE001 - best-effort: never block in-app delivery
+            logger.warning(
+                "resend_batch_send_error", extra={"chunk_size": len(chunk)}
+            )
+    return accepted
 
 
 def get_communication_or_404(
@@ -183,9 +261,10 @@ async def send_communication(
     db_communication = get_communication_or_404(
         db, communication_id, current_user.wedding_id, "send_communication"
     )
-    # External channels (email/WhatsApp/SMS) are still not connected; sending
-    # delivers in-app by fanning out one notification per audience invite,
-    # surfaced on member dashboards and the header bell.
+    # Sending always delivers in-app by fanning out one notification per
+    # audience invite, surfaced on member dashboards and the header bell,
+    # regardless of channel. When channel="email" this is additionally
+    # backed by real email delivery below (WhatsApp/SMS remain not built).
     recipients = audience_invites(
         db, db_communication.wedding_id, db_communication.audience
     )
@@ -212,4 +291,42 @@ async def send_communication(
             "notified": len(recipients),
         },
     )
+
+    # Best-effort email delivery: a missing API key or a Resend outage must
+    # never fail this request or roll back the in-app notifications already
+    # committed above (mirrors the gallery thumbnail best-effort pattern).
+    if db_communication.channel == "email":
+        settings = get_settings()
+        if not settings.resend_api_key:
+            logger.warning(
+                "communication_email_skipped_no_api_key",
+                extra={"communication_id": communication_id},
+            )
+        else:
+            email_recipients = email_recipients_for(recipients)
+            try:
+                accepted = send_email_batch(
+                    email_recipients,
+                    db_communication.subject,
+                    communication_email_html(
+                        db_communication.subject, db_communication.body
+                    ),
+                )
+                logger.info(
+                    "communication_email_sent",
+                    extra={
+                        "communication_id": communication_id,
+                        "attempted": len(email_recipients),
+                        "accepted": accepted,
+                    },
+                )
+            except Exception:  # noqa: BLE001 - never block the in-app send that already succeeded
+                logger.warning(
+                    "communication_email_failed",
+                    extra={
+                        "communication_id": communication_id,
+                        "attempted": len(email_recipients),
+                    },
+                )
+
     return db_communication

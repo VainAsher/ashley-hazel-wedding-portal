@@ -61,6 +61,15 @@ class Settings(BaseSettings):
     session_cookie_secure: bool = False
     session_max_age_seconds: int = Field(default=2_592_000, ge=60)
 
+    # Resend email delivery for Communications (channel="email"). Optional:
+    # most weddings' comms are in-app/announcement only, so absence of an
+    # API key must not fail app startup — email sending simply logs a
+    # warning and is skipped until the couple supplies real credentials.
+    resend_api_key: str | None = Field(default=None)
+    email_from_address: str = Field(
+        default="Ashley & Hazel <hello@ashley-and.hazel-of-halifax.com>"
+    )
+
     @field_validator("log_level")
     @classmethod
     def normalize_log_level(cls, value: str) -> str:
