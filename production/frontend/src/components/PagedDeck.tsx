@@ -333,6 +333,14 @@ export const PagedDeck = forwardRef<PagedDeckHandle, PagedDeckProps>(function Pa
         ))}
       </div>
 
+      {/* Desktop: hidden until hover/focus (a quiet affordance once the
+          swipe hint below has done its job). Mobile has no hover state at
+          all, so these stayed invisible there permanently -- the couple
+          only ever saw the transient swipe hint fade after ~3s and nothing
+          after (reported as "the hints/floaties disappeared"). max-sm
+          forces them permanently visible below the same breakpoint used
+          for the burger-menu switch, so touch users always have a
+          persistent, not just one-time, cue that there's another page. */}
       {currentIndex > 0 && (
         <Button
           type="button"
@@ -340,7 +348,7 @@ export const PagedDeck = forwardRef<PagedDeckHandle, PagedDeckProps>(function Pa
           size="icon"
           onClick={goToPrevious}
           aria-label="Previous page"
-          className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 text-white opacity-0 transition-opacity hover:bg-black/60 hover:text-white focus-visible:opacity-100 group-hover:opacity-100"
+          className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 text-white opacity-0 transition-opacity hover:bg-black/60 hover:text-white focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-100"
         >
           <ChevronLeft aria-hidden="true" />
         </Button>
@@ -352,7 +360,7 @@ export const PagedDeck = forwardRef<PagedDeckHandle, PagedDeckProps>(function Pa
           size="icon"
           onClick={goToNext}
           aria-label="Next page"
-          className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 text-white opacity-0 transition-opacity hover:bg-black/60 hover:text-white focus-visible:opacity-100 group-hover:opacity-100"
+          className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/40 text-white opacity-0 transition-opacity hover:bg-black/60 hover:text-white focus-visible:opacity-100 group-hover:opacity-100 max-sm:opacity-100"
         >
           <ChevronRight aria-hidden="true" />
         </Button>

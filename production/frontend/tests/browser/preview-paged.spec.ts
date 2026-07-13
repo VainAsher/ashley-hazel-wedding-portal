@@ -332,3 +332,30 @@ test('mobile: auto-fit shrinking is disabled, content keeps full width', async (
   const transform = await main.evaluate((element) => window.getComputedStyle(element).transform)
   expect(transform).toBe('none')
 })
+
+test('mobile: the arrow buttons stay visible permanently, not just during the swipe hint', async ({
+  page,
+}) => {
+  // Regression test: the arrow buttons are opacity-0-until-hover by design
+  // (a quiet desktop affordance), but touch devices have no hover state at
+  // all, so they were invisible on mobile from day one -- the couple only
+  // ever saw the transient swipe-hint pill (which fades after ~3.2s or the
+  // first touch) and nothing after, reported as "the hints/floaties
+  // disappeared". `max-sm:opacity-100` forces them permanently visible
+  // below the same breakpoint used for the burger-menu switch, so this
+  // must still hold well past the hint's own fade window.
+  await page.setViewportSize({ width: 390, height: 844 })
+  await mockCurrentUser(page, coordinatorUser)
+  await mockPreviewPageApis(page)
+
+  await page.goto('/preview')
+  await page.getByRole('button', { name: 'Next page' }).click()
+
+  const nextButton = page.getByRole('button', { name: 'Next page' })
+  await expect(nextButton).toHaveCSS('opacity', '1')
+
+  // Past the swipe hint's ~3.2s fade window -- arrows must still be visible.
+  await page.waitForTimeout(3500)
+  await expect(nextButton).toHaveCSS('opacity', '1')
+  await expect(page.getByRole('button', { name: 'Previous page' })).toHaveCSS('opacity', '1')
+})
