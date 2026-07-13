@@ -312,6 +312,16 @@ target).
 
 ## Wave 4 — the big design programme + long tail
 
+> **Decisions confirmed 2026-07-13:** video support (item 19) is direct
+> `.mp4` upload, not links — guests and couple both can upload, 150MB cap
+> (full contract: `docs/specs/VIDEO_UPLOAD.md`). Comms (item 21) gets real
+> email via Resend on top of the existing in-app bell; WhatsApp/SMS remain
+> won't-do (full contract: `docs/specs/EMAIL_COMMS.md`). Households remodel
+> (item 20) is **not wanted** — skip entirely, CSV import alone stays parked
+> until asked for. Item 17's Phase 0 spike starts now, in parallel with 19
+> and 21 (full contract: `docs/specs/VIEWPORT_PAGING_SPIKE.md`). All three
+> are IN BUILD as of 2026-07-13.
+
 ### 17. Viewport-fit paged layout (couple) — **XL** · spike before committing
 The riskiest item: "fills a viewport, no scrolling" collides with long content
 (86-photo gallery, growing song wall) and mobile keyboards. Plan:
@@ -335,25 +345,37 @@ per page. Also a good moment to switch backgrounds to responsive `image-set()` s
 (pairs with item 3's thumbnail tooling). Requires eyes-on-staging iteration with
 screenshots — design work, not plumbing.
 
-### 19. Video support (seed list) — **M or L, decision first**
-**Option A (recommended, M):** gallery items accept a **YouTube/streamable link** as
-an alternative to a file — reuses `music_metadata`-style oEmbed for title/thumb, plays
-embedded in the lightbox. Zero storage/transcoding risk, covers the Roora `.mp4`s once
-uploaded anywhere. **Option B (L):** direct `.mp4` upload (size cap ~100–200MB, nginx
-budget bump, `<video>` in lightbox, no transcoding — desktop-uploaded H.264 only,
-storage watch on the uploads volume). **Decision (couple):** A vs B vs both.
+### 19. Video support (seed list) — **L**
+
+> **Decision confirmed 2026-07-13:** direct `.mp4` upload (Option B), not
+> external links. Guests and couple both can upload, matching current
+> gallery permissions; 150MB cap; no transcoding. Full contract:
+> `docs/specs/VIDEO_UPLOAD.md`. IN BUILD.
+
+Direct `.mp4` upload (size cap 150MB, nginx budget bump on the `/api/gallery`
+route specifically, `<video>` in lightbox, no transcoding — desktop-uploaded
+H.264 only, storage watch on the uploads volume).
 
 ### 20. CSV guest import + households (seed list) — **M + L, split**
+
+> **Decision confirmed 2026-07-13:** households remodel is **not wanted** —
+> skip entirely. CSV import alone stays parked until asked for (still low
+> urgency, 76 guests already in).
+
 Import (M): admin Guests "Import CSV" — client parses + previews, posts rows through
 the existing create API with per-row validation results. Low urgency (76 guests
-already in). Households (L): real remodel — `households` table, `guests.household_id`,
-invite-per-household linking, RSVP UX per household — only worth it if the couple
-wants household-grouped invites/seating; **park until asked**.
+already in). ~~Households (L): real remodel...~~ **skipped per couple decision.**
 
-### 21. Comms external channels (seed list) — **decision gate**
-After item 8 ships in-app delivery: email via SMTP would be M (couple's SMTP creds in
-env, per-audience fan-out, unsubscribe not needed at this scale); WhatsApp/SMS are
-paid-provider territory — **recommend won't-do**. Ask the couple once item 8 is live.
+### 21. Comms external channels (seed list) — **M**
+
+> **Decision confirmed 2026-07-13:** add email via Resend on top of the
+> existing in-app bell (item 8); WhatsApp/SMS remain won't-do. Full contract:
+> `docs/specs/EMAIL_COMMS.md`. IN BUILD — note actual sending stays inert
+> until the couple supplies a real Resend API key as a deploy secret.
+
+Email via SMTP/Resend: couple's API key in env, per-audience fan-out reusing
+the existing Communications audience targeting, unsubscribe not needed at
+this scale. WhatsApp/SMS are paid-provider territory — **won't-do**.
 
 ---
 
@@ -365,12 +387,16 @@ D1→D2→D3 → profiles → mentions · **W4:** paging spike → composition p
 import / channels per decisions).
 
 ## Open decisions for the couple (non-blocking, listed per item above)
-1. Comms: in-app only, or also email? (WhatsApp/SMS recommended won't-do)
+1. ~~Comms: in-app only, or also email?~~ **Decided 2026-07-13: add email
+   (Resend). WhatsApp/SMS won't-do.**
 2. Menu: flat list vs courses (recommend flat)
-3. Party portals: confirm couple-excluded privacy + who gets party-admin
-4. Profiles: party-only vs public "Meet the wedding party" (recommend public)
-5. Video: external links vs direct upload (recommend links)
-6. Households remodel: wanted at all?
+3. ~~Party portals: confirm couple-excluded privacy...~~ **Decided
+   2026-07-12.**
+4. ~~Profiles: party-only vs public...~~ **Decided 2026-07-12: public.**
+5. ~~Video: external links vs direct upload~~ **Decided 2026-07-13: direct
+   upload.**
+6. ~~Households remodel: wanted at all?~~ **Decided 2026-07-13: not wanted,
+   skip.**
 7. Spotify sync: revisit only after DJ-pack use
 
 ## Verification (applies to every executed item)
