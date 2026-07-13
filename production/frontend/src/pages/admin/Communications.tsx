@@ -522,8 +522,10 @@ export function Communications() {
             </div>
 
             <p className="text-xs text-gray-500 m-0">
-              Sending delivers this message to member dashboards in-app. External
-              channels (email, WhatsApp, SMS) are not connected yet.
+              Sending always delivers this message to member dashboards in-app.
+              Email now also delivers to guests with an email on file, in
+              addition to the in-app notification. WhatsApp and SMS are not
+              connected.
             </p>
 
             <div className="grid gap-2">
