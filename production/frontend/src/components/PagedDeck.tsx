@@ -1,5 +1,14 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
+import { ChevronLeft, ChevronRight, Hand } from 'lucide-react'
 
 import { Button } from './ui/button'
 import { cn } from '@/lib/utils'
@@ -12,8 +21,98 @@ export interface PagedDeckPage {
   content: ReactNode
 }
 
+export interface PagedDeckHandle {
+  /** Imperative jump used by an external nav (e.g. the preview's burger menu). */
+  goToIndex: (index: number) => void
+}
+
 interface PagedDeckProps {
   pages: PagedDeckPage[]
+  /** Reported on every settled page change, for an external burger-menu nav. */
+  onIndexChange?: (index: number) => void
+}
+
+// Below this scale factor a page would become illegibly small, so we give up
+// shrinking it and fall back to letting that one slide scroll internally
+// instead (exactly the fallback docs/specs/VIEWPORT_PAGING_SPIKE.md already
+// accepted for content that can't reasonably be compressed).
+const MIN_FIT_SCALE = 0.62
+
+/**
+ * Measures each embedded page's `<main>` against the available height and
+ * shrinks JUST that element (CSS `transform: scale`) so a normal, unmodified
+ * page composes into one screen instead of needing to scroll. Rough-pass
+ * only: this is a blanket shrink, not the real per-page composition work
+ * (item 18) — some pages will still hit MIN_FIT_SCALE and keep an internal
+ * scrollbar, same as before.
+ *
+ * Scoped to `<main>` specifically, NOT the whole page tree: a CSS `transform`
+ * on an ancestor makes that ancestor the containing block for any
+ * `position: fixed` descendant (a CSS spec quirk), which broke
+ * GuestLayout's `<FeedbackWidget>` (position: fixed) the first time this was
+ * built wrapping everything — its "fixed" position started resolving
+ * relative to the scaled wrapper instead of the real viewport, so it visibly
+ * detached from its usual bottom-right corner (caught during couple review:
+ * two "Feedback" pills painting at different screen positions). `<main>` and
+ * `<FeedbackWidget>` are siblings inside GuestLayout, not ancestor/descendant,
+ * so scaling `<main>` alone leaves the widget's real fixed positioning intact.
+ */
+function FitToSlide({ children }: { children: ReactNode }) {
+  const outerRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const outer = outerRef.current
+    if (!outer) {
+      return
+    }
+
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    const recompute = () => {
+      const main = outer.querySelector('main')
+      if (!main) {
+        return
+      }
+      const header = outer.querySelector('header')
+      const footer = outer.querySelector('footer')
+
+      // Measure at natural size first, so a previous shrink doesn't feed
+      // back into the next measurement.
+      main.style.transform = 'none'
+      main.style.marginBottom = ''
+
+      const headerHeight = header?.getBoundingClientRect().height ?? 0
+      const footerHeight = footer?.getBoundingClientRect().height ?? 0
+      const availableHeight = outer.clientHeight - headerHeight - footerHeight
+      const contentHeight = main.scrollHeight
+
+      if (reduceMotion || contentHeight === 0 || availableHeight <= 0 || contentHeight <= availableHeight) {
+        return
+      }
+
+      const fitted = Math.max(MIN_FIT_SCALE, availableHeight / contentHeight)
+      main.style.transform = `scale(${fitted})`
+      main.style.transformOrigin = 'top center'
+      // transform doesn't reflow layout, so without this the footer would
+      // sit exactly where it did before the shrink, leaving a blank gap
+      // under the now-smaller content. Pull it up by exactly the amount
+      // visually removed.
+      main.style.marginBottom = `${-(contentHeight * (1 - fitted))}px`
+    }
+
+    recompute()
+    const observer = new ResizeObserver(recompute)
+    observer.observe(outer)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div ref={outerRef} className="h-full w-full overflow-y-auto">
+      {children}
+    </div>
+  )
 }
 
 /**
@@ -23,14 +122,21 @@ interface PagedDeckProps {
  * CSS scroll-snap so native touch swipe works for free. Desktop gets
  * hover-visible arrow buttons and ArrowLeft/ArrowRight keyboard navigation;
  * every page change is announced via an aria-live region for screen readers.
+ * Dot indicators + a one-time swipe hint make the gesture discoverable, and
+ * each slide's content is auto-shrunk (FitToSlide) to approximate a real
+ * single-viewport composition without touching the real page components.
  *
  * This is a throwaway prototype shell (see docs/specs/VIEWPORT_PAGING_SPIKE.md)
  * — it intentionally does not touch GuestLayout or any guest page.
  */
-export function PagedDeck({ pages }: PagedDeckProps) {
+export const PagedDeck = forwardRef<PagedDeckHandle, PagedDeckProps>(function PagedDeck(
+  { pages, onIndexChange },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement>(null)
   const slideRefs = useRef<Array<HTMLDivElement | null>>([])
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [showSwipeHint, setShowSwipeHint] = useState(true)
 
   const scrollToIndex = useCallback(
     (index: number) => {
@@ -39,6 +145,7 @@ export function PagedDeck({ pages }: PagedDeckProps) {
       if (!slide) {
         return
       }
+      setShowSwipeHint(false)
       // prefers-reduced-motion: jump directly instead of smooth-scrolling.
       const reduceMotion =
         typeof window !== 'undefined' &&
@@ -51,6 +158,8 @@ export function PagedDeck({ pages }: PagedDeckProps) {
     },
     [pages.length],
   )
+
+  useImperativeHandle(ref, () => ({ goToIndex: scrollToIndex }), [scrollToIndex])
 
   const goToPrevious = useCallback(() => scrollToIndex(currentIndex - 1), [currentIndex, scrollToIndex])
   const goToNext = useCallback(() => scrollToIndex(currentIndex + 1), [currentIndex, scrollToIndex])
@@ -67,6 +176,7 @@ export function PagedDeck({ pages }: PagedDeckProps) {
 
     let frame: number | null = null
     const handleScroll = () => {
+      setShowSwipeHint(false)
       if (frame !== null) {
         return
       }
@@ -87,6 +197,10 @@ export function PagedDeck({ pages }: PagedDeckProps) {
       }
     }
   }, [pages.length])
+
+  useEffect(() => {
+    onIndexChange?.(currentIndex)
+  }, [currentIndex, onIndexChange])
 
   // All 4 pages stay mounted (so swiping is instant, not a re-render), but
   // each is a FULL page including its own header/nav/footer -- without this,
@@ -146,6 +260,18 @@ export function PagedDeck({ pages }: PagedDeckProps) {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [goToNext, goToPrevious])
 
+  // The hint is a one-time nudge -- gone as soon as the guest interacts, and
+  // never shown at all under prefers-reduced-motion (it's built entirely out
+  // of a pulse animation).
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setShowSwipeHint(false)
+      return
+    }
+    const timer = window.setTimeout(() => setShowSwipeHint(false), 3200)
+    return () => window.clearTimeout(timer)
+  }, [])
+
   const currentPage = pages[currentIndex]
 
   return (
@@ -180,9 +306,9 @@ export function PagedDeck({ pages }: PagedDeckProps) {
             aria-roledescription="slide"
             aria-label={`${index + 1} of ${pages.length}: ${page.label}`}
             data-testid={`paged-deck-slide-${page.id}`}
-            className="h-[100dvh] w-screen flex-shrink-0 snap-start overflow-y-auto"
+            className="h-[100dvh] w-screen flex-shrink-0 snap-start"
           >
-            {page.content}
+            <FitToSlide>{page.content}</FitToSlide>
           </div>
         ))}
       </div>
@@ -211,6 +337,28 @@ export function PagedDeck({ pages }: PagedDeckProps) {
           <ChevronRight aria-hidden="true" />
         </Button>
       )}
+
+      {/* One-time swipe affordance: fades out on first interaction or after
+          ~3s. Purely decorative (aria-hidden) -- the arrow buttons and the
+          caller's own page indicator (see onIndexChange) are the persistent,
+          accessible way to tell there's more. Placed mid-screen rather than
+          at the top or bottom -- every embedded page has real header/footer
+          content pinned to both those edges, so a fixed screen position
+          there would overlap it on at least one of the 4 pages. */}
+      {showSwipeHint && (
+        <div
+          aria-hidden="true"
+          data-testid="paged-deck-swipe-hint"
+          className="pointer-events-none absolute inset-x-0 top-1/2 z-10 flex -translate-y-1/2 justify-center"
+        >
+          <div className="flex items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-xs font-medium text-white animate-pulse">
+            <ChevronLeft className="h-3.5 w-3.5" />
+            <Hand className="h-4 w-4" />
+            <span>Swipe or use arrow keys</span>
+            <ChevronRight className="h-3.5 w-3.5" />
+          </div>
+        </div>
+      )}
     </div>
   )
-}
+})
