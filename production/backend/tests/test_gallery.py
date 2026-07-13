@@ -24,6 +24,22 @@ TINY_PNG = bytes.fromhex(
 # EXIF orientation tag: 6 = rotated 90 degrees clockwise.
 EXIF_ORIENTATION = 0x0112
 
+# App-level size cap, mirrored from app/api/gallery.py (150MB).
+MAX_UPLOAD_BYTES = 150 * 1024 * 1024
+
+
+def make_mp4_bytes(size: int = 2048) -> bytes:
+    """A tiny fake .mp4 payload.
+
+    Not a real playable video — save_upload() validates via the multipart
+    Content-Type header, not by sniffing file contents, so arbitrary bytes
+    with a recognizable ftyp box prefix are enough to exercise the
+    content-type/size-cap code paths.
+    """
+    ftyp_box = b"\x00\x00\x00\x18ftypmp42\x00\x00\x00\x00mp42isom"
+    padding = b"\x00" * max(0, size - len(ftyp_box))
+    return ftyp_box + padding
+
 
 def make_image_bytes(
     image_format: str = "JPEG",
@@ -409,6 +425,110 @@ class TestGuestGallery:
             client.post(
                 "/api/gallery/submit",
                 files={"file": ("t.png", TINY_PNG, "image/png")},
+            ).status_code
+            == 401
+        )
+
+
+class TestGalleryVideo:
+    """Direct .mp4 video upload (Wave 4 item 19, docs/specs/VIDEO_UPLOAD.md)."""
+
+    def test_coordinator_upload_video_approved(
+        self,
+        coordinator_session: TestClient,
+        uploads_dir: Path,
+        cleanup_gallery: None,
+    ) -> None:
+        video_bytes = make_mp4_bytes()
+        created = coordinator_session.post(
+            "/api/gallery",
+            files={"file": ("clip.mp4", video_bytes, "video/mp4")},
+            data={"title": "First dance", "caption": "Reception"},
+        )
+        assert created.status_code == 201
+        data = created.json()
+        assert data["content_type"] == "video/mp4"
+        assert data["file_size"] == len(video_bytes)
+        assert data["status"] == "approved"
+        # No thumbnail for video — same shape as an unsupported image format,
+        # otherwise identical to an image row.
+        assert data["thumb_path"] is None
+        assert data["thumb_url"] is None
+        assert data["url"] == f"/uploads/{data['file_path']}"
+
+        on_disk = uploads_dir / data["file_path"]
+        assert on_disk.is_file()
+        assert on_disk.read_bytes() == video_bytes
+
+    def test_guest_submit_video_pending(
+        self,
+        guest_session: TestClient,
+        uploads_dir: Path,
+        cleanup_gallery: None,
+    ) -> None:
+        video_bytes = make_mp4_bytes()
+        response = guest_session.post(
+            "/api/gallery/submit",
+            files={"file": ("clip.mp4", video_bytes, "video/mp4")},
+            data={"title": "Guest clip"},
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["status"] == "pending"
+        assert data["content_type"] == "video/mp4"
+        assert data["thumb_path"] is None
+        assert data["thumb_url"] is None
+
+        on_disk = uploads_dir / data["file_path"]
+        assert on_disk.is_file()
+        assert on_disk.read_bytes() == video_bytes
+
+    def test_non_mp4_video_rejected(
+        self,
+        coordinator_session: TestClient,
+        uploads_dir: Path,
+        cleanup_gallery: None,
+    ) -> None:
+        response = coordinator_session.post(
+            "/api/gallery",
+            files={"file": ("clip.mov", make_mp4_bytes(), "video/quicktime")},
+        )
+        assert response.status_code == 400
+
+    def test_webm_video_rejected(
+        self,
+        coordinator_session: TestClient,
+        uploads_dir: Path,
+        cleanup_gallery: None,
+    ) -> None:
+        response = coordinator_session.post(
+            "/api/gallery",
+            files={"file": ("clip.webm", make_mp4_bytes(), "video/webm")},
+        )
+        assert response.status_code == 400
+
+    def test_over_cap_video_rejected_with_413(
+        self,
+        coordinator_session: TestClient,
+        uploads_dir: Path,
+        cleanup_gallery: None,
+    ) -> None:
+        oversized = make_mp4_bytes(MAX_UPLOAD_BYTES + 1024)
+        response = coordinator_session.post(
+            "/api/gallery",
+            files={"file": ("huge.mp4", oversized, "video/mp4")},
+        )
+        assert response.status_code == 413
+        # Nothing should have been written to disk for a rejected upload.
+        wedding_dir = uploads_dir / str(TEST_WEDDING_ID)
+        leftover_files = list(wedding_dir.glob("*.mp4")) if wedding_dir.exists() else []
+        assert leftover_files == []
+
+    def test_video_submit_requires_authentication(self, client: TestClient) -> None:
+        assert (
+            client.post(
+                "/api/gallery/submit",
+                files={"file": ("clip.mp4", make_mp4_bytes(), "video/mp4")},
             ).status_code
             == 401
         )

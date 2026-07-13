@@ -38,10 +38,27 @@ const approvedItem: GalleryItem = {
   thumb_url: '/uploads/1/thumbs/sunset.jpg',
 }
 
+const approvedVideo: GalleryItem = {
+  id: 7002,
+  wedding_id: 1,
+  title: 'First Dance',
+  caption: 'Reception',
+  file_path: '/uploads/1/first-dance.mp4',
+  thumb_path: null,
+  content_type: 'video/mp4',
+  file_size: 2048,
+  status: 'approved',
+  created_at: null,
+  url: '/uploads/1/first-dance.mp4',
+  thumb_url: null,
+}
+
 const PNG_BUFFER = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
   'base64',
 )
+
+const MP4_BUFFER = Buffer.from('00000018667479706d703432000000006d70343269736f6d', 'hex')
 
 function json(route: Route, body: unknown, status = 200) {
   return route.fulfill({
@@ -67,18 +84,22 @@ async function installGuestGalleryApi(page: Page, approved: GalleryItem[]) {
   await page.route('**/api/gallery/submit', async (route) => {
     if (route.request().method() === 'POST') {
       submitCount += 1
+      // Real content negotiation is covered by the backend tests; here we
+      // just need a well-formed pending row so the UI's success path renders.
+      const isVideo = (route.request().postData() ?? '').includes('video/mp4')
+      const ext = isVideo ? 'mp4' : 'png'
       const item: GalleryItem = {
         id: 8000 + submitCount,
         wedding_id: 1,
         title: 'Guest Upload',
         caption: null,
-        file_path: `/uploads/1/guest-${submitCount}.png`,
+        file_path: `/uploads/1/guest-${submitCount}.${ext}`,
         thumb_path: null,
-        content_type: 'image/png',
+        content_type: isVideo ? 'video/mp4' : 'image/png',
         file_size: 64,
         status: 'pending',
         created_at: null,
-        url: `/uploads/1/guest-${submitCount}.png`,
+        url: `/uploads/1/guest-${submitCount}.${ext}`,
         thumb_url: null,
       }
       await json(route, item, 201)
@@ -87,8 +108,17 @@ async function installGuestGalleryApi(page: Page, approved: GalleryItem[]) {
     await json(route, { detail: 'Not found' }, 404)
   })
 
-  // Serve uploaded image paths so <img> requests don't error.
+  // Serve uploaded media paths so <img>/<video> requests don't error.
   await page.route('**/uploads/**', async (route) => {
+    const url = route.request().url()
+    if (url.endsWith('.mp4')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'video/mp4',
+        body: MP4_BUFFER,
+      })
+      return
+    }
     await route.fulfill({
       status: 200,
       contentType: 'image/png',
@@ -204,6 +234,63 @@ test('submits a photo and shows the pending-approval message', async ({ page }) 
     name: 'guest.png',
     mimeType: 'image/png',
     buffer: PNG_BUFFER,
+  })
+
+  await mainRegion(page).getByRole('button', { name: 'Submit' }).click()
+
+  await expect(page.getByRole('status')).toHaveText(
+    'Thanks! Your photo was submitted for approval.',
+  )
+  expect(submitCount).toBe(1)
+})
+
+test('upload hint mentions video support and the 150MB cap', async ({ page }) => {
+  await installGuestGalleryApi(page, [{ ...approvedItem }])
+  await page.goto('/gallery')
+
+  await expect(
+    mainRegion(page).getByText('Photos or short videos (MP4), up to 150 MB.'),
+  ).toBeVisible()
+})
+
+test('shows an approved video as a play-tile in the guest gallery', async ({ page }) => {
+  await installGuestGalleryApi(page, [{ ...approvedVideo }])
+  await page.goto('/gallery')
+
+  const tileButton = gallery(page).getByRole('button', {
+    name: 'View photo full size: First Dance',
+  })
+  await expect(tileButton).toBeVisible()
+  // No thumbnail exists for video, so no <img> is rendered in the tile.
+  await expect(tileButton.locator('img')).toHaveCount(0)
+})
+
+test('opens a video in the lightbox and renders a playable <video> element', async ({
+  page,
+}) => {
+  await installGuestGalleryApi(page, [{ ...approvedVideo }])
+  await page.goto('/gallery')
+
+  await gallery(page)
+    .getByRole('button', { name: 'View photo full size: First Dance' })
+    .click()
+
+  const lightbox = page.getByRole('dialog')
+  await expect(lightbox).toBeVisible()
+
+  const video = lightbox.locator('video')
+  await expect(video).toHaveAttribute('src', '/uploads/1/first-dance.mp4')
+  await expect(video).toHaveAttribute('controls', '')
+})
+
+test('submits a video and shows the pending-approval message', async ({ page }) => {
+  await installGuestGalleryApi(page, [{ ...approvedItem }])
+  await page.goto('/gallery')
+
+  await page.getByLabel('Photo', { exact: true }).setInputFiles({
+    name: 'clip.mp4',
+    mimeType: 'video/mp4',
+    buffer: MP4_BUFFER,
   })
 
   await mainRegion(page).getByRole('button', { name: 'Submit' }).click()

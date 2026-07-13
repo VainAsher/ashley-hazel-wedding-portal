@@ -53,6 +53,23 @@ const pendingItem: GalleryItem = {
   thumb_url: null,
 }
 
+const pendingVideo: GalleryItem = {
+  id: 5003,
+  wedding_id: 1,
+  title: 'Pending Clip',
+  caption: 'Guest video, awaiting review',
+  file_path: '/uploads/1/pending-clip.mp4',
+  thumb_path: null,
+  content_type: 'video/mp4',
+  file_size: 4096,
+  status: 'pending',
+  created_at: null,
+  url: '/uploads/1/pending-clip.mp4',
+  thumb_url: null,
+}
+
+const MP4_BUFFER = Buffer.from('00000018667479706d703432000000006d70343269736f6d', 'hex')
+
 function json(route: Route, body: unknown, status = 200) {
   return route.fulfill({
     body: JSON.stringify(body),
@@ -68,9 +85,9 @@ interface PatchRecord {
 
 const patchRequests: PatchRecord[] = []
 
-async function installGalleryApi(page: Page) {
+async function installGalleryApi(page: Page, extraItems: GalleryItem[] = []) {
   let nextId = 6000
-  let items: GalleryItem[] = [{ ...pendingItem }, { ...initialItem }]
+  let items: GalleryItem[] = [{ ...pendingItem }, { ...initialItem }, ...extraItems]
   patchRequests.length = 0
 
   await page.route(/\/api\/gallery(?:\/\d+)?$/, async (route) => {
@@ -99,20 +116,36 @@ async function installGalleryApi(page: Page) {
     if (url.pathname.endsWith('/api/gallery') && method === 'POST') {
       const id = nextId
       nextId += 1
-      const item: GalleryItem = {
-        id,
-        wedding_id: 1,
-        title: 'Uploaded Photo',
-        caption: 'Freshly added',
-        file_path: `/uploads/1/${id}.png`,
-        thumb_path: `1/thumbs/${id}.jpg`,
-        content_type: 'image/png',
-        file_size: 64,
-        status: 'pending',
-        created_at: null,
-        url: `/uploads/1/${id}.png`,
-        thumb_url: `/uploads/1/thumbs/${id}.jpg`,
-      }
+      const isVideo = (request.postData() ?? '').includes('video/mp4')
+      const item: GalleryItem = isVideo
+        ? {
+            id,
+            wedding_id: 1,
+            title: 'Uploaded Clip',
+            caption: 'Freshly added',
+            file_path: `/uploads/1/${id}.mp4`,
+            thumb_path: null,
+            content_type: 'video/mp4',
+            file_size: 64,
+            status: 'pending',
+            created_at: null,
+            url: `/uploads/1/${id}.mp4`,
+            thumb_url: null,
+          }
+        : {
+            id,
+            wedding_id: 1,
+            title: 'Uploaded Photo',
+            caption: 'Freshly added',
+            file_path: `/uploads/1/${id}.png`,
+            thumb_path: `1/thumbs/${id}.jpg`,
+            content_type: 'image/png',
+            file_size: 64,
+            status: 'pending',
+            created_at: null,
+            url: `/uploads/1/${id}.png`,
+            thumb_url: `/uploads/1/thumbs/${id}.jpg`,
+          }
       // newest first
       items = [item, ...items]
       await json(route, item, 201)
@@ -129,8 +162,17 @@ async function installGalleryApi(page: Page) {
     await json(route, { detail: 'Not found' }, 404)
   })
 
-  // Serve uploaded image paths so <img> requests don't error.
+  // Serve uploaded media paths so <img>/<video> requests don't error.
   await page.route('**/uploads/**', async (route) => {
+    const url = route.request().url()
+    if (url.endsWith('.mp4')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'video/mp4',
+        body: MP4_BUFFER,
+      })
+      return
+    }
     await route.fulfill({
       status: 200,
       contentType: 'image/png',
@@ -293,4 +335,49 @@ test('deletes a photo and removes its card', async ({ page }) => {
 
   await expect(page.getByRole('status')).toHaveText('Photo deleted successfully.')
   await expect(gallery(page).getByRole('heading', { name: 'Existing Photo' })).not.toBeVisible()
+})
+
+test('upload hint mentions video support and the 150MB cap', async ({ page }) => {
+  await page.goto('/admin/gallery')
+
+  await expect(
+    mainRegion(page).getByText('Photos or short videos (MP4), up to 150 MB.'),
+  ).toBeVisible()
+})
+
+test('renders a pending video as a play-tile in the moderation queue', async ({ page }) => {
+  await installGalleryApi(page, [{ ...pendingVideo }])
+  await page.goto('/admin/gallery')
+
+  await expect(mainRegion(page).getByText('3 photos · 2 pending review')).toBeVisible()
+  await expect(gallery(page).getByRole('heading', { name: 'Pending Clip' })).toBeVisible()
+  // No thumbnail exists for video, so no <img> is rendered for that card
+  // (the real photo cards still render theirs).
+  await expect(gallery(page).getByRole('img', { name: 'Pending Clip' })).toHaveCount(0)
+})
+
+test('approves a pending video via PATCH from the moderation queue', async ({ page }) => {
+  await installGalleryApi(page, [{ ...pendingVideo }])
+  await page.goto('/admin/gallery')
+
+  await page.getByRole('button', { name: 'Approve Pending Clip' }).click()
+
+  await expect(page.getByRole('status')).toHaveText('Pending Clip approved.')
+  expect(patchRequests).toContainEqual({ id: pendingVideo.id, status: 'approved' })
+})
+
+test('uploads a video and adds a play-tile card', async ({ page }) => {
+  await page.goto('/admin/gallery')
+
+  await page.getByLabel('Image or video').setInputFiles({
+    name: 'clip.mp4',
+    mimeType: 'video/mp4',
+    buffer: MP4_BUFFER,
+  })
+
+  await mainRegion(page).getByRole('button', { name: 'Upload' }).click()
+
+  await expect(page.getByRole('status')).toHaveText('Photo uploaded successfully.')
+  await expect(gallery(page).getByRole('heading', { name: 'Uploaded Clip' })).toBeVisible()
+  await expect(gallery(page).getByRole('img', { name: 'Uploaded Clip' })).toHaveCount(0)
 })
