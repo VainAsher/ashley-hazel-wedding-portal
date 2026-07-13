@@ -334,6 +334,24 @@ target).
 > full backend 507/507 on the final merged tree, `tsc` clean). CI green on
 > all three merge commits. **Not yet released** — on `main` only, awaiting
 > the next release cut.
+>
+> **Iteration 2026-07-13 (same day):** couple's first look at `/preview`
+> surfaced 3 real gaps — mobile nav should be a burger menu not the wrapped
+> nav row, desktop should compress to one viewport instead of scrolling, and
+> there was no visual cue the deck is swipeable. All addressed: a
+> preview-only burger menu (CSS-scoped nav hiding, doesn't touch
+> `GuestLayout`), a `FitToSlide` auto-shrink of each page's `<main>` against
+> the available height, and a one-time animated swipe hint + dot indicator
+> in the banner. Caught and fixed my own bug during visual verification
+> before shipping it: the first `FitToSlide` pass scaled the WHOLE embedded
+> page, and a CSS `transform` on an ancestor becomes the containing block
+> for `position: fixed` descendants — `FeedbackWidget` detached from its
+> real screen position on any slide that needed shrinking (two "Feedback"
+> pills visible at once). Rescoped the transform to `<main>` only; added a
+> regression test asserting all 4 mounted copies resolve to the same
+> screen position. 18/18 preview-paged tests green on both projects,
+> `tsc` clean. Merged to `main`, CI green, staging auto-deployed — ready
+> for another look.
 
 ### 17. Viewport-fit paged layout (couple) — **XL** · spike before committing
 The riskiest item: "fills a viewport, no scrolling" collides with long content
