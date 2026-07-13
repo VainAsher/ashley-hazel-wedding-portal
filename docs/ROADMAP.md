@@ -360,8 +360,8 @@ target).
 > mobile, swipe hint, auto-fit-to-viewport, static header/footer, page-name
 > label) and signed off: "this is perfect, please accept this." Phase 0 is
 > done; Phase 1 (the real rollout to Dashboard/RSVP/Schedule/Blessings
-> inside `GuestLayout`, with a route-level fallback) is next but NOT yet
-> started — needs its own spec per house process before build begins.
+> inside `GuestLayout`, with a route-level fallback) full contract:
+> `docs/specs/VIEWPORT_PAGING_PHASE1.md`. IN BUILD as of 2026-07-13.
 
 The riskiest item: "fills a viewport, no scrolling" collides with long content
 (86-photo gallery, growing song wall) and mobile keyboards. Plan:
