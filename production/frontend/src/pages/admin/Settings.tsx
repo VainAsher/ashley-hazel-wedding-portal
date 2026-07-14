@@ -18,6 +18,7 @@ import {
   SettingsApiError,
   useSettings,
   useUpdateSettings,
+  type LayoutMode,
   type PartyVisibilityMode,
   type WeddingPhase,
   type WeddingSettings,
@@ -464,6 +465,98 @@ function PartyVisibilityCard({ settings }: { settings: WeddingSettings }) {
   )
 }
 
+const LAYOUT_MODE_OPTIONS: { value: LayoutMode; label: string; description: string }[] = [
+  {
+    value: 'paged',
+    label: 'Paged',
+    description:
+      'Dashboard, RSVP, Schedule and Blessings fill the screen and guests swipe (or use arrow keys) between them — no page scrolling.',
+  },
+  {
+    value: 'scroll',
+    label: 'Scroll',
+    description: "Today's normal scrolling pages, one after another.",
+  },
+]
+
+// Wave 4 item 17 Phase 1 (docs/specs/VIEWPORT_PAGING_PHASE1.md): the
+// route-level fallback the couple can flip back from if paged navigation
+// doesn't work for a guest. Small card, matching the house style of the
+// Party Visibility card above — deliberately not touching that one. Stored
+// nested in the theme JSONB (layout_mode lives on WeddingTheme, not as its
+// own top-level settings field), so saving merges into the existing theme
+// object rather than sending a bare top-level field like party_visibility_mode.
+function LayoutModeCard({ settings }: { settings: WeddingSettings }) {
+  const updateMutation = useUpdateSettings()
+  const [feedback, setFeedback] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  const mode = themeWithDefaults(settings.theme).layout_mode
+
+  const setMode = async (value: LayoutMode) => {
+    if (value === mode) return
+    setFeedback(null)
+    setSaveError(null)
+    try {
+      await updateMutation.mutateAsync({
+        theme: { ...themeWithDefaults(settings.theme), layout_mode: value },
+      })
+      setFeedback('Guest page navigation saved.')
+    } catch (err) {
+      setSaveError(err instanceof SettingsApiError ? err.message : 'Failed to save guest page navigation')
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Guest Page Navigation</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-3">
+          <p className="text-sm text-gray-600 m-0">
+            Controls how guests move between Dashboard, RSVP, Schedule and Blessings.
+          </p>
+
+          {feedback && (
+            <Alert variant="success" role="status" aria-live="polite">
+              {feedback}
+            </Alert>
+          )}
+          {saveError && <Alert variant="destructive">{saveError}</Alert>}
+
+          <div role="radiogroup" aria-label="Guest page navigation" className="grid gap-3">
+            {LAYOUT_MODE_OPTIONS.map((option) => {
+              const active = mode === option.value
+              return (
+                <label
+                  key={option.value}
+                  className={`flex items-start gap-3 rounded-md border p-3 cursor-pointer ${
+                    active ? 'border-plum bg-plum/5' : 'border-input'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="layout-mode"
+                    className="mt-1"
+                    checked={active}
+                    disabled={updateMutation.isPending}
+                    onChange={() => void setMode(option.value)}
+                  />
+                  <span className="grid gap-0.5">
+                    <span className="text-sm font-medium">{option.label}</span>
+                    <span className="text-xs text-gray-500">{option.description}</span>
+                  </span>
+                </label>
+              )
+            })}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function validate(form: SettingsFormState): string | null {
   if (!form.couple_names.trim()) {
     return 'Couple names are required.'
@@ -652,6 +745,8 @@ export function Settings() {
         )}
 
         {!isLoading && !isError && settings && <ThemeCard settings={settings} />}
+
+        {!isLoading && !isError && settings && <LayoutModeCard settings={settings} />}
 
         {!isLoading && !isError && settings && <PartyVisibilityCard settings={settings} />}
 

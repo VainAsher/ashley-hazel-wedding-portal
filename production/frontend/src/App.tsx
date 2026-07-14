@@ -1,12 +1,13 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 
 import { HomeRedirect, RequireAdmin, RequireGuest, RequireGuestOrCouple } from './components/AuthRoutes'
+import { GuestLayout } from './components/GuestLayout'
 import { ThemeApplier } from './hooks/useTheme'
 import { Admin } from './pages/Admin'
 import { Guests } from './pages/Guests'
 import { Invite } from './pages/Invite'
-import { RSVP } from './pages/RSVP'
+import { RSVPContent } from './pages/RSVP'
 
 // Admin module pages are route-level code-split so they stay out of the main
 // bundle until an admin actually navigates to them.
@@ -40,14 +41,14 @@ const Settings = lazy(() =>
 const GuestGallery = lazy(() =>
   import('./pages/Gallery').then((m) => ({ default: m.Gallery })),
 )
-const Dashboard = lazy(() =>
-  import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })),
+const DashboardContent = lazy(() =>
+  import('./pages/Dashboard').then((m) => ({ default: m.DashboardContent })),
 )
-const Schedule = lazy(() =>
-  import('./pages/Schedule').then((m) => ({ default: m.Schedule })),
+const ScheduleContent = lazy(() =>
+  import('./pages/Schedule').then((m) => ({ default: m.ScheduleContent })),
 )
-const Blessings = lazy(() =>
-  import('./pages/Blessings').then((m) => ({ default: m.Blessings })),
+const BlessingsContent = lazy(() =>
+  import('./pages/Blessings').then((m) => ({ default: m.BlessingsContent })),
 )
 const AdminBlessings = lazy(() =>
   import('./pages/admin/Blessings').then((m) => ({ default: m.Blessings })),
@@ -65,11 +66,6 @@ const Party = lazy(() => import('./pages/Party').then((m) => ({ default: m.Party
 const WeddingParty = lazy(() =>
   import('./pages/WeddingParty').then((m) => ({ default: m.WeddingParty })),
 )
-// Phase 0 viewport-paging spike (Wave 4 item 17, docs/specs/VIEWPORT_PAGING_SPIKE.md):
-// a throwaway, admin-gated prototype route -- not part of the live guest experience.
-const PreviewPaged = lazy(() =>
-  import('./pages/PreviewPaged').then((m) => ({ default: m.PreviewPaged })),
-)
 
 function guestRoute(element: React.ReactNode) {
   return <RequireGuest>{element}</RequireGuest>
@@ -77,6 +73,26 @@ function guestRoute(element: React.ReactNode) {
 
 function adminRoute(element: React.ReactNode) {
   return <RequireAdmin>{element}</RequireAdmin>
+}
+
+// Wave 4 item 17 Phase 1 (docs/specs/VIEWPORT_PAGING_PHASE1.md): Dashboard,
+// RSVP, Schedule, and Blessings share ONE persistent GuestLayout instance via
+// this layout route, rather than each independently wrapping GuestLayout.
+// This matters even in scroll mode: React Router unmounts and remounts
+// whatever a route renders whenever the matched Route *element* changes, so
+// four separate top-level routes (the old shape) would tear down and rebuild
+// GuestLayout -- and with it, PagedGuestDeck's whole scroll position and
+// mounted-slide state -- on every navigate() between them. Nesting these 4
+// routes under one shared layout route means only the <Outlet/> content
+// swaps; GuestLayout (and the deck it renders in paged mode) never remounts.
+function PagedGuestLayoutRoute() {
+  return (
+    <RequireGuest>
+      <GuestLayout>
+        <Outlet />
+      </GuestLayout>
+    </RequireGuest>
+  )
 }
 
 function App() {
@@ -94,14 +110,12 @@ function App() {
           <Routes>
             <Route element={<HomeRedirect />} path="/" />
             <Route element={<Invite />} path="/invite" />
-            <Route
-              element={
-                <RequireGuest>
-                  <RSVP />
-                </RequireGuest>
-              }
-              path="/rsvp"
-            />
+            <Route element={<PagedGuestLayoutRoute />}>
+              <Route element={<DashboardContent />} path="/dashboard" />
+              <Route element={<RSVPContent />} path="/rsvp" />
+              <Route element={<ScheduleContent />} path="/schedule" />
+              <Route element={<BlessingsContent />} path="/blessings" />
+            </Route>
             <Route
               element={
                 <RequireGuest>
@@ -110,9 +124,6 @@ function App() {
               }
               path="/gallery"
             />
-            <Route element={guestRoute(<Dashboard />)} path="/dashboard" />
-            <Route element={guestRoute(<Schedule />)} path="/schedule" />
-            <Route element={guestRoute(<Blessings />)} path="/blessings" />
             <Route element={guestRoute(<Music />)} path="/music" />
             <Route element={guestRoute(<WeddingParty />)} path="/wedding-party" />
             <Route
@@ -137,7 +148,6 @@ function App() {
             <Route element={adminRoute(<Vendors />)} path="/admin/vendors" />
             <Route element={adminRoute(<Gallery />)} path="/admin/gallery" />
             <Route element={adminRoute(<Settings />)} path="/admin/settings" />
-            <Route element={adminRoute(<PreviewPaged />)} path="/preview" />
             <Route element={<Navigate replace to="/invite" />} path="*" />
           </Routes>
         </Suspense>

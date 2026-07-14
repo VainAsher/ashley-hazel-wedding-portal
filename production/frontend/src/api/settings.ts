@@ -2,6 +2,10 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export type WeddingPhase = 'planning' | 'live' | 'event' | 'archived'
 
+// Wave 4 item 17 Phase 1 (docs/specs/VIEWPORT_PAGING_PHASE1.md): guest-site
+// navigation pattern for Dashboard/RSVP/Schedule/Blessings.
+export type LayoutMode = 'paged' | 'scroll'
+
 export interface WeddingThemeSettings {
   primary: string
   secondary: string
@@ -9,6 +13,7 @@ export interface WeddingThemeSettings {
   display_font: string
   body_font: string
   type_scale: number
+  layout_mode: LayoutMode
 }
 
 // Wave 3 item 14 D1: the non-subject partner's default access to their

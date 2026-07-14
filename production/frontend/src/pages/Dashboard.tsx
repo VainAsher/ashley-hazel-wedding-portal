@@ -2,7 +2,6 @@ import { Calendar, Clock, Heart, Image as ImageIcon, MapPin, Music2, Send } from
 import { Link } from 'react-router-dom'
 
 import { useAuth } from '../contexts/AuthContext'
-import { GuestLayout } from '../components/GuestLayout'
 import { NotificationsCard } from '../components/NotificationsCard'
 import { OnboardingChecklist } from '../components/OnboardingChecklist'
 import { Alert } from '../components/ui/alert'
@@ -176,15 +175,18 @@ function KeyDetails({ wedding }: { wedding: PortalWedding }) {
   )
 }
 
-export function Dashboard() {
+// The actual page content, no GuestLayout wrapper -- used both by the thin
+// `Dashboard` route wrapper below (scroll mode) and by PagedGuestDeck, which
+// mounts all 4 guest pages' content together inside one shared GuestLayout
+// (paged mode). See docs/specs/VIEWPORT_PAGING_PHASE1.md.
+export function DashboardContent() {
   usePageTitle('Dashboard')
   const { user } = useAuth()
   const { data: wedding, isLoading, isError, error } = usePortalWedding()
 
   return (
-    <GuestLayout>
-      <div className="max-w-4xl mx-auto w-full grid gap-6">
-        {isLoading && (
+    <div className="max-w-4xl mx-auto w-full grid gap-6">
+      {isLoading && (
           <div role="status" className="grid gap-6">
             <span className="sr-only">Loading wedding details...</span>
 
@@ -252,7 +254,7 @@ export function Dashboard() {
             </Link>
           ))}
         </section>
-      </div>
-    </GuestLayout>
+    </div>
   )
 }
+

@@ -13,11 +13,29 @@ export async function cleanupPageState(page: Page): Promise<void> {
     })
 
     // ThemeApplier requests the public theme on every page. Answer it with
-    // "use defaults" so specs don't need to mock it individually (a spec can
-    // still override — routes registered later win).
+    // the canonical defaults so specs don't need to mock it individually (a
+    // spec can still override — routes registered later win).
+    //
+    // layout_mode is explicitly 'scroll' here (NOT the real production
+    // default of 'paged' -- see WeddingTheme in app/db/schemas.py) so every
+    // existing guest-page spec keeps exercising today's normal scrolling
+    // pages, completely unmodified, as the Wave 4 item 17 Phase 1 regression
+    // backstop (docs/specs/VIEWPORT_PAGING_PHASE1.md). Paged-mode specs
+    // (paged-guest-deck.spec.ts) register their own theme route with
+    // layout_mode: 'paged', which wins over this default.
     await page.route('**/api/portal/theme', (route) =>
       route.fulfill({
-        body: JSON.stringify({ theme: null }),
+        body: JSON.stringify({
+          theme: {
+            primary: '#f6c445',
+            secondary: '#2b064d',
+            tint_opacity: 0.9,
+            display_font: 'Georgia',
+            body_font: 'Inter',
+            type_scale: 1.0,
+            layout_mode: 'scroll',
+          },
+        }),
         contentType: 'application/json',
         status: 200,
       }),

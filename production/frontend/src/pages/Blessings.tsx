@@ -3,7 +3,6 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Heart } from 'lucide-react'
 
 import { fetchCurrentUser } from '../api/auth'
-import { GuestLayout } from '../components/GuestLayout'
 import { MentionHighlightedText } from '../components/mentions/MentionHighlight'
 import { MentionTextarea } from '../components/mentions/MentionTextarea'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -54,7 +53,11 @@ function BlessingCard({
   )
 }
 
-export function Blessings() {
+// The actual page content, no GuestLayout wrapper -- used both by the thin
+// `Blessings` route wrapper below (scroll mode) and by PagedGuestDeck, which
+// mounts all 4 guest pages' content together inside one shared GuestLayout
+// (paged mode). See docs/specs/VIEWPORT_PAGING_PHASE1.md.
+export function BlessingsContent() {
   usePageTitle('Blessings')
   const { data: blessings, isLoading, isError, error } = useBlessings()
   const createMutation = useCreateBlessing()
@@ -113,8 +116,7 @@ export function Blessings() {
   const isSubmitting = createMutation.isPending
 
   return (
-    <GuestLayout>
-      <div className="max-w-3xl mx-auto w-full grid gap-6">
+    <div className="max-w-3xl mx-auto w-full grid gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Blessings</CardTitle>
@@ -208,7 +210,7 @@ export function Blessings() {
             ))}
           </section>
         )}
-      </div>
-    </GuestLayout>
+    </div>
   )
 }
+

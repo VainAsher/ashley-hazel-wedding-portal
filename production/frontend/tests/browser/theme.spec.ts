@@ -48,7 +48,7 @@ test.afterEach(async ({ page }) => {
 test('default theme sets the canonical font stacks and injects NO Google Fonts link', async ({
   page,
 }) => {
-  // page-cleanup already mocks /api/portal/theme as { theme: null } (defaults).
+  // page-cleanup already mocks /api/portal/theme with the canonical defaults.
   await page.goto('/invite')
   await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toBeVisible()
 

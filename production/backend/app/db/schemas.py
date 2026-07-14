@@ -476,6 +476,12 @@ THEME_BODY_FONTS = (
 )
 THEME_TYPE_SCALES = (0.9, 1.0, 1.1)
 
+# Wave 4 item 17 Phase 1 (docs/specs/VIEWPORT_PAGING_PHASE1.md): guest-site
+# navigation pattern for Dashboard/RSVP/Schedule/Blessings. 'paged' is the
+# approved default (couple signed off on the Phase 0 spike); 'scroll' is the
+# route-level fallback the couple can flip back to with no redeploy.
+THEME_LAYOUT_MODES = ("paged", "scroll")
+
 
 class WeddingTheme(BaseModel):
     """Guest-site theme dials set by the couple in admin Settings.
@@ -487,6 +493,9 @@ class WeddingTheme(BaseModel):
     display_font: headings typeface (allowlisted; prototype Georgia serif)
     body_font: running-text typeface (allowlisted; prototype Inter/system)
     type_scale: root font-size multiplier — 0.9 (cosy) / 1.0 / 1.1 (roomy)
+    layout_mode: 'paged' (viewport-fit swipeable deck, the default) or
+        'scroll' (today's normal scrolling pages) for
+        Dashboard/RSVP/Schedule/Blessings
     """
 
     primary: str = Field(default="#f6c445", pattern=HEX_COLOR_PATTERN)
@@ -495,6 +504,7 @@ class WeddingTheme(BaseModel):
     display_font: str = THEME_DISPLAY_FONTS[0]
     body_font: str = THEME_BODY_FONTS[0]
     type_scale: float = 1.0
+    layout_mode: str = THEME_LAYOUT_MODES[0]
 
     @field_validator("display_font")
     @classmethod
@@ -519,6 +529,15 @@ class WeddingTheme(BaseModel):
             raise ValueError(
                 "Type scale must be one of: "
                 + ", ".join(str(scale) for scale in THEME_TYPE_SCALES)
+            )
+        return value
+
+    @field_validator("layout_mode")
+    @classmethod
+    def layout_mode_must_be_allowlisted(cls, value: str) -> str:
+        if value not in THEME_LAYOUT_MODES:
+            raise ValueError(
+                "Layout mode must be one of: " + ", ".join(THEME_LAYOUT_MODES)
             )
         return value
 
