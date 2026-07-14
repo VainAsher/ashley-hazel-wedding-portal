@@ -137,5 +137,62 @@ admin-only `/preview` route sitting next to the real thing is just dead code
 once guests are actually using paged navigation.
 
 ## Out of scope
-Item 18's real per-page composition/background work, any change to
-Dancefloor/Gallery/Wedding Party/Party pages, any change to admin pages.
+Item 18's real per-page composition/background work, any change to admin
+pages.
+
+## Addendum 2026-07-14: expanded to every guest page
+Original scope (above) was Dashboard/RSVP/Schedule/Blessings only, matching
+the roadmap's original wording ("Dancefloor + Gallery keep internal scroll
+for their lists"). After using the merged Phase 1, the couple asked for
+swipe to work across *every* guest page for consistency, accepting that
+Dancefloor/Gallery/Wedding Party/Stag-Hen's naturally longer, growing
+content (an 86+ photo gallery, a song wall, a member directory, message
+boards) will still need its own internal scroll once you're actually on
+that slide — the auto-fit-scale's `MIN_FIT_SCALE` floor + internal-scroll
+fallback already handles that gracefully; it was built for exactly this
+case.
+
+**Now in scope:** Music (Dancefloor), Gallery, Wedding Party, and
+`/party/:party` (Stag Do / Hen Do) join Dashboard/RSVP/Schedule/Blessings in
+the same deck. **Still out of scope:** all `/admin/*` pages.
+
+**Guest-specific page list.** Unlike the original 4 (identical for every
+guest), the deck's page set now varies per guest: a guest not in either
+party sees 7 pages; a guest in the Stag or Hen party sees 8 (their own
+party's page joins the set — never both, matching the existing party
+access rule). `GuestLayout` already fetches `usePartyAccess()` for the
+nav-link visibility (`partyAccess?.stag`/`partyAccess?.hen`); build the
+deck's page array with the exact same conditional inclusion, so the deck
+never shows a party page a guest can't access.
+
+**`PAGED_ROUTES` becomes derived, not hardcoded:** rather than maintaining
+a second list that has to stay in sync with the guest-specific page array,
+compute `isPagedRoute` as `pagedDeckPages.some(page => page.path ===
+pathname)` — i.e. build the page list first (which already needs the party
+access data), then check membership against it.
+
+**`Party.tsx`'s content needs a prop, not a URL param.** Today `Party()`
+reads `party` from `useParams<{ party: string }>()`. Extract `PartyContent`
+to take `party: 'stag' | 'hen'` as an explicit prop instead (the thin
+`Party()` route wrapper keeps reading `useParams` and validating/redirecting
+exactly as today, then passes `party` down) — the deck supplies up to two
+concrete entries (`path: '/party/stag'`, `path: '/party/hen'`), never the
+`:party` pattern itself.
+
+**Content extraction, same mechanical pattern as the original 4:** split
+`Music.tsx`, `Gallery.tsx` (the guest-facing one, not `admin/Gallery.tsx`),
+`WeddingParty.tsx`, and `Party.tsx` into `*Content` exports + thin
+`GuestLayout`-wrapping route components, identically to how
+`Dashboard`/`RSVP`/`Schedule`/`Blessings` were split. `App.tsx`'s nested
+`PagedGuestLayoutRoute` gains the additional child routes
+(`/music`, `/gallery`, `/wedding-party`, `/party/:party`); the party route
+stays a single parametrized `<Route>` (React Router resolves it to whichever
+concrete path matched, same as it does today).
+
+**Test plan additions:** deep link to each of the 7 base routes (no party)
+and each of the 8 routes for a stag/hen guest; a guest with no party never
+sees party pages in the deck (dot count matches, swiping never lands there);
+swipe/keyboard/URL-sync across the full set; the existing
+music/gallery/wedding-party/party specs continue passing **unmodified** as
+the scroll-mode regression backstop for these newly-included pages, same
+proof pattern as the original 4.
