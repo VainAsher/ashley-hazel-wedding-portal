@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Navigate, NavLink, useLocation } from 'react-router-dom'
+import { Menu, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { FeedbackWidget } from '@/components/FeedbackWidget'
 import { HowThisWorksDialog } from '@/components/HowThisWorksDialog'
@@ -102,6 +103,14 @@ export function GuestLayout({ children }: GuestLayoutProps) {
   )
   const [activePagedIndex, setActivePagedIndex] = useState(initialPagedIndex)
 
+  // Mobile guest nav (below `sm`): a real burger menu, matching what the
+  // couple approved in the Phase 0 `/preview` spike -- see the nav markup
+  // below for why this replaced the old wrap-to-second-row treatment.
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  useEffect(() => {
+    setMobileNavOpen(false)
+  }, [pathname])
+
   // App.tsx's shared PagedGuestLayoutRoute gates on RequireGuestOrCouple --
   // the widest permission any nested child needs, since a couple member can
   // reach /party/:party (viewing/revealing their partner's party, per Wave
@@ -134,6 +143,7 @@ export function GuestLayout({ children }: GuestLayoutProps) {
     ...(partyAccess?.stag ? [{ label: 'Stag Do', href: '/party/stag' }] : []),
     ...(partyAccess?.hen ? [{ label: 'Hen Do', href: '/party/hen' }] : []),
   ]
+  const currentNavLabel = navigationItems.find((item) => item.href === pathname)?.label
 
   return (
     <div className={cn('flex flex-col', isPagedActive ? 'h-[100dvh] overflow-hidden' : 'min-h-screen')}>
@@ -209,30 +219,43 @@ export function GuestLayout({ children }: GuestLayoutProps) {
           </div>
 
           {/* Navigation */}
-          {/* Wraps onto a second row on narrow screens so every page stays
-              reachable (an overflow scroller hid Dancefloor + Gallery). */}
-          <nav aria-label="Guest pages" className="-mb-px">
-            <div className={cn('flex flex-wrap gap-x-6 sm:gap-x-8', isPagedActive && 'items-center')}>
-              {navigationItems.map((item) => (
-                <NavLink
-                  key={item.href}
-                  to={item.href}
-                  className={({ isActive }) =>
-                    cn(
-                      'px-1 py-3 text-sm font-medium transition-colors border-b-2 whitespace-nowrap no-underline',
-                      isActive
-                        ? 'text-gold border-gold'
-                        : 'text-cream/80 border-transparent hover:text-gold hover:border-gold/60',
-                    )
-                  }
-                >
-                  {item.label}
-                </NavLink>
-              ))}
-              {/* Mobile: the dot indicator lives on the nav row instead (the
-                  top row is too tight below `sm`). */}
+          {/* Desktop (sm+): every page directly visible in one row, as
+              always. Below `sm`, this used to wrap onto a second row instead
+              -- fine for the original 4 pages, but cramped and cluttered now
+              that there are up to 8. Replaced with a real burger menu
+              matching what the couple approved in the Phase 0 `/preview`
+              spike (docs/specs/VIEWPORT_PAGING_SPIKE.md), built for real
+              here instead of as a preview-only CSS hack. One set of links in
+              the DOM either way -- only the container's layout/visibility
+              classes differ by breakpoint and open state, so there's never a
+              duplicate, ambiguous "Blessings" link to trip over. */}
+          <nav aria-label="Guest pages" className="-mb-px relative">
+            <div className="flex items-center justify-between py-3 sm:hidden">
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen((value) => !value)}
+                aria-expanded={mobileNavOpen}
+                aria-controls="guest-nav-links"
+                // An aria-label overrides all descendant text for the
+                // accessible name, so it must spell out the current page
+                // itself -- otherwise a screen reader user would hear only
+                // "Open guest pages menu" with no indication of where they
+                // are, even though sighted users see the page name right
+                // on the button.
+                aria-label={`${mobileNavOpen ? 'Close' : 'Open'} guest pages menu — currently ${currentNavLabel ?? 'Menu'}`}
+                className="flex items-center gap-2 text-sm font-medium text-cream"
+              >
+                {mobileNavOpen ? (
+                  <X className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <Menu className="h-4 w-4" aria-hidden="true" />
+                )}
+                <span data-testid="mobile-nav-current-page">{currentNavLabel ?? 'Menu'}</span>
+              </button>
+              {/* Mobile: the dot indicator lives next to the burger trigger
+                  instead of the (now hidden by default) row of links. */}
               {isPagedActive && (
-                <span className="ml-auto flex gap-1 py-3 sm:hidden" aria-hidden="true">
+                <span className="flex gap-1" aria-hidden="true">
                   {pagedDeckPages.map((page, index) => (
                     <span
                       key={page.id}
@@ -244,6 +267,35 @@ export function GuestLayout({ children }: GuestLayoutProps) {
                   ))}
                 </span>
               )}
+            </div>
+
+            <div
+              id="guest-nav-links"
+              className={cn(
+                'gap-x-6 sm:flex sm:flex-wrap sm:gap-x-8',
+                isPagedActive && 'sm:items-center',
+                mobileNavOpen
+                  ? 'absolute inset-x-0 top-full z-40 flex flex-col gap-0 rounded-b-lg bg-plum-night pb-2 shadow-xl sm:static sm:z-auto sm:flex-row sm:rounded-none sm:bg-transparent sm:pb-0 sm:shadow-none'
+                  : 'hidden sm:flex',
+              )}
+            >
+              {navigationItems.map((item) => (
+                <NavLink
+                  key={item.href}
+                  to={item.href}
+                  onClick={() => setMobileNavOpen(false)}
+                  className={({ isActive }) =>
+                    cn(
+                      'px-4 py-2.5 text-sm font-medium no-underline transition-colors sm:border-b-2 sm:px-1 sm:py-3 sm:whitespace-nowrap',
+                      isActive
+                        ? 'text-gold sm:border-gold'
+                        : 'text-cream/80 hover:text-gold sm:border-transparent sm:hover:border-gold/60',
+                    )
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              ))}
             </div>
           </nav>
         </div>

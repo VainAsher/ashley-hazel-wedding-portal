@@ -144,6 +144,20 @@ export function getBrowserErrors(page: Page): string[] {
 }
 
 /**
+ * Below the `sm` breakpoint, GuestLayout's nav links live behind a burger
+ * menu trigger instead of being directly visible (see GuestLayout.tsx and
+ * docs/specs/VIEWPORT_PAGING_PHASE1.md) -- opens it if present, so guest-nav
+ * assertions/clicks work unchanged across both the desktop and mobile
+ * Playwright projects. A no-op on desktop, where the trigger doesn't render.
+ */
+export async function openMobileGuestNavIfPresent(page: Page): Promise<void> {
+  const trigger = page.getByRole('button', { name: /guest pages menu/i })
+  if (await trigger.isVisible().catch(() => false)) {
+    await trigger.click()
+  }
+}
+
+/**
  * Filter out expected/ignorable errors
  */
 export function filterIgnorableErrors(

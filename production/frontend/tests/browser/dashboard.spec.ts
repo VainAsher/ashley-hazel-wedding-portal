@@ -4,6 +4,7 @@ import {
   initializeErrorTracking,
   filterIgnorableErrors,
   getBrowserErrors,
+  openMobileGuestNavIfPresent,
 } from './fixtures/page-cleanup'
 
 interface PortalWedding {
@@ -111,8 +112,12 @@ test('every guest page is reachable from the header nav', async ({ page }) => {
   await installPortalApi(page, { ...wedding })
   await page.goto('/dashboard')
 
-  // The nav must never hide entries at any viewport (it previously clipped
-  // Dancefloor + Gallery behind an overflow scroller on phones).
+  // Every page must stay reachable at any viewport (it previously clipped
+  // Dancefloor + Gallery behind an overflow scroller on phones). On mobile
+  // that's now via the burger menu (see GuestLayout.tsx) rather than a
+  // directly-visible row -- open it first so this assertion holds on both
+  // projects.
+  await openMobileGuestNavIfPresent(page)
   const nav = page.getByRole('navigation', { name: 'Guest pages' })
   for (const label of ['Dashboard', 'RSVP', 'Schedule', 'Blessings', 'Dancefloor', 'Gallery']) {
     await expect(nav.getByRole('link', { name: label })).toBeInViewport()

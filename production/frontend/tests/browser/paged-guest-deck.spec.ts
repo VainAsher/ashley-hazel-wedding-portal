@@ -4,6 +4,7 @@ import {
   initializeErrorTracking,
   filterIgnorableErrors,
   getBrowserErrors,
+  openMobileGuestNavIfPresent,
 } from './fixtures/page-cleanup'
 
 // Wave 4 item 17 Phase 1 (docs/specs/VIEWPORT_PAGING_PHASE1.md): the real,
@@ -361,6 +362,7 @@ test('the back button leaves the paged group entirely instead of stepping throug
 
   // A real nav-link click is a normal (push) navigation -- one new history
   // entry, same as any other route change in the app.
+  await openMobileGuestNavIfPresent(page)
   await page.getByRole('navigation', { name: 'Guest pages' }).getByRole('link', { name: 'Blessings' }).click()
   await expect(page).toHaveURL(/\/blessings$/)
   await expect(page.getByTestId('paged-deck-slide-blessings')).toBeInViewport()
@@ -490,6 +492,66 @@ test('mobile: the arrow buttons stay permanently visible, not just during the sw
   await page.waitForTimeout(3500)
   await expect(nextButton).toHaveCSS('opacity', '1')
   await expect(page.getByRole('button', { name: 'Previous page' })).toHaveCSS('opacity', '1')
+})
+
+test.describe('mobile guest nav is a burger menu, not a wrapped row of links', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('the trigger shows the current page name and the row of links is hidden until opened', async ({
+    page,
+  }) => {
+    await mockCurrentUser(page, guestUser)
+    await mockGuestPageApis(page)
+    await page.route('**/api/portal/theme', (route) => json(route, pagedTheme('scroll')))
+
+    await page.goto('/dashboard')
+
+    await expect(page.getByRole('button', { name: /open guest pages menu/i })).toBeVisible()
+    await expect(page.getByTestId('mobile-nav-current-page')).toHaveText('Dashboard')
+    const guestNav = page.getByRole('navigation', { name: 'Guest pages' })
+    await expect(guestNav.getByRole('link', { name: 'Blessings' })).not.toBeVisible()
+  })
+
+  test('opening the menu reveals every page and selecting one navigates and closes it', async ({
+    page,
+  }) => {
+    await mockCurrentUser(page, guestUser)
+    await mockGuestPageApis(page)
+    await page.route('**/api/portal/theme', (route) => json(route, pagedTheme('scroll')))
+
+    await page.goto('/dashboard')
+
+    const guestNav = page.getByRole('navigation', { name: 'Guest pages' })
+    await page.getByRole('button', { name: /open guest pages menu/i }).click()
+    await expect(page.getByRole('button', { name: /close guest pages menu/i })).toBeVisible()
+    for (const label of ['Dashboard', 'RSVP', 'Schedule', 'Blessings', 'Dancefloor', 'Gallery', 'Wedding Party']) {
+      await expect(guestNav.getByRole('link', { name: label })).toBeVisible()
+    }
+
+    await guestNav.getByRole('link', { name: 'Blessings' }).click()
+
+    await expect(page).toHaveURL(/\/blessings$/)
+    // The menu closes on navigation -- back to the trigger showing the new
+    // current page, not the open dropdown.
+    await expect(page.getByRole('button', { name: /open guest pages menu/i })).toBeVisible()
+    await expect(guestNav.getByRole('link', { name: 'Blessings' })).not.toBeVisible()
+  })
+
+  test('the dot indicator sits next to the burger trigger in paged mode', async ({ page }) => {
+    await mockCurrentUser(page, guestUser)
+    await mockGuestPageApis(page)
+    await page.route('**/api/portal/theme', (route) => json(route, pagedTheme('paged')))
+
+    await page.goto('/dashboard')
+
+    const currentPageLabel = page.getByTestId('mobile-nav-current-page')
+    await expect(currentPageLabel).toHaveText('Dashboard')
+    await expect(page.getByTestId('paged-deck')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Next page' }).click()
+    await expect(page.getByTestId('paged-deck-slide-rsvp')).toBeInViewport()
+    await expect(currentPageLabel).toHaveText('RSVP')
+  })
 })
 
 test('a couple member never gets the paged deck, even in layout_mode paged', async ({ page }) => {

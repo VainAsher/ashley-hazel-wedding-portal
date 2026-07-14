@@ -4,6 +4,7 @@ import {
   initializeErrorTracking,
   filterIgnorableErrors,
   getBrowserErrors,
+  openMobileGuestNavIfPresent,
 } from './fixtures/page-cleanup'
 
 interface MemberProfile {
@@ -192,6 +193,7 @@ test.describe('nav visibility', () => {
     )
     await page.goto('/dashboard')
 
+    await openMobileGuestNavIfPresent(page)
     await expect(page.getByRole('link', { name: 'Wedding Party' })).toBeVisible()
   })
 
@@ -204,6 +206,7 @@ test.describe('nav visibility', () => {
     await page.route('**/api/party/access', (route) => json(route, { stag: true, hen: false }))
     await page.goto('/dashboard')
 
+    await openMobileGuestNavIfPresent(page)
     await expect(page.getByRole('link', { name: 'Wedding Party' })).toBeVisible()
   })
 })

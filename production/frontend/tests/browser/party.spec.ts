@@ -4,6 +4,7 @@ import {
   initializeErrorTracking,
   filterIgnorableErrors,
   getBrowserErrors,
+  openMobileGuestNavIfPresent,
 } from './fixtures/page-cleanup'
 
 interface PartyAccess {
@@ -370,6 +371,7 @@ test.describe('nav visibility', () => {
     await installPartyApi(page, { stag: true, hen: false }, { stag: baseSummary() })
     await page.goto('/dashboard')
 
+    await openMobileGuestNavIfPresent(page)
     await expect(page.getByRole('link', { name: 'Stag Do' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Hen Do' })).toHaveCount(0)
   })
