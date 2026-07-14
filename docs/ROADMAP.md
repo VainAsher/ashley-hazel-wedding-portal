@@ -361,7 +361,25 @@ target).
 > label) and signed off: "this is perfect, please accept this." Phase 0 is
 > done; Phase 1 (the real rollout to Dashboard/RSVP/Schedule/Blessings
 > inside `GuestLayout`, with a route-level fallback) full contract:
-> `docs/specs/VIEWPORT_PAGING_PHASE1.md`. IN BUILD as of 2026-07-13.
+> `docs/specs/VIEWPORT_PAGING_PHASE1.md`.
+>
+> **Status 2026-07-14: BUILT and merged to `main`.** Dashboard/RSVP/
+> Schedule/Blessings now share one persistent `GuestLayout` via a nested
+> React Router layout route (`<Outlet/>`), with `PagedGuestDeck` swiping
+> between them when `layout_mode: 'paged'` (the new default,
+> couple-flippable in Admin Settings back to `'scroll'`, today's normal
+> pages, unchanged). Found and fixed two real bugs before merging: (1)
+> the original flat-route shape remounted the whole layout+deck on every
+> swipe-triggered URL change, wiping scroll position — fixed by hoisting
+> `GuestLayout` into a shared layout route; (2) once fixed, a real
+> nav-link click updated the URL but not the deck's scroll position —
+> fixed by distinguishing external navigation from the deck's own
+> internal URL sync. The Phase 0 `/preview` spike is deleted, superseded.
+> 86/86 relevant Playwright tests pass on both projects (tsc clean), the
+> existing dashboard/rsvp/schedule/blessings specs pass **unmodified** as
+> the scroll-mode regression backstop, and the full 518-test backend
+> suite verified clean. **Not yet deployed to production** — merged to
+> `main` only, awaiting a release cut.
 
 The riskiest item: "fills a viewport, no scrolling" collides with long content
 (86-photo gallery, growing song wall) and mobile keyboards. Plan:
