@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Music2, Users } from 'lucide-react'
 
-import { GuestLayout } from '../components/GuestLayout'
 import { ProfileAvatar, ProfileCard } from '../components/profiles/ProfileCard'
 import { Alert } from '../components/ui/alert'
 import { Button } from '../components/ui/button'
@@ -278,11 +277,14 @@ function MyProfileEditor() {
   )
 }
 
-export function WeddingParty() {
+// The actual page content, no GuestLayout wrapper -- App.tsx routes directly
+// to this (both in scroll mode, via the shared PagedGuestLayoutRoute's
+// <Outlet/>, and in paged mode, mounted inside PagedGuestDeck). See
+// docs/specs/VIEWPORT_PAGING_PHASE1.md.
+export function WeddingPartyContent() {
   usePageTitle('Wedding Party')
 
   return (
-    <GuestLayout>
       <div className="max-w-5xl mx-auto w-full grid gap-6">
         <Card>
           <CardHeader>
@@ -297,6 +299,5 @@ export function WeddingParty() {
 
         <WeddingPartyDirectory />
       </div>
-    </GuestLayout>
   )
 }

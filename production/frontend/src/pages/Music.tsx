@@ -3,7 +3,6 @@ import { useState, type FormEvent } from 'react'
 import { Heart, Music2 } from 'lucide-react'
 
 import { useAuth } from '../contexts/AuthContext'
-import { GuestLayout } from '../components/GuestLayout'
 import { Jukebox } from '../components/Jukebox'
 import { MentionHighlightedText } from '../components/mentions/MentionHighlight'
 import { MentionTextarea } from '../components/mentions/MentionTextarea'
@@ -128,7 +127,11 @@ function NowPlayingCard({ song }: { song: SongWallItem }) {
   )
 }
 
-export function Music() {
+// The actual page content, no GuestLayout wrapper -- App.tsx routes directly
+// to this (both in scroll mode, via the shared PagedGuestLayoutRoute's
+// <Outlet/>, and in paged mode, mounted inside PagedGuestDeck). See
+// docs/specs/VIEWPORT_PAGING_PHASE1.md.
+export function MusicContent() {
   usePageTitle('Dancefloor')
   const { data: wall, isLoading, isError, error } = useSongWall()
   const submitMutation = useSubmitSongRequest()
@@ -186,7 +189,6 @@ export function Music() {
   const isSubmitting = submitMutation.isPending
 
   return (
-    <GuestLayout>
       <div className="max-w-3xl mx-auto w-full grid gap-6">
         <Card>
           <CardHeader>
@@ -320,6 +322,6 @@ export function Music() {
           </section>
         )}
       </div>
-    </GuestLayout>
   )
 }
+

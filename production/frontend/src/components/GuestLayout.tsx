@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { Navigate, NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { FeedbackWidget } from '@/components/FeedbackWidget'
 import { HowThisWorksDialog } from '@/components/HowThisWorksDialog'
@@ -14,6 +14,11 @@ import { DashboardContent } from '@/pages/Dashboard'
 import { RSVPContent } from '@/pages/RSVP'
 import { ScheduleContent } from '@/pages/Schedule'
 import { BlessingsContent } from '@/pages/Blessings'
+import { MusicContent } from '@/pages/Music'
+import { GalleryContent } from '@/pages/Gallery'
+import { WeddingPartyContent } from '@/pages/WeddingParty'
+import { PartyContent } from '@/pages/Party'
+import type { PartyAccess } from '@/hooks/useParty'
 
 interface GuestLayoutProps {
   children: React.ReactNode
@@ -33,21 +38,34 @@ const ROUTE_BACKGROUNDS: Record<string, string> = {
   '/party/hen': '/backgrounds/bg-01-winter-selfie.jpg',
 }
 
-// Wave 4 item 17 Phase 1 (docs/specs/VIEWPORT_PAGING_PHASE1.md): the 4 pages
-// PagedGuestDeck swipes between. Built inside the component body (not at
-// module scope) so it's constructed after Dashboard/RSVP/Schedule/Blessings
-// have finished loading regardless of the circular-import load order (each
-// of those files imports GuestLayout too, for their own thin route wrapper).
-function buildPagedDeckPages(): PagedGuestDeckPage[] {
+// Wave 4 item 17 Phase 1 (docs/specs/VIEWPORT_PAGING_PHASE1.md), expanded
+// 2026-07-14 to every guest page: PagedGuestDeck swipes between all of a
+// guest's pages, not just Dashboard/RSVP/Schedule/Blessings. Unlike those
+// original 4 (identical for every guest), this list is now guest-specific --
+// a guest's own Stag or Hen party page joins the set (never both, matching
+// the existing party access rule), mirroring the exact same conditional
+// inclusion already used for `navigationItems` below. Built inside the
+// component body (not at module scope) so it's constructed after every
+// *Content component has finished loading regardless of the circular-import
+// load order (each of those files imports GuestLayout too, for their own
+// thin route wrapper).
+function buildPagedDeckPages(partyAccess: PartyAccess | undefined): PagedGuestDeckPage[] {
   return [
     { id: 'dashboard', label: 'Dashboard', path: '/dashboard', content: <DashboardContent /> },
     { id: 'rsvp', label: 'RSVP', path: '/rsvp', content: <RSVPContent /> },
     { id: 'schedule', label: 'Schedule', path: '/schedule', content: <ScheduleContent /> },
     { id: 'blessings', label: 'Blessings', path: '/blessings', content: <BlessingsContent /> },
+    { id: 'music', label: 'Dancefloor', path: '/music', content: <MusicContent /> },
+    { id: 'gallery', label: 'Gallery', path: '/gallery', content: <GalleryContent /> },
+    { id: 'wedding-party', label: 'Wedding Party', path: '/wedding-party', content: <WeddingPartyContent /> },
+    ...(partyAccess?.stag
+      ? [{ id: 'party-stag', label: 'Stag Do', path: '/party/stag', content: <PartyContent party="stag" /> }]
+      : []),
+    ...(partyAccess?.hen
+      ? [{ id: 'party-hen', label: 'Hen Do', path: '/party/hen', content: <PartyContent party="hen" /> }]
+      : []),
   ]
 }
-
-const PAGED_ROUTES = ['/dashboard', '/rsvp', '/schedule', '/blessings']
 
 export function GuestLayout({ children }: GuestLayoutProps) {
   const { user, logout } = useAuth()
@@ -57,15 +75,48 @@ export function GuestLayout({ children }: GuestLayoutProps) {
   // access, so hiding these links is never the security boundary.
   const { data: partyAccess } = usePartyAccess()
 
-  const isPagedRoute = PAGED_ROUTES.includes(pathname)
-  const isPagedActive = isPagedRoute && theme.layout_mode === 'paged'
+  // Guest-specific (a stag/hen guest's own party page joins the set) --
+  // computed unconditionally so route-membership can be checked against it
+  // directly, rather than maintaining a second static list that has to stay
+  // in sync by hand. Cheap even when it won't end up rendered: this just
+  // builds plain descriptor objects, it doesn't mount anything.
+  const pagedDeckPages = buildPagedDeckPages(partyAccess)
+  const isPagedRoute = pagedDeckPages.some((page) => page.path === pathname)
+  // Guests only. A couple member can reach /party/:party (RequireGuestOrCouple
+  // -- viewing/revealing their partner's party), but has no route-level
+  // access to Dashboard/RSVP/Schedule/Blessings/Music/Gallery/Wedding Party
+  // at all. The deck renders each page's *Content directly, bypassing those
+  // routes' own RequireGuest guards entirely -- so a couple ending up with a
+  // paged deck would silently mount pages they aren't supposed to be able to
+  // reach. Simplest correct fix: couples always get today's plain
+  // single-page rendering, regardless of layout_mode, since paging a
+  // single-page access pattern doesn't mean anything anyway.
+  const isPagedActive = isPagedRoute && theme.layout_mode === 'paged' && user?.role === 'guest'
 
-  const pagedDeckPages = isPagedActive ? buildPagedDeckPages() : []
   // Resolved up front (not just from PagedGuestDeck's onIndexChange) so the
   // header's dot indicator shows the right page from the very first paint,
   // with no flash of index 0 before the deck's own effect confirms it.
-  const initialPagedIndex = Math.max(0, PAGED_ROUTES.indexOf(pathname))
+  const initialPagedIndex = Math.max(
+    0,
+    pagedDeckPages.findIndex((page) => page.path === pathname),
+  )
   const [activePagedIndex, setActivePagedIndex] = useState(initialPagedIndex)
+
+  // App.tsx's shared PagedGuestLayoutRoute gates on RequireGuestOrCouple --
+  // the widest permission any nested child needs, since a couple member can
+  // reach /party/:party (viewing/revealing their partner's party, per Wave
+  // 3's access rule). Every OTHER guest page is guest-only; restoring that
+  // narrower restriction here (via the already-fetched useAuth() context,
+  // not a second RequireGuest guard re-fetching /api/auth/me) matches
+  // today's exact access rule without doubling the auth request per guest
+  // page load. Placed after every hook call above (not as an early return
+  // interleaved with them) so the hook call order never changes between
+  // renders, even if pathname changes while this same GuestLayout instance
+  // stays mounted (the whole point of nesting every guest route under one
+  // shared layout route).
+  if (user?.role === 'couple' && !pathname.startsWith('/party/')) {
+    return <Navigate replace to="/admin" />
+  }
 
   const backgroundImage = ROUTE_BACKGROUNDS[pathname] ?? ROUTE_BACKGROUNDS['/dashboard']
   const tint = buildTint(theme.secondary, theme.tint_opacity)

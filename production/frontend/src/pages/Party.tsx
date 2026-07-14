@@ -1,7 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 
-import { GuestLayout } from '@/components/GuestLayout'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -847,20 +846,18 @@ function MessageBoard({ party, isPartyAdmin }: { party: PartyName; isPartyAdmin:
   )
 }
 
-export function Party() {
-  const params = useParams<{ party: string }>()
-  const party = params.party === 'stag' || params.party === 'hen' ? params.party : null
+// The actual page content, no GuestLayout wrapper -- takes `party` as an
+// explicit prop (rather than reading useParams itself) so PagedGuestDeck can
+// supply up to two concrete entries (stag, hen) directly. App.tsx routes to
+// this via PartyRouteResolver (scroll mode, reading the `:party` URL param)
+// and PagedGuestDeck mounts it directly with a concrete prop (paged mode).
+// See docs/specs/VIEWPORT_PAGING_PHASE1.md.
+export function PartyContent({ party }: { party: PartyName }) {
+  usePageTitle(PARTY_TITLE[party])
 
-  usePageTitle(party ? PARTY_TITLE[party] : 'Party')
-
-  const { data: summary, isLoading, isError, error } = usePartySummary(party ?? 'stag')
-
-  if (!party) {
-    return <Navigate replace to="/dashboard" />
-  }
+  const { data: summary, isLoading, isError, error } = usePartySummary(party)
 
   return (
-    <GuestLayout>
       <div className="max-w-3xl mx-auto w-full grid gap-6">
         <Card>
           <CardHeader>
@@ -892,6 +889,21 @@ export function Party() {
           </>
         )}
       </div>
-    </GuestLayout>
   )
+}
+
+// Resolves the `:party` URL param, redirecting if invalid -- App.tsx routes
+// directly to this (both in scroll mode, via the shared PagedGuestLayoutRoute's
+// <Outlet/>, and in paged mode via GuestLayout's isPagedActive check; the deck
+// itself never uses this at all, it renders `<PartyContent party="stag">`/
+// `"hen"` directly with a concrete prop, never the `:party` pattern).
+export function PartyRouteResolver() {
+  const params = useParams<{ party: string }>()
+  const party = params.party === 'stag' || params.party === 'hen' ? params.party : null
+
+  if (!party) {
+    return <Navigate replace to="/dashboard" />
+  }
+
+  return <PartyContent party={party} />
 }

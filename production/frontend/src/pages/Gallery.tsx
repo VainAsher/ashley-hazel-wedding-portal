@@ -10,7 +10,6 @@ import {
 
 import { ChevronLeft, ChevronRight, Image as ImageIcon, Pause, Play } from 'lucide-react'
 
-import { GuestLayout } from '../components/GuestLayout'
 import { Alert } from '../components/ui/alert'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
@@ -249,7 +248,11 @@ function Lightbox({
   )
 }
 
-export function Gallery() {
+// The actual page content, no GuestLayout wrapper -- App.tsx routes directly
+// to this (both in scroll mode, via the shared PagedGuestLayoutRoute's
+// <Outlet/>, and in paged mode, mounted inside PagedGuestDeck). See
+// docs/specs/VIEWPORT_PAGING_PHASE1.md.
+export function GalleryContent() {
   usePageTitle('Gallery')
   const { data: photos, isLoading, isError, error } = useApprovedGallery()
   const submitMutation = useSubmitGalleryItem()
@@ -304,7 +307,6 @@ export function Gallery() {
   const isSubmitting = submitMutation.isPending
 
   return (
-    <GuestLayout>
       <div className="max-w-5xl mx-auto w-full grid gap-6">
         <Card>
           <CardHeader>
@@ -430,6 +432,6 @@ export function Gallery() {
           />
         )}
       </div>
-    </GuestLayout>
   )
 }
+
