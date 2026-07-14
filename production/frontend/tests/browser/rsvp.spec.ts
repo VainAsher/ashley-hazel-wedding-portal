@@ -198,10 +198,13 @@ test('does not fetch /api/auth/me from the page itself', async ({ page }) => {
   await expect(page.getByLabel('Accept')).toBeChecked()
 
   // Exactly two callers remain on a page load: the app-wide AuthProvider and
-  // the RequireGuest route guard. The RSVP page reads the shared auth context
-  // instead of issuing a third, duplicate fetch. React StrictMode double-fires
-  // mount effects on the dev server Playwright runs against, so each caller
-  // counts twice (2 callers x 2 = 4). A page-level fetch would push this to 6.
+  // the RequireGuestOrCouple route guard shared by every paged-layout route
+  // (see App.tsx's PagedGuestLayoutRoute). The RSVP page reads the shared
+  // auth context instead of issuing a third, duplicate fetch, and GuestLayout
+  // restores the guest-only restriction by reading that same context rather
+  // than mounting a second guard. React StrictMode double-fires mount effects
+  // on the dev server Playwright runs against, so each caller counts twice
+  // (2 callers x 2 = 4). A page-level fetch would push this to 6.
   expect(authMeRequests).toBe(4)
 })
 
