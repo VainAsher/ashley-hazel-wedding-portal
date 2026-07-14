@@ -44,7 +44,7 @@ Add a row to the right table. Keep it short. Use:
 | 2026-07-10 | Couple | **Wedding-party mini profiles** — flagged members get a small customisable profile: pic, name, role, about me, best known for, etc. *(The prototype's "Profiles" screen is the design reference — avatar/role/known-for cards.)* | Personality + helps parties know each other | new |
 | 2026-07-10 | Couple | **@mentions** — within submissions (blessings, songs, party areas) users can @ other members | Coordination + conversation | new |
 | 2026-07-10 | Couple | **Member dashboard as comms + notification surface** — wedding communications can be issued to the dashboard, targeted by flags (guests / wedding party / coordinators / stags / hens); @-mention notifications also land there. *(Pairs with the seed-list "communications don't actually send" item — in-app delivery becomes the first real channel.)* *2026-07-12: done, live in prod (v1.1.0) — migration 017; Send fans out real in-app notifications by audience (incl. future party flags), bell + unread badge in both layouts, Messages card on the guest dashboard, mark-read/read-all. External channels (email/SMS) remain a decision gate* | One reliable place everyone actually sees messages | done |
-| 2026-07-10 | Couple | **Viewport-fit paged layout** — restructure each page (guest portal especially) so content fills one viewport with no scrolling; swipe left/right or hover arrow buttons switch between pages | App-like, deck-of-cards feel | new |
+| 2026-07-10 | Couple | **Viewport-fit paged layout** — restructure each page (guest portal especially) so content fills one viewport with no scrolling; swipe left/right or hover arrow buttons switch between pages | App-like, deck-of-cards feel. *2026-07-14: done, live in prod (v1.5.0) — all 7-8 guest pages swipe together in one shared deck (guest-specific: a stag/hen guest's own party page joins the set), CSS scroll-snap + hover arrows + keyboard + swipe, desktop auto-fit-to-viewport, mobile burger menu (couple-approved from the Phase 0 review) replacing the old wrapped nav row now that there are more pages. Couple-flippable back to scroll mode in Admin Settings.* | done |
 | 2026-07-10 | Couple | **Per-page composition pass** — rearrange content and move/crop/resize background images so each photo's focal point stays visible and unobscured, with content overlaid on uninteresting areas | The photos become part of the design, not behind it | new |
 | 2026-07-10 | Couple | **Typography theme dials** — font/typography configurable from admin Settings, like the colour theme (display + body faces, maybe scale) *2026-07-12: done, live in prod (v1.1.0) — 8 curated heading faces + 5 body faces + Cosy/Standard/Roomy scale in the theme card, live preview, applies site-wide incl. the invite page; no font downloads while on the Georgia/Inter defaults* | Full self-service brand control | done |
 | 2026-07-10 | Couple | **⚡ Real-audio looping playlist** — turn submitted/approved songs into a looping playlist with real audio on the site. Wanted *sooner rather than later*. *2026-07-10: done, live in prod — chosen solution: 30-second previews (keyless iTunes Search API, matched server-side on approval; admin Find/Clear/Match-all controls). Guest Dancefloor gains the "Now playing" jukebox: artwork, dedication, play/pause/prev/next, auto-advance, looping. Full-length audio would be the YouTube-embed path if ever wanted* | The Dancefloor becomes audible; prototype's "Currently playing" widget for real | done |
@@ -68,12 +68,15 @@ Add a row to the right table. Keep it short. Use:
 ## Seed list — known limitations & candidate v1.1 items
 (Already known as of v1.0.0 — pre-loaded so we don't forget. Add real-use findings above.)
 
-- **Gallery is image-only.** No video support — the Roora-day `.mp4`/`.mov` files
-  couldn't be uploaded. *Candidate: video support, or an "external links" section.*
+- ~~**Gallery is image-only.**~~ *2026-07-14: done, live in prod (v1.5.0) — direct
+  `.mp4` upload, 150MB cap, guests and couple both can upload (matching existing
+  gallery permissions), `<video>` playback in the lightbox, no transcoding.*
 - ~~**Communications don't actually send.**~~ *2026-07-12: in-app delivery is real
   as of v1.1.0 — Send fans out notifications to matching member dashboards and
-  the UI says exactly that. External channels (email/WhatsApp/SMS) remain
-  unconnected by design pending the couple's decision (ROADMAP item 21).*
+  the UI says exactly that. 2026-07-14: real email via Resend now live in prod
+  (v1.5.0) on top of the in-app bell — actual sending stays inert (in-app only,
+  logged skip) until the couple supplies a Resend API key as a deploy secret.
+  WhatsApp/SMS remain won't-do.*
 - **No bulk guest import in the UI.** The 76 guests were loaded directly into the DB.
   *Candidate: CSV import + a households/plus-one model (the "+1/guest" rows are
   currently separate records).*
