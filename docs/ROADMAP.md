@@ -380,6 +380,28 @@ target).
 > the scroll-mode regression backstop, and the full 518-test backend
 > suite verified clean. **Not yet deployed to production** — merged to
 > `main` only, awaiting a release cut.
+>
+> **Iteration 2026-07-14: expanded to every guest page.** Couple feedback
+> after trying Phase 1 live: swiping only worked on Dashboard/RSVP/
+> Schedule/Blessings, not Dancefloor/Gallery/Wedding Party or their own
+> Stag/Hen Do — confirmed "yes, add them all for consistency" and "include
+> them too, deck adapts per guest." `buildPagedDeckPages()` now takes the
+> guest's party access and returns 7 base pages plus their own stag/hen
+> page (never both); extracted `*Content` from Music/Gallery/WeddingParty
+> the same way, and from Party (now takes `party` as a prop instead of
+> `useParams`). Found and fixed a real regression during verification: my
+> first pass at preserving `/party/:party`'s couple-access rule nested a
+> second route guard under the shared layout route's guard, and
+> `AuthRoutes.tsx`'s guards each independently re-fetch `/api/auth/me`
+> with no shared cache — doubling that request on every guest page load.
+> Fixed by moving the guest-only restriction into `GuestLayout` itself
+> (reading the same already-fetched auth context it already uses for
+> `isPagedActive`), caught a Rules-of-Hooks violation in that same fix
+> (an early return was interleaved between hook calls) before it shipped.
+> 22/22 new/updated deck tests plus the existing music/gallery/
+> wedding-party/party specs pass **unmodified** on both projects (tsc
+> clean); full suite re-verified on the merged tree. **Not yet deployed
+> to production** — merged to `main` only, awaiting a release cut.
 
 The riskiest item: "fills a viewport, no scrolling" collides with long content
 (86-photo gallery, growing song wall) and mobile keyboards. Plan:
