@@ -304,11 +304,7 @@ v1.4.0 (2026-07-13, deployed commit `0854187`)** — 13 and 14 D1 shipped
 earlier as v1.2.1/v1.3.0; D2, D3, 15, and 16 shipped together in this
 release. Migration 022 applied clean on prod, all containers healthy,
 rollback ready (`previous_image_tag=022a21f`, pre-release dump
-`wedding_prod-20260712-232648.sql.gz`). Wave 4 is next — see below; all
-of it is currently gated on couple decisions rather than ready-to-build
-engineering (the viewport-paging spike, video approach, and external
-comms channels all need a couple call before there's a clear build
-target).
+`wedding_prod-20260712-232648.sql.gz`). Wave 4 is next — see below.
 
 ## Wave 4 — the big design programme + long tail
 
@@ -400,8 +396,31 @@ target).
 > (an early return was interleaved between hook calls) before it shipped.
 > 22/22 new/updated deck tests plus the existing music/gallery/
 > wedding-party/party specs pass **unmodified** on both projects (tsc
-> clean); full suite re-verified on the merged tree. **Not yet deployed
-> to production** — merged to `main` only, awaiting a release cut.
+> clean); full suite re-verified on the merged tree.
+>
+> **Iteration 2026-07-14: mobile burger menu restored.** The couple
+> reported the mobile nav "seems back rather than a burger menu" right
+> after using the expanded deck live on staging — Phase 1's spec had
+> unilaterally dropped the Phase 0 spike's approved burger menu, reasoning
+> it wasn't needed once GuestLayout was shared, which held for 4 links but
+> not for 7-8. Restored for real (not a CSS hack this time): one set of
+> nav links in the DOM always, styled as a static row on desktop and a
+> burger-trigger dropdown (showing the current page name) below `sm`.
+> Caught a real a11y gap in my own first draft — a static `aria-label`
+> was overriding the button's visible current-page text for screen reader
+> users — fixed before shipping.
+>
+> **SHIPPED to production 2026-07-14 as v1.5.0** (deployed commit
+> `2f81abb`, bundled with items 19 and 21 below — no new migrations, all
+> three are JSONB/file-storage based). Pre-release dump
+> `wedding_prod-20260714-194003-pre-v1.5.0.sql.gz`; all containers healthy
+> post-deploy; `/healthz` 200; gallery/communications endpoints 401/405-gated
+> (not 404). **Important operational note:** the couple's prod `weddings.theme`
+> row has never been touched (still fully `NULL`), so `layout_mode` resolves
+> to the frontend's default of `'paged'` — real guests now see the paged/
+> swipeable nav by default, not just on staging. Reversible instantly via
+> the "Guest Page Navigation" toggle in Admin Settings (no redeploy needed)
+> if the couple wants scroll mode instead.
 
 The riskiest item: "fills a viewport, no scrolling" collides with long content
 (86-photo gallery, growing song wall) and mobile keyboards. Plan:
@@ -430,8 +449,8 @@ screenshots — design work, not plumbing.
 > **Decision confirmed 2026-07-13:** direct `.mp4` upload (Option B), not
 > external links. Guests and couple both can upload, matching current
 > gallery permissions; 150MB cap; no transcoding. Full contract:
-> `docs/specs/VIDEO_UPLOAD.md`. BUILT and merged to `main` 2026-07-13,
-> awaiting release.
+> `docs/specs/VIDEO_UPLOAD.md`. **SHIPPED to production 2026-07-14 as
+> v1.5.0** (commit `2f81abb`, bundled with items 17 and 21).
 
 Direct `.mp4` upload (size cap 150MB, nginx budget bump on the `/api/gallery`
 route specifically, `<video>` in lightbox, no transcoding — desktop-uploaded
@@ -451,8 +470,9 @@ already in). ~~Households (L): real remodel...~~ **skipped per couple decision.*
 
 > **Decision confirmed 2026-07-13:** add email via Resend on top of the
 > existing in-app bell (item 8); WhatsApp/SMS remain won't-do. Full contract:
-> `docs/specs/EMAIL_COMMS.md`. BUILT and merged to `main` 2026-07-13,
-> awaiting release — note actual sending stays inert until the couple
+> `docs/specs/EMAIL_COMMS.md`. **SHIPPED to production 2026-07-14 as v1.5.0**
+> (commit `2f81abb`, bundled with items 17 and 19) — actual sending still
+> stays inert (in-app notifications only, logged skip) until the couple
 > supplies a real Resend API key as a deploy secret.
 
 Email via SMTP/Resend: couple's API key in env, per-audience fan-out reusing
