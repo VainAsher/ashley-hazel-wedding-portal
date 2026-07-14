@@ -1,6 +1,5 @@
 import { CalendarDays, Clock, MapPin } from 'lucide-react'
 
-import { GuestLayout } from '../components/GuestLayout'
 import { Alert } from '../components/ui/alert'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -77,7 +76,11 @@ function ScheduleItem({ event }: { event: PortalScheduleEvent }) {
   )
 }
 
-export function Schedule() {
+// The actual page content, no GuestLayout wrapper -- used both by the thin
+// `Schedule` route wrapper below (scroll mode) and by PagedGuestDeck, which
+// mounts all 4 guest pages' content together inside one shared GuestLayout
+// (paged mode). See docs/specs/VIEWPORT_PAGING_PHASE1.md.
+export function ScheduleContent() {
   usePageTitle('Schedule')
   const { data: events, isLoading, isError, error } = usePortalSchedule()
   const { data: wedding } = usePortalWedding()
@@ -104,8 +107,7 @@ export function Schedule() {
   )
 
   return (
-    <GuestLayout>
-      <div className="max-w-3xl mx-auto w-full grid gap-6">
+    <div className="max-w-3xl mx-auto w-full grid gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Schedule</CardTitle>
@@ -148,7 +150,7 @@ export function Schedule() {
             ))}
           </section>
         )}
-      </div>
-    </GuestLayout>
+    </div>
   )
 }
+

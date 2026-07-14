@@ -157,6 +157,7 @@ test('saves the guest-site theme dials', async ({ page }) => {
         display_font: 'Georgia',
         body_font: 'Inter',
         type_scale: 1,
+        layout_mode: 'paged',
       },
     },
   ])
@@ -202,6 +203,7 @@ test('saves chosen fonts and type scale, and previews them live', async ({ page 
         display_font: 'Playfair Display',
         body_font: 'Nunito Sans',
         type_scale: 1.1,
+        layout_mode: 'paged',
       },
     },
   ])
@@ -226,6 +228,46 @@ test('rejects an invalid hex colour before saving', async ({ page }) => {
 
   await expect(main.getByText('Use a six-digit hex colour, e.g. #f6c445')).toBeVisible()
   await expect(main.getByRole('button', { name: 'Save theme' })).toBeDisabled()
+})
+
+test('renders the Guest Page Navigation card with the default paged mode selected', async ({
+  page,
+}) => {
+  await page.goto('/admin/settings')
+
+  const main = mainRegion(page)
+  await expect(main.getByRole('heading', { name: 'Guest Page Navigation' })).toBeVisible()
+
+  const group = main.getByRole('radiogroup', { name: 'Guest page navigation' })
+  await expect(group.getByRole('radio', { name: /Paged/ })).toBeChecked()
+  await expect(group.getByRole('radio', { name: /Scroll/ })).not.toBeChecked()
+})
+
+test('switches guest page navigation to scroll and saves it', async ({ page }) => {
+  await page.goto('/admin/settings')
+
+  const main = mainRegion(page)
+  const group = main.getByRole('radiogroup', { name: 'Guest page navigation' })
+  await group.getByRole('radio', { name: /Scroll/ }).click()
+
+  await expect(
+    page.getByRole('status').filter({ hasText: 'Guest page navigation saved.' }),
+  ).toBeVisible()
+  // layout_mode is nested in the theme JSONB (not its own top-level settings
+  // field like party_visibility_mode), so the save merges it into the
+  // existing (default) theme rather than sending a bare field.
+  expect(putPayloads).toContainEqual({
+    theme: {
+      primary: '#f6c445',
+      secondary: '#2b064d',
+      tint_opacity: 0.9,
+      display_font: 'Georgia',
+      body_font: 'Inter',
+      type_scale: 1.0,
+      layout_mode: 'scroll',
+    },
+  })
+  await expect(group.getByRole('radio', { name: /Scroll/ })).toBeChecked()
 })
 
 test('renders the Party Visibility card with the current mode selected', async ({ page }) => {

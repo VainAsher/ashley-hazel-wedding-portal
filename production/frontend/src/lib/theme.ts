@@ -2,6 +2,11 @@
 // runtime as CSS custom properties. NULL/absent theme = these defaults (the
 // original prototype palette).
 
+// Wave 4 item 17 Phase 1 (docs/specs/VIEWPORT_PAGING_PHASE1.md): guest-site
+// navigation pattern for Dashboard/RSVP/Schedule/Blessings. The backend
+// mirrors this allowlist in app/db/schemas.py (THEME_LAYOUT_MODES).
+export type LayoutMode = 'paged' | 'scroll'
+
 export interface WeddingTheme {
   primary: string
   secondary: string
@@ -9,6 +14,7 @@ export interface WeddingTheme {
   display_font: string
   body_font: string
   type_scale: number
+  layout_mode: LayoutMode
 }
 
 // ---------------------------------------------------------------------------
@@ -88,6 +94,7 @@ export const DEFAULT_THEME: WeddingTheme = {
   display_font: THEME_DISPLAY_FONTS[0].value,
   body_font: THEME_BODY_FONTS[0].value,
   type_scale: 1.0,
+  layout_mode: 'paged',
 }
 
 export function findDisplayFont(value: string | undefined): FontOption {

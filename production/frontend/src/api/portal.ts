@@ -96,6 +96,7 @@ export interface PortalThemeResponse {
     display_font: string
     body_font: string
     type_scale: number
+    layout_mode: 'paged' | 'scroll'
   } | null
 }
 

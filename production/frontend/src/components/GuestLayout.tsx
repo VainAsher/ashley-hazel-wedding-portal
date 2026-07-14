@@ -1,14 +1,19 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { FeedbackWidget } from '@/components/FeedbackWidget'
 import { HowThisWorksDialog } from '@/components/HowThisWorksDialog'
 import { NotificationsBell } from '@/components/NotificationsBell'
+import { PagedGuestDeck, type PagedGuestDeckPage } from '@/components/PagedGuestDeck'
 import { usePartyAccess } from '@/hooks/useParty'
 import { usePortalTheme } from '@/hooks/useTheme'
 import { Button } from '@/components/ui/button'
 import { buildTint } from '@/lib/theme'
 import { cn } from '@/lib/utils'
+import { DashboardContent } from '@/pages/Dashboard'
+import { RSVPContent } from '@/pages/RSVP'
+import { ScheduleContent } from '@/pages/Schedule'
+import { BlessingsContent } from '@/pages/Blessings'
 
 interface GuestLayoutProps {
   children: React.ReactNode
@@ -28,6 +33,22 @@ const ROUTE_BACKGROUNDS: Record<string, string> = {
   '/party/hen': '/backgrounds/bg-01-winter-selfie.jpg',
 }
 
+// Wave 4 item 17 Phase 1 (docs/specs/VIEWPORT_PAGING_PHASE1.md): the 4 pages
+// PagedGuestDeck swipes between. Built inside the component body (not at
+// module scope) so it's constructed after Dashboard/RSVP/Schedule/Blessings
+// have finished loading regardless of the circular-import load order (each
+// of those files imports GuestLayout too, for their own thin route wrapper).
+function buildPagedDeckPages(): PagedGuestDeckPage[] {
+  return [
+    { id: 'dashboard', label: 'Dashboard', path: '/dashboard', content: <DashboardContent /> },
+    { id: 'rsvp', label: 'RSVP', path: '/rsvp', content: <RSVPContent /> },
+    { id: 'schedule', label: 'Schedule', path: '/schedule', content: <ScheduleContent /> },
+    { id: 'blessings', label: 'Blessings', path: '/blessings', content: <BlessingsContent /> },
+  ]
+}
+
+const PAGED_ROUTES = ['/dashboard', '/rsvp', '/schedule', '/blessings']
+
 export function GuestLayout({ children }: GuestLayoutProps) {
   const { user, logout } = useAuth()
   const { pathname } = useLocation()
@@ -35,6 +56,16 @@ export function GuestLayout({ children }: GuestLayoutProps) {
   // Nav-hint only — every party content endpoint independently re-checks
   // access, so hiding these links is never the security boundary.
   const { data: partyAccess } = usePartyAccess()
+
+  const isPagedRoute = PAGED_ROUTES.includes(pathname)
+  const isPagedActive = isPagedRoute && theme.layout_mode === 'paged'
+
+  const pagedDeckPages = isPagedActive ? buildPagedDeckPages() : []
+  // Resolved up front (not just from PagedGuestDeck's onIndexChange) so the
+  // header's dot indicator shows the right page from the very first paint,
+  // with no flash of index 0 before the deck's own effect confirms it.
+  const initialPagedIndex = Math.max(0, PAGED_ROUTES.indexOf(pathname))
+  const [activePagedIndex, setActivePagedIndex] = useState(initialPagedIndex)
 
   const backgroundImage = ROUTE_BACKGROUNDS[pathname] ?? ROUTE_BACKGROUNDS['/dashboard']
   const tint = buildTint(theme.secondary, theme.tint_opacity)
@@ -54,7 +85,7 @@ export function GuestLayout({ children }: GuestLayoutProps) {
   ]
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className={cn('flex flex-col', isPagedActive ? 'h-[100dvh] overflow-hidden' : 'min-h-screen')}>
       {/* Fixed photo backdrop with plum tint */}
       <div
         aria-hidden="true"
@@ -83,6 +114,33 @@ export function GuestLayout({ children }: GuestLayoutProps) {
 
             {/* User Info & Logout */}
             <div className="flex items-center gap-4">
+              {/* Paged-mode-only: which of the 4 swipeable pages is showing.
+                  Lives in the header (not a separate banner) -- see
+                  docs/specs/VIEWPORT_PAGING_PHASE1.md. */}
+              {isPagedActive && (
+                <div
+                  className="hidden items-center gap-2 sm:flex"
+                  data-testid="paged-nav-indicator"
+                >
+                  <span
+                    data-testid="paged-current-page-name"
+                    className="text-xs font-semibold text-gold"
+                  >
+                    {pagedDeckPages[activePagedIndex]?.label}
+                  </span>
+                  <span className="flex gap-1" aria-hidden="true">
+                    {pagedDeckPages.map((page, index) => (
+                      <span
+                        key={page.id}
+                        className={cn(
+                          'h-1.5 w-1.5 rounded-full',
+                          index === activePagedIndex ? 'bg-gold' : 'bg-cream/30',
+                        )}
+                      />
+                    ))}
+                  </span>
+                </div>
+              )}
               <NotificationsBell variant="guest" />
               <div className="text-right hidden sm:block">
                 <p className="m-0 text-sm font-medium text-cream">{user?.name || 'Guest'}</p>
@@ -103,7 +161,7 @@ export function GuestLayout({ children }: GuestLayoutProps) {
           {/* Wraps onto a second row on narrow screens so every page stays
               reachable (an overflow scroller hid Dancefloor + Gallery). */}
           <nav aria-label="Guest pages" className="-mb-px">
-            <div className="flex flex-wrap gap-x-6 sm:gap-x-8">
+            <div className={cn('flex flex-wrap gap-x-6 sm:gap-x-8', isPagedActive && 'items-center')}>
               {navigationItems.map((item) => (
                 <NavLink
                   key={item.href}
@@ -120,14 +178,42 @@ export function GuestLayout({ children }: GuestLayoutProps) {
                   {item.label}
                 </NavLink>
               ))}
+              {/* Mobile: the dot indicator lives on the nav row instead (the
+                  top row is too tight below `sm`). */}
+              {isPagedActive && (
+                <span className="ml-auto flex gap-1 py-3 sm:hidden" aria-hidden="true">
+                  {pagedDeckPages.map((page, index) => (
+                    <span
+                      key={page.id}
+                      className={cn(
+                        'h-1.5 w-1.5 rounded-full',
+                        index === activePagedIndex ? 'bg-gold' : 'bg-cream/30',
+                      )}
+                    />
+                  ))}
+                </span>
+              )}
             </div>
           </nav>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
-        {children}
+      <main
+        className={cn(
+          'flex-1 w-full',
+          isPagedActive ? 'overflow-hidden' : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8',
+        )}
+      >
+        {isPagedActive ? (
+          <PagedGuestDeck
+            pages={pagedDeckPages}
+            initialPath={pathname}
+            onIndexChange={setActivePagedIndex}
+          />
+        ) : (
+          children
+        )}
       </main>
 
       {/* Footer */}

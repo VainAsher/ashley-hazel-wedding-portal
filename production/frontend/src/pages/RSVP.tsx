@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from '../components/ui/select'
 import { useAuth } from '../contexts/AuthContext'
-import { GuestLayout } from '../components/GuestLayout'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 interface RsvpFormData {
@@ -103,7 +102,11 @@ function MealHint({ options, chosen }: { options: PortalMenuOption[]; chosen: st
   return <p className="text-xs text-gray-500 m-0">{text}</p>
 }
 
-export function RSVP() {
+// The actual page content, no GuestLayout wrapper -- used both by the thin
+// `RSVP` route wrapper below (scroll mode) and by PagedGuestDeck, which
+// mounts all 4 guest pages' content together inside one shared GuestLayout
+// (paged mode). See docs/specs/VIEWPORT_PAGING_PHASE1.md.
+export function RSVPContent() {
   usePageTitle('RSVP')
   // Current user + wedding phase come from the shared auth context (a single
   // /api/auth/me query for the whole app) rather than a page-level fetch.
@@ -234,8 +237,7 @@ export function RSVP() {
   const formDisabled = submitting || saved
 
   return (
-    <GuestLayout>
-      <div className="max-w-2xl mx-auto w-full">
+    <div className="max-w-2xl mx-auto w-full">
         {loading && (
           <Card>
             <CardContent className="pt-6">
@@ -439,7 +441,7 @@ export function RSVP() {
             </form>
           </>
         )}
-      </div>
-    </GuestLayout>
+    </div>
   )
 }
+

@@ -129,6 +129,7 @@ DEFAULT_TYPOGRAPHY = {
     "display_font": "Georgia",
     "body_font": "Inter",
     "type_scale": 1.0,
+    "layout_mode": "paged",
 }
 
 
@@ -200,6 +201,7 @@ class TestWeddingTypography:
             "display_font": "Playfair Display",
             "body_font": "Nunito Sans",
             "type_scale": 1.1,
+            "layout_mode": "scroll",
         }
         response = coordinator_session.put("/api/settings/wedding", json={"theme": theme})
         assert response.status_code == 200
@@ -212,6 +214,7 @@ class TestWeddingTypography:
         assert wedding.theme["display_font"] == "Playfair Display"
         assert wedding.theme["body_font"] == "Nunito Sans"
         assert wedding.theme["type_scale"] == 1.1
+        assert wedding.theme["layout_mode"] == "scroll"
 
         # The public theme endpoint carries the typography keys too.
         public = client.get("/api/portal/theme")
@@ -266,6 +269,71 @@ class TestWeddingTypography:
         assert theme["display_font"] == "Georgia"
         assert theme["body_font"] == "Inter"
         assert theme["type_scale"] == 1.0
+        assert theme["layout_mode"] == "paged"
+
+
+class TestWeddingLayoutMode:
+    """Wave 4 item 17 Phase 1 (docs/specs/VIEWPORT_PAGING_PHASE1.md): the
+    guest-site paged/scroll navigation dial, nested in the theme JSONB
+    exactly like display_font/type_scale."""
+
+    def test_defaults_to_paged_when_unset(
+        self,
+        coordinator_session: TestClient,
+        restore_wedding: None,
+    ) -> None:
+        # A theme saved without layout_mode (e.g. colour-only) still reports
+        # the canonical default -- same "older stored theme" case the other
+        # typography dials already handle.
+        coordinator_session.put(
+            "/api/settings/wedding",
+            json={"theme": {"primary": "#AA5500", "secondary": "#112233"}},
+        )
+        theme = coordinator_session.get("/api/settings/wedding").json()["theme"]
+        assert theme["layout_mode"] == "paged"
+
+    @pytest.mark.parametrize("layout_mode", ["paged", "scroll"])
+    def test_layout_mode_round_trip(
+        self,
+        coordinator_session: TestClient,
+        client: TestClient,
+        db_session: Session,
+        restore_wedding: None,
+        layout_mode: str,
+    ) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding",
+            json={"theme": {"layout_mode": layout_mode}},
+        )
+        assert response.status_code == 200
+        assert response.json()["theme"]["layout_mode"] == layout_mode
+
+        # Persisted in the wedding's JSONB theme column.
+        db_session.expire_all()
+        wedding = db_session.get(Wedding, TEST_WEDDING_ID)
+        assert wedding is not None
+        assert wedding.theme["layout_mode"] == layout_mode
+
+        # The public (unauthenticated) theme endpoint round-trips it too --
+        # this is the endpoint GuestLayout's usePortalTheme() actually reads.
+        public = client.get("/api/portal/theme")
+        assert public.status_code == 200
+        assert public.json()["theme"]["layout_mode"] == layout_mode
+
+    @pytest.mark.parametrize(
+        "layout_mode",
+        ["grid", "Paged", "SCROLL", "paged ", "", "paged; DROP TABLE", 123, None],
+    )
+    def test_rejects_unknown_layout_mode(
+        self,
+        coordinator_session: TestClient,
+        layout_mode: object,
+    ) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding",
+            json={"theme": {"layout_mode": layout_mode}},
+        )
+        assert response.status_code == 422
 
 
 class TestPartyVisibilityMode:
