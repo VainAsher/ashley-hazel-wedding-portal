@@ -102,7 +102,7 @@ export function BlessingsContent() {
         author_name: trimmedName || null,
         message: trimmedMessage,
       })
-      setFeedback('Thank you! Your blessing has been shared.')
+      setFeedback('Thanks! Your blessing has been shared.')
       setMessage('')
     } catch (err) {
       setSubmitError(

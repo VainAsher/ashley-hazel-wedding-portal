@@ -226,7 +226,7 @@ export function RSVPContent() {
       setGuest(updatedGuest)
       setFormData(formDataFromGuest(updatedGuest))
       setSaved(true)
-      setStatusMessage('RSVP saved.')
+      setStatusMessage("Thanks — we've got your RSVP!")
     } catch (err) {
       setError(errorMessage(err))
     } finally {

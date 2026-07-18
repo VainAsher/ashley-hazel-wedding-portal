@@ -131,8 +131,9 @@ function InvitationHero({
           {formatDate(wedding.wedding_date)} · {countdownLabel(wedding.wedding_date)}
         </p>
         <p className="mx-auto mt-4 mb-0 max-w-xl text-base leading-relaxed text-plum/90">
-          Two families, two cultures, one celebration — love, blessings, music, food,
-          laughter, and the people who made us who we are.
+          Jamaica and Zimbabwe, two families becoming one — a journey that wound
+          through England and, like sliding doors, led us to each other, and to
+          the life we're building together here in Halifax.
         </p>
       </div>
     </section>

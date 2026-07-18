@@ -13,7 +13,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 
 function inviteErrorMessage(error: unknown): string {
   if (error instanceof AuthApiError && error.status === 401) {
-    return 'Code not found'
+    return "We couldn't find that invite code — check it matches your invitation and try again."
   }
 
   if (error instanceof AuthApiError) {
@@ -37,7 +37,7 @@ export function Invite() {
 
     const trimmedCode = inviteCode.trim()
     if (!trimmedCode) {
-      setError('Invite code is required.')
+      setError('Please enter your invite code.')
       return
     }
 
@@ -56,7 +56,7 @@ export function Invite() {
 
   return (
     <EnvelopeReveal>
-      <AuthLayout title="Enter Invite Code">
+      <AuthLayout title="One code, and you're in">
         <form onSubmit={handleSubmit} className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="invite-code">
@@ -85,7 +85,8 @@ export function Invite() {
           </Button>
 
           <p className="m-0 text-xs text-cream/80">
-            Guest-only areas include RSVP, the schedule, photo gallery, and the blessings wall.
+            Guest-only areas include RSVP, the schedule, and Celebrate — blessings, the
+            dancefloor, and photos.
           </p>
         </form>
       </AuthLayout>

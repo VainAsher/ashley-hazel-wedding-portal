@@ -114,7 +114,7 @@ if (LIVE_E2E) {
     await page.getByRole('button', { name: 'Save RSVP' }).click()
 
     // Step 7: Verify success message
-    await expect(page.locator('[role="alert"]').filter({ hasText: 'RSVP saved.' })).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('[role="alert"]').filter({ hasText: "Thanks — we've got your RSVP!" })).toBeVisible({ timeout: 5000 })
     await expect(page.getByRole('button', { name: 'Saved' })).toBeDisabled()
 
     // Step 8: Reload page and verify persistence
@@ -136,7 +136,9 @@ if (LIVE_E2E) {
 
     // Should show error and stay on invite page
     await expect(page).toHaveURL(/\/invite$/)
-    await expect(page.getByRole('alert')).toContainText('Code not found')
+    await expect(page.getByRole('alert')).toContainText(
+      "We couldn't find that invite code",
+    )
   })
 } else {
   // Mocked tests for CI/CD (no live backend required)
@@ -263,7 +265,7 @@ if (LIVE_E2E) {
     await page.getByRole('button', { name: 'Save RSVP' }).click()
 
     // Step 7: Verify success
-    await expect(page.locator('[role="alert"]').filter({ hasText: 'RSVP saved.' })).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('[role="alert"]').filter({ hasText: "Thanks — we've got your RSVP!" })).toBeVisible({ timeout: 5000 })
     await expect(page.getByRole('button', { name: 'Saved' })).toBeDisabled()
 
     // Verify PATCH was called — meal_choice intentionally absent while
@@ -300,7 +302,9 @@ if (LIVE_E2E) {
 
     // Should stay on invite page and show error
     await expect(page).toHaveURL(/\/invite$/)
-    await expect(page.getByRole('alert')).toContainText('Code not found')
+    await expect(page.getByRole('alert')).toContainText(
+      "We couldn't find that invite code",
+    )
   })
 
   test('guest cannot modify form after logout', async ({ page }) => {

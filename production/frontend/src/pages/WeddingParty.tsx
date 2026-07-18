@@ -139,7 +139,7 @@ function MyProfileEditor() {
       await uploadPhotoMutation.mutateAsync(file)
       setFeedback('Photo updated.')
     } catch (err) {
-      setFormError(err instanceof ProfilesApiError ? err.message : 'Failed to upload photo')
+      setFormError(err instanceof ProfilesApiError ? err.message : 'Unable to upload photo.')
     } finally {
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
@@ -161,7 +161,7 @@ function MyProfileEditor() {
       })
       setFeedback('Your profile has been saved.')
     } catch (err) {
-      setFormError(err instanceof ProfilesApiError ? err.message : 'Failed to save your profile')
+      setFormError(err instanceof ProfilesApiError ? err.message : 'Unable to save your profile.')
     }
   }
 
@@ -174,8 +174,8 @@ function MyProfileEditor() {
         <CardTitle className="text-lg">My profile</CardTitle>
         <CardDescription>
           {isEmpty
-            ? "You haven't filled this in yet -- everyone can currently see just your name and role. Add a bit about yourself below."
-            : 'Update your details any time -- guests see this on the Wedding Party page.'}
+            ? "You haven't filled this in yet — everyone can currently see just your name and role. Add a bit about yourself below."
+            : 'Update your details any time — guests see this on the Wedding Party page.'}
         </CardDescription>
       </CardHeader>
       <CardContent>

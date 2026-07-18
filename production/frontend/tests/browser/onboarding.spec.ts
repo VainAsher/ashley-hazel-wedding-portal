@@ -173,7 +173,7 @@ test.describe('first-visit nav coach mark', () => {
     const hint = coachMark(page)
     await expect(hint).toBeVisible()
     await expect(
-      hint.getByText('Everything lives up here — RSVP, the schedule, the dancefloor and more.'),
+      hint.getByText('Everything lives up here — RSVP, the schedule, and Celebrate.'),
     ).toBeVisible()
 
     await hint.getByRole('button', { name: 'Got it' }).click()

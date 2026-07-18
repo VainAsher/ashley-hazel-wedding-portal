@@ -74,6 +74,10 @@ export function AuthLayout({ children, title, description }: AuthLayoutProps) {
               Ashley <span className="text-[#9b6b00]">&amp;</span> Hazel
             </p>
             <p className="m-0 text-lg font-bold">Saturday 19 June 2027 · Halifax</p>
+            <p className="m-0 mt-2 text-sm italic text-plum/80">
+              Jamaica and Zimbabwe, a journey through England, and now, Halifax —
+              come see where our sliding doors led us.
+            </p>
 
             {title && (
               <div className="mt-6 mb-2">

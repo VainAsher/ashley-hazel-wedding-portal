@@ -138,7 +138,7 @@ test('submitting a blessing adds it to the list and clears the message', async (
   await page.getByLabel('Message').fill('Congratulations to you both!')
   await page.getByRole('button', { name: 'Post blessing' }).click()
 
-  await expect(page.getByRole('status')).toHaveText('Thank you! Your blessing has been shared.')
+  await expect(page.getByRole('status')).toHaveText('Thanks! Your blessing has been shared.')
   await expect(blessingsRegion(page).getByText('Congratulations to you both!')).toBeVisible()
   await expect(page.getByLabel('Message')).toHaveValue('')
 })
