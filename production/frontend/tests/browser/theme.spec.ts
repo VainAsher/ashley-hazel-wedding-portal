@@ -50,7 +50,7 @@ test('default theme sets the canonical font stacks and injects NO Google Fonts l
 }) => {
   // page-cleanup already mocks /api/portal/theme with the canonical defaults.
   await page.goto('/invite')
-  await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: "One code, and you're in" })).toBeVisible()
 
   await expect.poll(() => rootStyles(page)).toEqual({
     display: 'Georgia, "Times New Roman", serif',
@@ -78,7 +78,7 @@ test('non-default theme sets the font CSS vars, scale, and one Google Fonts link
   )
 
   await page.goto('/invite')
-  await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: "One code, and you're in" })).toBeVisible()
 
   await expect.poll(() => rootStyles(page)).toEqual({
     display: '"Cormorant Garamond", Georgia, serif',
@@ -96,7 +96,7 @@ test('non-default theme sets the font CSS vars, scale, and one Google Fonts link
 
   // The headline actually renders in the chosen display stack via the
   // tailwind font-display -> var(--font-display) wiring.
-  await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toHaveCSS(
+  await expect(page.getByRole('heading', { name: "One code, and you're in" })).toHaveCSS(
     'font-family',
     /Cormorant Garamond/,
   )
@@ -117,7 +117,7 @@ test('a display-only font choice loads just that family', async ({ page }) => {
   )
 
   await page.goto('/invite')
-  await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: "One code, and you're in" })).toBeVisible()
 
   const link = page.locator(FONTS_LINK)
   await expect(link).toHaveCount(1)

@@ -66,7 +66,7 @@ test('routes from invite entry to guests and renders guest data', async ({ page 
   // Start unauthenticated at root
   await page.goto('/')
   await expect(page).toHaveURL(/\/invite$/)
-  await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: "One code, and you're in" })).toBeVisible()
 
   // Now unroute the 401 handler and replace with authenticated handler
   await page.unroute('**/api/auth/me')
@@ -141,5 +141,5 @@ test('direct guests route and fallback route are browser-accessible', async ({ p
 
   await page.goto('/not-a-real-route')
   await expect(page).toHaveURL(/\/invite$/)
-  await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: "One code, and you're in" })).toBeVisible()
 })

@@ -250,7 +250,7 @@ test('submits RSVP changes and locks the saved form', async ({ page }) => {
   await page.getByRole('button', { name: 'Save RSVP' }).click()
 
   // Verify success - wait for success alert to appear
-  await expect(page.locator('[role="alert"]').filter({ hasText: 'RSVP saved.' })).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('[role="alert"]').filter({ hasText: "Thanks — we've got your RSVP!" })).toBeVisible({ timeout: 5000 })
   await expect(page.getByRole('button', { name: 'Saved' })).toBeDisabled()
   await expect(page.getByLabel('Accept')).toBeDisabled()
 
@@ -375,7 +375,7 @@ test('submits meal choices for guest and plus one while open', async ({ page }) 
   await page.getByLabel('Dietary requirements').fill('No nuts')
 
   await page.getByRole('button', { name: 'Save RSVP' }).click()
-  await expect(page.locator('[role="alert"]').filter({ hasText: 'RSVP saved.' })).toBeVisible({ timeout: 5000 })
+  await expect(page.locator('[role="alert"]').filter({ hasText: "Thanks — we've got your RSVP!" })).toBeVisible({ timeout: 5000 })
 
   expect(requests).toEqual([
     {

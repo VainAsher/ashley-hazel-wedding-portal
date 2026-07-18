@@ -238,7 +238,7 @@ test('validates that a photo is selected before submitting', async ({ page }) =>
   const dialog = await openGallery(page)
   await openSharePhotoForm(dialog)
 
-  await dialog.getByRole('button', { name: 'Submit' }).click()
+  await dialog.getByRole('button', { name: 'Share photo' }).click()
 
   await expect(dialog.getByRole('alert')).toHaveText('Please select a photo to share.')
 })
@@ -254,7 +254,7 @@ test('submits a photo and shows the pending-approval message', async ({ page }) 
     buffer: PNG_BUFFER,
   })
 
-  await dialog.getByRole('button', { name: 'Submit' }).click()
+  await dialog.getByRole('button', { name: 'Share photo' }).click()
 
   await expect(dialog.getByRole('status')).toHaveText(
     'Thanks! Your photo was submitted for approval.',
@@ -298,7 +298,7 @@ test('submits a video and shows the pending-approval message', async ({ page }) 
     buffer: MP4_BUFFER,
   })
 
-  await dialog.getByRole('button', { name: 'Submit' }).click()
+  await dialog.getByRole('button', { name: 'Share photo' }).click()
 
   await expect(dialog.getByRole('status')).toHaveText(
     'Thanks! Your photo was submitted for approval.',

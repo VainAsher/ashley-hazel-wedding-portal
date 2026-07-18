@@ -285,7 +285,7 @@ export function GalleryContent() {
       setFeedback('Thanks! Your photo was submitted for approval.')
       resetForm()
     } catch (err) {
-      setSubmitError(err instanceof GalleryApiError ? err.message : 'Failed to submit photo')
+      setSubmitError(err instanceof GalleryApiError ? err.message : 'Unable to submit your photo.')
     }
   }
 
@@ -318,7 +318,7 @@ export function GalleryContent() {
 
       {isError && !isLoading && (
         <Alert variant="destructive">
-          {error instanceof Error ? error.message : 'Failed to load photos'}
+          {error instanceof Error ? error.message : 'Unable to load photos.'}
         </Alert>
       )}
 
@@ -377,7 +377,7 @@ export function GalleryContent() {
                     id="guest-gallery-title"
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
-                    placeholder="Optional"
+                    placeholder="Add a title (optional)"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -386,14 +386,14 @@ export function GalleryContent() {
                     id="guest-gallery-caption"
                     value={caption}
                     onChange={(event) => setCaption(event.target.value)}
-                    placeholder="Optional"
+                    placeholder="Add a caption (optional)"
                   />
                 </div>
               </div>
 
               <div className="flex justify-end">
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Submitting...' : 'Submit'}
+                  {isSubmitting ? 'Sharing...' : 'Share photo'}
                 </Button>
               </div>
             </form>

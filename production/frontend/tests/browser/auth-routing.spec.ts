@@ -121,7 +121,7 @@ test('unauthenticated root traffic lands on invite form', async ({ page }) => {
   await page.goto('/')
 
   await expect(page).toHaveURL(/\/invite$/)
-  await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: "One code, and you're in" })).toBeVisible()
 })
 
 test('unauthenticated RSVP traffic redirects to invite form', async ({ page }) => {
@@ -130,7 +130,7 @@ test('unauthenticated RSVP traffic redirects to invite form', async ({ page }) =
   await page.goto('/rsvp')
 
   await expect(page).toHaveURL(/\/invite$/)
-  await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: "One code, and you're in" })).toBeVisible()
 })
 
 test('authenticated guest root traffic lands on the dashboard', async ({ page }) => {

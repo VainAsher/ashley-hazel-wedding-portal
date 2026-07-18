@@ -123,7 +123,7 @@ function optionalTaskText(value: string): string | null {
 
 function validateTaskForm(form: TaskFormState): string | null {
   if (!form.title.trim()) {
-    return 'Task title is required.'
+    return 'Please give the task a title.'
   }
   return null
 }
@@ -228,7 +228,7 @@ function PlanningBoard({ party }: { party: PartyName }) {
       }
       closeDialog()
     } catch (err) {
-      const fallback = dialogMode === 'edit' ? 'Failed to update task' : 'Failed to add task'
+      const fallback = dialogMode === 'edit' ? 'Unable to update task.' : 'Unable to add task.'
       setFormError(err instanceof TaskApiError ? err.message : fallback)
     }
   }
@@ -253,7 +253,7 @@ function PlanningBoard({ party }: { party: PartyName }) {
       setFeedback('Task deleted successfully.')
       setTaskToDelete(null)
     } catch (err) {
-      setDeleteError(err instanceof TaskApiError ? err.message : 'Failed to delete task')
+      setDeleteError(err instanceof TaskApiError ? err.message : 'Unable to delete task.')
     }
   }
 
@@ -263,7 +263,7 @@ function PlanningBoard({ party }: { party: PartyName }) {
       { id: taskId, payload: target },
       {
         onError: (err) => {
-          setBoardError(err instanceof TaskApiError ? err.message : 'Failed to move task')
+          setBoardError(err instanceof TaskApiError ? err.message : 'Unable to move task.')
         },
       },
     )
@@ -275,7 +275,7 @@ function PlanningBoard({ party }: { party: PartyName }) {
       { id: task.id, payload: taskPayloadFromTask(task, { priority }) },
       {
         onError: (err) => {
-          setBoardError(err instanceof TaskApiError ? err.message : 'Failed to update priority')
+          setBoardError(err instanceof TaskApiError ? err.message : 'Unable to update priority.')
         },
       },
     )
@@ -287,7 +287,7 @@ function PlanningBoard({ party }: { party: PartyName }) {
       { id: task.id, payload: taskPayloadFromTask(task, { assigned_to: assignee }) },
       {
         onError: (err) => {
-          setBoardError(err instanceof TaskApiError ? err.message : 'Failed to update assignee')
+          setBoardError(err instanceof TaskApiError ? err.message : 'Unable to update assignee.')
         },
       },
     )
@@ -326,7 +326,7 @@ function PlanningBoard({ party }: { party: PartyName }) {
             tasks={taskList}
             isLoading={isLoading}
             isError={isError}
-            errorMessage={error instanceof Error ? error.message : 'Failed to load tasks'}
+            errorMessage={error instanceof Error ? error.message : 'Unable to load tasks.'}
             onCreateTask={openCreateDialog}
             onEditTask={openEditDialog}
             onDeleteTask={requestDelete}

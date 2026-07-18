@@ -31,7 +31,7 @@ const envelope = (page: Page) =>
 const replayButton = (page: Page) =>
   page.getByRole('button', { name: 'Replay the envelope opening' })
 const inviteHeading = (page: Page) =>
-  page.getByRole('heading', { name: 'Enter Invite Code' })
+  page.getByRole('heading', { name: "One code, and you're in" })
 
 test.describe('reduced motion', () => {
   test('renders the open invitation immediately with no envelope or confetti', async ({
@@ -76,7 +76,9 @@ test('first visit shows the sealed envelope; clicking it reveals a usable invite
 
   await page.getByLabel('Invite Code').fill('bad-code')
   await page.getByRole('button', { name: 'Enter the celebration' }).click()
-  await expect(page.getByRole('alert')).toHaveText('Code not found')
+  await expect(page.getByRole('alert')).toHaveText(
+    "We couldn't find that invite code — check it matches your invitation and try again.",
+  )
 
   // Confetti is one-shot: the canvas unmounts once the burst finishes.
   await expect(page.getByTestId('confetti-canvas')).toHaveCount(0, { timeout: 5000 })

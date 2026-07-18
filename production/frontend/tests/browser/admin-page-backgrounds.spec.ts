@@ -213,7 +213,7 @@ test('picks a stock photo, drags the focal point, zooms, saves, and the change p
 
   await main.getByRole('button', { name: 'Save all backgrounds' }).click()
   await expect(
-    page.getByRole('status').filter({ hasText: 'Page backgrounds saved.' }),
+    page.getByRole('status').filter({ hasText: 'Page backgrounds saved' }),
   ).toBeVisible()
 
   const lastPayload = putPayloads.at(-1) as { theme: WeddingThemeSettings }

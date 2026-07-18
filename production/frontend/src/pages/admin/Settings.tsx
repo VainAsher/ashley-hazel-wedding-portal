@@ -222,7 +222,7 @@ function ThemeCard({ settings }: { settings: WeddingSettings }) {
         setTheme(DEFAULT_THEME)
       }
     } catch (err) {
-      setSaveError(err instanceof SettingsApiError ? err.message : 'Failed to save theme')
+      setSaveError(err instanceof SettingsApiError ? err.message : 'Unable to save theme.')
     }
   }
 
@@ -424,7 +424,7 @@ function PartyVisibilityCard({ settings }: { settings: WeddingSettings }) {
       await updateMutation.mutateAsync({ party_visibility_mode: value })
       setFeedback('Party visibility saved.')
     } catch (err) {
-      setSaveError(err instanceof SettingsApiError ? err.message : 'Failed to save party visibility')
+      setSaveError(err instanceof SettingsApiError ? err.message : 'Unable to save party visibility.')
     }
   }
 
@@ -517,7 +517,7 @@ function LayoutModeCard({ settings }: { settings: WeddingSettings }) {
       })
       setFeedback('Guest page navigation saved.')
     } catch (err) {
-      setSaveError(err instanceof SettingsApiError ? err.message : 'Failed to save guest page navigation')
+      setSaveError(err instanceof SettingsApiError ? err.message : 'Unable to save guest page navigation.')
     }
   }
 
@@ -667,7 +667,7 @@ function PageBackgroundsCard({ settings }: { settings: WeddingSettings }) {
       const result = await uploadMutation.mutateAsync(file)
       selectPhoto('upload', result.url)
     } catch (err) {
-      setUploadError(err instanceof SettingsApiError ? err.message : 'Failed to upload photo')
+      setUploadError(err instanceof SettingsApiError ? err.message : 'Unable to upload photo.')
     }
   }
 
@@ -693,9 +693,9 @@ function PageBackgroundsCard({ settings }: { settings: WeddingSettings }) {
       await updateMutation.mutateAsync({
         theme: { ...baseTheme, page_backgrounds: backgrounds },
       })
-      setFeedback('Page backgrounds saved.')
+      setFeedback('Page backgrounds saved — guests will see this from now on.')
     } catch (err) {
-      setSaveError(err instanceof SettingsApiError ? err.message : 'Failed to save page backgrounds')
+      setSaveError(err instanceof SettingsApiError ? err.message : 'Unable to save page backgrounds.')
     }
   }
 
@@ -958,7 +958,7 @@ export function Settings() {
       await updateMutation.mutateAsync(buildPayload(form))
       setFeedback('Settings saved successfully.')
     } catch (err) {
-      setFormError(err instanceof SettingsApiError ? err.message : 'Failed to save settings')
+      setFormError(err instanceof SettingsApiError ? err.message : 'Unable to save settings.')
     }
   }
 
@@ -989,7 +989,7 @@ export function Settings() {
 
         {isError && !isLoading && (
           <Alert variant="destructive">
-            {error instanceof Error ? error.message : 'Failed to load settings'}
+            {error instanceof Error ? error.message : 'Unable to load settings.'}
           </Alert>
         )}
 

@@ -47,7 +47,7 @@ test('redirects unauthenticated root traffic to invite form', async ({ page }) =
   await page.goto('/')
 
   await expect(page).toHaveURL(/\/invite$/)
-  await expect(page.getByRole('heading', { name: 'Enter Invite Code' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: "One code, and you're in" })).toBeVisible()
   await expect(page.getByLabel('Invite Code')).toBeVisible()
 })
 
@@ -56,7 +56,7 @@ test('requires an invite code before submitting', async ({ page }) => {
 
   await page.getByRole('button', { name: 'Enter the celebration' }).click()
 
-  await expect(page.getByRole('alert')).toHaveText('Invite code is required.')
+  await expect(page.getByRole('alert')).toHaveText('Please enter your invite code.')
 })
 
 test('shows code not found for invalid invite response', async ({ page }) => {
@@ -68,7 +68,9 @@ test('shows code not found for invalid invite response', async ({ page }) => {
   await page.getByLabel('Invite Code').fill('bad-code')
   await page.getByRole('button', { name: 'Enter the celebration' }).click()
 
-  await expect(page.getByRole('alert')).toHaveText('Code not found')
+  await expect(page.getByRole('alert')).toHaveText(
+    "We couldn't find that invite code — check it matches your invitation and try again.",
+  )
   await expect(page).toHaveURL(/\/invite$/)
 })
 

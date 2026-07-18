@@ -131,7 +131,7 @@ function FirstVisitHint() {
         />
         <div className="flex items-start gap-3">
           <p className="m-0 flex-1 text-sm leading-relaxed text-plum">
-            Everything lives up here — RSVP, the schedule, the dancefloor and more.
+            Everything lives up here — RSVP, the schedule, and Celebrate.
           </p>
           <button
             type="button"
