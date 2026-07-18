@@ -1,3 +1,5 @@
+import type { WeddingTheme } from '@/lib/theme'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export interface PortalWedding {
@@ -89,15 +91,7 @@ export function fetchPortalProgress(apiBaseUrl = API_BASE_URL): Promise<PortalPr
 }
 
 export interface PortalThemeResponse {
-  theme: {
-    primary: string
-    secondary: string
-    tint_opacity: number
-    display_font: string
-    body_font: string
-    type_scale: number
-    layout_mode: 'paged' | 'scroll'
-  } | null
+  theme: WeddingTheme | null
 }
 
 // Public (pre-login) — the invite page needs the couple's colours too.

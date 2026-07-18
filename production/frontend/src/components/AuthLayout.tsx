@@ -1,7 +1,7 @@
 import React from 'react'
 
 import { usePortalTheme } from '@/hooks/useTheme'
-import { buildTint } from '@/lib/theme'
+import { buildTint, resolvePageBackground } from '@/lib/theme'
 
 interface AuthLayoutProps {
   children: React.ReactNode
@@ -12,17 +12,27 @@ interface AuthLayoutProps {
 export function AuthLayout({ children, title, description }: AuthLayoutProps) {
   const theme = usePortalTheme()
   const tint = buildTint(theme.secondary, theme.tint_opacity)
+  const background = resolvePageBackground('invite', theme)
 
   return (
     <div className="min-h-screen flex flex-col text-cream">
-      {/* Photo backdrop under the prototype's plum night gradient */}
-      <div
-        aria-hidden="true"
-        className="fixed inset-0 -z-10 bg-cover bg-center"
-        style={{
-          backgroundImage: `${tint}, url(/backgrounds/bg-06-registry-candid.jpg)`,
-        }}
-      />
+      {/* Photo backdrop under the prototype's plum night gradient. Same
+          clip-wrapper + photo layer + tint layer split as GuestLayout, so
+          the couple's chosen focal point/zoom (ROADMAP item 18) applies here
+          too -- see docs/specs/PAGE_BACKGROUNDS.md. */}
+      <div aria-hidden="true" className="fixed inset-0 -z-10 overflow-hidden">
+        <div
+          data-testid="guest-backdrop-photo"
+          className="absolute inset-0 bg-cover"
+          style={{
+            backgroundImage: `url(${background.url})`,
+            backgroundPosition: `${background.focal_x}% ${background.focal_y}%`,
+            transform: `scale(${background.zoom})`,
+            transformOrigin: `${background.focal_x}% ${background.focal_y}%`,
+          }}
+        />
+        <div className="absolute inset-0" style={{ backgroundImage: tint }} />
+      </div>
 
       {/* Header */}
       <header className="border-b border-gold/40 bg-plum-night/80 backdrop-blur-sm sticky top-0 z-50">

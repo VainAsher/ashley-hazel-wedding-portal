@@ -9,7 +9,7 @@ import { PagedGuestDeck, type PagedGuestDeckPage } from '@/components/PagedGuest
 import { usePartyAccess } from '@/hooks/useParty'
 import { usePortalTheme } from '@/hooks/useTheme'
 import { Button } from '@/components/ui/button'
-import { buildTint } from '@/lib/theme'
+import { buildTint, resolvePageBackground, type PageBackground, type PageBackgroundKey } from '@/lib/theme'
 import { cn } from '@/lib/utils'
 import { DashboardContent } from '@/pages/Dashboard'
 import { RSVPContent } from '@/pages/RSVP'
@@ -33,6 +33,17 @@ const ROUTE_BACKGROUNDS: Record<string, string> = {
   '/wedding-party': '/backgrounds/bg-02-registry-office.jpg',
   '/party/stag': '/backgrounds/bg-04-woodland-walk.jpg',
   '/party/hen': '/backgrounds/bg-01-winter-selfie.jpg',
+}
+
+// ROADMAP item 18 (docs/specs/PAGE_BACKGROUNDS.md): routes the couple can
+// set a custom background/focal-point/zoom for. Stag/Hen are deliberately
+// excluded from v1 -- they keep resolving through ROUTE_BACKGROUNDS above.
+const PAGE_BACKGROUND_ROUTE_KEYS: Partial<Record<string, PageBackgroundKey>> = {
+  '/dashboard': 'dashboard',
+  '/rsvp': 'rsvp',
+  '/schedule': 'schedule',
+  '/celebrate': 'celebrate',
+  '/wedding-party': 'wedding_party',
 }
 
 // Wave 4 item 17 Phase 1 (docs/specs/VIEWPORT_PAGING_PHASE1.md), expanded
@@ -121,7 +132,19 @@ export function GuestLayout({ children }: GuestLayoutProps) {
     return <Navigate replace to="/admin" />
   }
 
-  const backgroundImage = ROUTE_BACKGROUNDS[pathname] ?? ROUTE_BACKGROUNDS['/dashboard']
+  // ROADMAP item 18 (docs/specs/PAGE_BACKGROUNDS.md): routes the couple can
+  // customize a background for resolve through theme.page_backgrounds;
+  // everything else (Stag/Hen for now) keeps the legacy static map.
+  const pageBackgroundKey = PAGE_BACKGROUND_ROUTE_KEYS[pathname]
+  const background: PageBackground = pageBackgroundKey
+    ? resolvePageBackground(pageBackgroundKey, theme)
+    : {
+        source: 'stock',
+        url: ROUTE_BACKGROUNDS[pathname] ?? ROUTE_BACKGROUNDS['/dashboard'],
+        focal_x: 50,
+        focal_y: 50,
+        zoom: 1.0,
+      }
   const tint = buildTint(theme.secondary, theme.tint_opacity)
 
   const navigationItems = [
@@ -139,12 +162,24 @@ export function GuestLayout({ children }: GuestLayoutProps) {
 
   return (
     <div className={cn('flex flex-col', isPagedActive ? 'h-[100dvh] overflow-hidden' : 'min-h-screen')}>
-      {/* Fixed photo backdrop with plum tint */}
-      <div
-        aria-hidden="true"
-        className="fixed inset-0 -z-10 bg-cover bg-center"
-        style={{ backgroundImage: `${tint}, url(${backgroundImage})` }}
-      />
+      {/* Fixed photo backdrop with plum tint. Split into a clip wrapper +
+          photo layer + tint layer (rather than one combined multi-background
+          div) so a per-page focal point/zoom (item 18) can transform just
+          the photo without distorting the tint -- see
+          docs/specs/PAGE_BACKGROUNDS.md for the geometry reasoning. */}
+      <div aria-hidden="true" className="fixed inset-0 -z-10 overflow-hidden">
+        <div
+          data-testid="guest-backdrop-photo"
+          className="absolute inset-0 bg-cover"
+          style={{
+            backgroundImage: `url(${background.url})`,
+            backgroundPosition: `${background.focal_x}% ${background.focal_y}%`,
+            transform: `scale(${background.zoom})`,
+            transformOrigin: `${background.focal_x}% ${background.focal_y}%`,
+          }}
+        />
+        <div className="absolute inset-0" style={{ backgroundImage: tint }} />
+      </div>
 
       {/* Decorative sunflower & lavender frame -- above the tint, below all
           content. White centre keyed to transparent so only the corners

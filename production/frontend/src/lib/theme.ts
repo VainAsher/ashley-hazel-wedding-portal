@@ -7,6 +7,26 @@
 // mirrors this allowlist in app/db/schemas.py (THEME_LAYOUT_MODES).
 export type LayoutMode = 'paged' | 'scroll'
 
+// ROADMAP item 18 (docs/specs/PAGE_BACKGROUNDS.md): per-page background
+// photo + focal point/zoom, couple-set in admin Settings. Backend mirrors
+// this in app/db/schemas.py (PageBackground, PAGE_BACKGROUND_KEYS).
+export type PageBackgroundSource = 'stock' | 'gallery' | 'upload'
+export type PageBackgroundKey =
+  | 'dashboard'
+  | 'rsvp'
+  | 'schedule'
+  | 'celebrate'
+  | 'wedding_party'
+  | 'invite'
+
+export interface PageBackground {
+  source: PageBackgroundSource
+  url: string
+  focal_x: number
+  focal_y: number
+  zoom: number
+}
+
 export interface WeddingTheme {
   primary: string
   secondary: string
@@ -15,6 +35,7 @@ export interface WeddingTheme {
   body_font: string
   type_scale: number
   layout_mode: LayoutMode
+  page_backgrounds: Partial<Record<PageBackgroundKey, PageBackground>>
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +116,83 @@ export const DEFAULT_THEME: WeddingTheme = {
   body_font: THEME_BODY_FONTS[0].value,
   type_scale: 1.0,
   layout_mode: 'paged',
+  page_backgrounds: {},
+}
+
+// ---------------------------------------------------------------------------
+// Per-page backgrounds (ROADMAP item 18, docs/specs/PAGE_BACKGROUNDS.md)
+// ---------------------------------------------------------------------------
+
+// Mirrors production/frontend/public/backgrounds/*.jpg and the backend's
+// STOCK_BACKGROUND_FILES allowlist — keep all three in sync.
+export const STOCK_BACKGROUNDS: { file: string; label: string }[] = [
+  { file: 'bg-01-winter-selfie.jpg', label: 'Winter selfie' },
+  { file: 'bg-02-registry-office.jpg', label: 'Registry office' },
+  { file: 'bg-03-waterfall.jpg', label: 'Waterfall' },
+  { file: 'bg-04-woodland-walk.jpg', label: 'Woodland walk' },
+  { file: 'bg-05-evening-sky.jpg', label: 'Evening sky' },
+  { file: 'bg-06-registry-candid.jpg', label: 'Registry candid' },
+]
+
+// Reproduces today's ROUTE_BACKGROUNDS values at the neutral focal point/zoom
+// that renders identically to plain bg-cover/bg-center — this is what keeps
+// an uncustomized wedding (theme.page_backgrounds missing a key, or the whole
+// theme null) visually unchanged until the couple actively picks a photo.
+export const DEFAULT_PAGE_BACKGROUNDS: Record<PageBackgroundKey, PageBackground> = {
+  dashboard: {
+    source: 'stock',
+    url: '/backgrounds/bg-02-registry-office.jpg',
+    focal_x: 50,
+    focal_y: 50,
+    zoom: 1.0,
+  },
+  rsvp: {
+    source: 'stock',
+    url: '/backgrounds/bg-03-waterfall.jpg',
+    focal_x: 50,
+    focal_y: 50,
+    zoom: 1.0,
+  },
+  schedule: {
+    source: 'stock',
+    url: '/backgrounds/bg-04-woodland-walk.jpg',
+    focal_x: 50,
+    focal_y: 50,
+    zoom: 1.0,
+  },
+  celebrate: {
+    source: 'stock',
+    url: '/backgrounds/bg-05-evening-sky.jpg',
+    focal_x: 50,
+    focal_y: 50,
+    zoom: 1.0,
+  },
+  wedding_party: {
+    source: 'stock',
+    url: '/backgrounds/bg-02-registry-office.jpg',
+    focal_x: 50,
+    focal_y: 50,
+    zoom: 1.0,
+  },
+  invite: {
+    source: 'stock',
+    url: '/backgrounds/bg-06-registry-candid.jpg',
+    focal_x: 50,
+    focal_y: 50,
+    zoom: 1.0,
+  },
+}
+
+/**
+ * Resolves key-by-key against DEFAULT_PAGE_BACKGROUNDS, independent of
+ * themeWithDefaults()'s shallow merge (Settings.tsx) — so guest-facing
+ * rendering never depends on that admin-only merge behaviour.
+ */
+export function resolvePageBackground(
+  key: PageBackgroundKey,
+  theme: WeddingTheme,
+): PageBackground {
+  return theme.page_backgrounds?.[key] ?? DEFAULT_PAGE_BACKGROUNDS[key]
 }
 
 export function findDisplayFont(value: string | undefined): FontOption {
