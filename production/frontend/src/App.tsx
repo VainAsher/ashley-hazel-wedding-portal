@@ -39,23 +39,17 @@ const Gallery = lazy(() =>
 const Settings = lazy(() =>
   import('./pages/admin/Settings').then((m) => ({ default: m.Settings })),
 )
-const GuestGalleryContent = lazy(() =>
-  import('./pages/Gallery').then((m) => ({ default: m.GalleryContent })),
-)
 const DashboardContent = lazy(() =>
   import('./pages/Dashboard').then((m) => ({ default: m.DashboardContent })),
 )
 const ScheduleContent = lazy(() =>
   import('./pages/Schedule').then((m) => ({ default: m.ScheduleContent })),
 )
-const BlessingsContent = lazy(() =>
-  import('./pages/Blessings').then((m) => ({ default: m.BlessingsContent })),
+const CelebrateContent = lazy(() =>
+  import('./pages/Celebrate').then((m) => ({ default: m.CelebrateContent })),
 )
 const AdminBlessings = lazy(() =>
   import('./pages/admin/Blessings').then((m) => ({ default: m.Blessings })),
-)
-const MusicContent = lazy(() =>
-  import('./pages/Music').then((m) => ({ default: m.MusicContent })),
 )
 const AdminMusic = lazy(() =>
   import('./pages/admin/Music').then((m) => ({ default: m.Music })),
@@ -119,13 +113,19 @@ function App() {
           <Routes>
             <Route element={<HomeRedirect />} path="/" />
             <Route element={<Invite />} path="/invite" />
+            {/* Blessings/Dancefloor/Gallery consolidated into one Celebrate
+                hub page (launcher cards opening each in a modal) -- these
+                redirect old bookmarks/notification links rather than 404ing.
+                A deep link doesn't yet auto-open the specific modal; that's
+                a reasonable fast-follow, not a blocker. */}
+            <Route element={<Navigate replace to="/celebrate" />} path="/blessings" />
+            <Route element={<Navigate replace to="/celebrate" />} path="/music" />
+            <Route element={<Navigate replace to="/celebrate" />} path="/gallery" />
             <Route element={<PagedGuestLayoutRoute />}>
               <Route element={<DashboardContent />} path="/dashboard" />
               <Route element={<RSVPContent />} path="/rsvp" />
               <Route element={<ScheduleContent />} path="/schedule" />
-              <Route element={<BlessingsContent />} path="/blessings" />
-              <Route element={<MusicContent />} path="/music" />
-              <Route element={<GuestGalleryContent />} path="/gallery" />
+              <Route element={<CelebrateContent />} path="/celebrate" />
               <Route element={<WeddingPartyContent />} path="/wedding-party" />
               <Route element={<PartyRouteResolver />} path="/party/:party" />
             </Route>

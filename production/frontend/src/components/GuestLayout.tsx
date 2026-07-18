@@ -14,9 +14,7 @@ import { cn } from '@/lib/utils'
 import { DashboardContent } from '@/pages/Dashboard'
 import { RSVPContent } from '@/pages/RSVP'
 import { ScheduleContent } from '@/pages/Schedule'
-import { BlessingsContent } from '@/pages/Blessings'
-import { MusicContent } from '@/pages/Music'
-import { GalleryContent } from '@/pages/Gallery'
+import { CelebrateContent } from '@/pages/Celebrate'
 import { WeddingPartyContent } from '@/pages/WeddingParty'
 import { PartyContent } from '@/pages/Party'
 import type { PartyAccess } from '@/hooks/useParty'
@@ -31,9 +29,7 @@ const ROUTE_BACKGROUNDS: Record<string, string> = {
   '/dashboard': '/backgrounds/bg-02-registry-office.jpg',
   '/rsvp': '/backgrounds/bg-03-waterfall.jpg',
   '/schedule': '/backgrounds/bg-04-woodland-walk.jpg',
-  '/blessings': '/backgrounds/bg-01-winter-selfie.jpg',
-  '/music': '/backgrounds/bg-05-evening-sky.jpg',
-  '/gallery': '/backgrounds/bg-05-evening-sky.jpg',
+  '/celebrate': '/backgrounds/bg-05-evening-sky.jpg',
   '/wedding-party': '/backgrounds/bg-02-registry-office.jpg',
   '/party/stag': '/backgrounds/bg-04-woodland-walk.jpg',
   '/party/hen': '/backgrounds/bg-01-winter-selfie.jpg',
@@ -55,9 +51,7 @@ function buildPagedDeckPages(partyAccess: PartyAccess | undefined): PagedGuestDe
     { id: 'dashboard', label: 'Dashboard', path: '/dashboard', content: <DashboardContent /> },
     { id: 'rsvp', label: 'RSVP', path: '/rsvp', content: <RSVPContent /> },
     { id: 'schedule', label: 'Schedule', path: '/schedule', content: <ScheduleContent /> },
-    { id: 'blessings', label: 'Blessings', path: '/blessings', content: <BlessingsContent /> },
-    { id: 'music', label: 'Dancefloor', path: '/music', content: <MusicContent /> },
-    { id: 'gallery', label: 'Gallery', path: '/gallery', content: <GalleryContent /> },
+    { id: 'celebrate', label: 'Celebrate', path: '/celebrate', content: <CelebrateContent /> },
     { id: 'wedding-party', label: 'Wedding Party', path: '/wedding-party', content: <WeddingPartyContent /> },
     ...(partyAccess?.stag
       ? [{ id: 'party-stag', label: 'Stag Do', path: '/party/stag', content: <PartyContent party="stag" /> }]
@@ -134,9 +128,7 @@ export function GuestLayout({ children }: GuestLayoutProps) {
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'RSVP', href: '/rsvp' },
     { label: 'Schedule', href: '/schedule' },
-    { label: 'Blessings', href: '/blessings' },
-    { label: 'Dancefloor', href: '/music' },
-    { label: 'Gallery', href: '/gallery' },
+    { label: 'Celebrate', href: '/celebrate' },
     // Unlike Stag Do/Hen Do below, this has no gating -- the "Meet the
     // wedding party" directory is open to every logged-in guest.
     { label: 'Wedding Party', href: '/wedding-party' },

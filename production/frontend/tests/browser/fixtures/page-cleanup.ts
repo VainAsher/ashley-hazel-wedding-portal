@@ -81,6 +81,36 @@ export async function cleanupPageState(page: Page): Promise<void> {
       }),
     )
 
+    // The Celebrate hub (Blessings/Dancefloor/Gallery consolidated onto one
+    // screen, see Celebrate.tsx) fetches all three of these for its
+    // launcher-card teasers regardless of which modal a guest opens, and
+    // paged mode mounts it alongside every other slide. Default to empty so
+    // a spec that only cares about one of these three areas -- or doesn't
+    // touch Celebrate at all -- doesn't need to mock the other two just to
+    // stay console-error-free; a spec exercising one of these areas
+    // registers its own route, which wins.
+    await page.route('**/api/blessings', (route) =>
+      route.fulfill({
+        body: JSON.stringify([]),
+        contentType: 'application/json',
+        status: 200,
+      }),
+    )
+    await page.route('**/api/music/requests/wall', (route) =>
+      route.fulfill({
+        body: JSON.stringify({ songs: [], now_playing: null }),
+        contentType: 'application/json',
+        status: 200,
+      }),
+    )
+    await page.route('**/api/gallery/approved', (route) =>
+      route.fulfill({
+        body: JSON.stringify([]),
+        contentType: 'application/json',
+        status: 200,
+      }),
+    )
+
     // Clear cookies and local storage
     await page.context().clearCookies()
     await page.evaluate(() => {

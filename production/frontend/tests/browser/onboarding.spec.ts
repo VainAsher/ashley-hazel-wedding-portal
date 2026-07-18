@@ -84,14 +84,15 @@ test.describe('onboarding checklist', () => {
     await expect(card.getByText('RSVP received — thank you!')).toBeVisible()
     await expect(card.getByText("Blessing posted — they'll treasure it.")).toBeVisible()
 
-    // Remaining items carry CTA links to the right pages.
+    // Remaining items carry CTA links to the right pages. Song request and
+    // photo share both live on the Celebrate hub now (see Celebrate.tsx).
     await expect(card.getByRole('link', { name: 'Request a song' })).toHaveAttribute(
       'href',
-      '/music',
+      '/celebrate',
     )
     await expect(card.getByRole('link', { name: 'Share a photo' })).toHaveAttribute(
       'href',
-      '/gallery',
+      '/celebrate',
     )
     await expect(card.getByRole('link', { name: 'RSVP now' })).toHaveCount(0)
   })
@@ -220,8 +221,9 @@ test.describe('how this works dialog', () => {
     await expect(dialog).toBeVisible()
     await expect(dialog.getByRole('heading', { name: 'How this works' })).toBeVisible()
 
-    // One sentence per page, all six pages present.
-    for (const pageName of ['Dashboard', 'RSVP', 'Schedule', 'Blessings', 'Dancefloor', 'Gallery']) {
+    // One sentence per page, all four present (Blessings/Dancefloor/Gallery
+    // consolidated into the Celebrate hub -- see Celebrate.tsx).
+    for (const pageName of ['Dashboard', 'RSVP', 'Schedule', 'Celebrate']) {
       await expect(dialog.getByText(pageName, { exact: true })).toBeVisible()
     }
     // The phase note about RSVP/songs opening when the couple flips live.

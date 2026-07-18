@@ -13,10 +13,8 @@ import { ChevronLeft, ChevronRight, Image as ImageIcon, Pause, Play } from 'luci
 import { Alert } from '../components/ui/alert'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../components/ui/dialog'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
-import { usePageTitle } from '../hooks/usePageTitle'
 import {
   GalleryApiError,
   useApprovedGallery,
@@ -24,7 +22,6 @@ import {
   type GalleryItem,
 } from '../hooks/useGallery'
 
-const PAGE_SIZE = 24
 const SLIDESHOW_INTERVAL_MS = 4000
 
 // Bulk-loaded photos carry their camera filename as a title
@@ -64,69 +61,20 @@ function altText(photo: GalleryItem): string {
   return displayLabel(photo) ?? photo.caption?.trim() ?? 'Wedding photo shared by a guest'
 }
 
-function GalleryGrid({
-  photos,
-  onOpen,
-}: {
-  photos: GalleryItem[]
-  onOpen: (index: number) => void
-}) {
-  return (
-    <section
-      aria-label="Photo gallery"
-      className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
-    >
-      {photos.map((photo, index) => {
-        const label = displayLabel(photo)
-        const caption = photo.caption?.trim()
-        const isVideo = photo.content_type?.startsWith('video/') ?? false
-
-        return (
-          <Card key={photo.id} className="flex flex-col overflow-hidden">
-            <figure className="m-0 flex flex-1 flex-col">
-              <button
-                type="button"
-                onClick={() => onOpen(index)}
-                className="block w-full cursor-zoom-in border-0 bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                aria-label={`View photo full size: ${altText(photo)}`}
-              >
-                {isVideo ? (
-                  <div className="flex aspect-square w-full items-center justify-center bg-gray-900">
-                    <Play className="h-10 w-10 text-white" aria-hidden="true" />
-                  </div>
-                ) : (
-                  <img
-                    src={photo.thumb_url ?? photo.url}
-                    alt={altText(photo)}
-                    loading="lazy"
-                    decoding="async"
-                    className="aspect-square w-full object-cover"
-                  />
-                )}
-              </button>
-              {(label || caption) && (
-                <figcaption className="flex flex-1 flex-col gap-1 p-3">
-                  {label && <span className="text-sm font-semibold text-gray-900">{label}</span>}
-                  {caption && <span className="text-sm text-gray-600">{caption}</span>}
-                </figcaption>
-              )}
-            </figure>
-          </Card>
-        )
-      })}
-    </section>
-  )
-}
-
-function Lightbox({
+// The primary photo/video display -- one photo at a time (hero), not a
+// grid. Plain markup, not a Dialog: this is the default view of the page
+// now (see GalleryContent below), and when Gallery is mounted inside the
+// Celebrate hub's own modal, nesting a second Dialog here would double
+// focus-trap/scroll-lock. Keyboard nav is scoped to this element's own
+// focus (tabIndex + onKeyDown) rather than a window-level listener, so it
+// doesn't fight the paged deck's own arrow-key slide navigation.
+function GalleryViewer({
   photos,
   index,
-  onClose,
   onNavigate,
 }: {
   photos: GalleryItem[]
   index: number
-  onClose: () => void
   onNavigate: (index: number) => void
 }) {
   const [isPlaying, setIsPlaying] = useState(false)
@@ -170,90 +118,129 @@ function Lightbox({
   const isVideo = photo.content_type?.startsWith('video/') ?? false
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent
-        onKeyDown={handleKeyDown}
-        className="max-w-[96vw] gap-2 border-none bg-black/95 p-2 text-white sm:max-w-5xl sm:p-4 [&>button]:text-white"
-      >
-        <DialogTitle className="sr-only">
-          {label ? `Photo: ${label}` : 'Wedding photo'}
-        </DialogTitle>
-        <DialogDescription className="sr-only">
-          Use the left and right arrow keys to move between photos.
-        </DialogDescription>
+    <div
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
+      className="grid gap-2 rounded-2xl bg-black/95 p-2 text-white outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-4"
+    >
+      <div className="flex min-h-[50vh] items-center justify-center">
+        {isVideo ? (
+          <video
+            key={photo.id}
+            src={photo.url}
+            controls
+            autoPlay={false}
+            className="mx-auto max-h-[60vh] w-auto max-w-full object-contain"
+          >
+            Sorry, your browser can&apos;t play this video.
+          </video>
+        ) : (
+          <img
+            src={photo.url}
+            alt={altText(photo)}
+            className="mx-auto max-h-[60vh] w-auto max-w-full object-contain"
+          />
+        )}
+      </div>
 
-        <div className="flex min-h-[50vh] items-center justify-center">
-          {isVideo ? (
-            <video
-              key={photo.id}
-              src={photo.url}
-              controls
-              autoPlay={false}
-              className="mx-auto max-h-[78vh] w-auto max-w-full object-contain"
-            >
-              Sorry, your browser can&apos;t play this video.
-            </video>
-          ) : (
-            <img
-              src={photo.url}
-              alt={altText(photo)}
-              className="mx-auto max-h-[78vh] w-auto max-w-full object-contain"
-            />
-          )}
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0 text-sm">
+          {label && <p className="m-0 truncate font-medium">{label}</p>}
+          {caption && <p className="m-0 truncate text-gray-300">{caption}</p>}
+          <p className="m-0 text-xs text-gray-400">
+            {index + 1} of {photos.length}
+          </p>
         </div>
-
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0 text-sm">
-            {label && <p className="m-0 truncate font-medium">{label}</p>}
-            {caption && <p className="m-0 truncate text-gray-300">{caption}</p>}
-            <p className="m-0 text-xs text-gray-400">
-              {index + 1} of {photos.length}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20 hover:text-white"
-              onClick={() => goTo(-1)}
-              aria-label="Previous photo"
-            >
-              <ChevronLeft aria-hidden="true" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20 hover:text-white"
-              onClick={() => setIsPlaying((playing) => !playing)}
-              aria-label={isPlaying ? 'Pause slideshow' : 'Play slideshow'}
-            >
-              {isPlaying ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20 hover:text-white"
-              onClick={() => goTo(1)}
-              aria-label="Next photo"
-            >
-              <ChevronRight aria-hidden="true" />
-            </Button>
-          </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-white/20 hover:text-white"
+            onClick={() => goTo(-1)}
+            aria-label="Previous photo"
+          >
+            <ChevronLeft aria-hidden="true" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-white/20 hover:text-white"
+            onClick={() => setIsPlaying((playing) => !playing)}
+            aria-label={isPlaying ? 'Pause slideshow' : 'Play slideshow'}
+          >
+            {isPlaying ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-white/20 hover:text-white"
+            onClick={() => goTo(1)}
+            aria-label="Next photo"
+          >
+            <ChevronRight aria-hidden="true" />
+          </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   )
 }
 
-// The actual page content, no GuestLayout wrapper -- App.tsx routes directly
-// to this (both in scroll mode, via the shared PagedGuestLayoutRoute's
-// <Outlet/>, and in paged mode, mounted inside PagedGuestDeck). See
-// docs/specs/VIEWPORT_PAGING_PHASE1.md.
+// Secondary navigation for the hero above -- a scrollable strip of
+// thumbnails standing in for the old full grid.
+function GalleryFilmstrip({
+  photos,
+  activeIndex,
+  onSelect,
+}: {
+  photos: GalleryItem[]
+  activeIndex: number
+  onSelect: (index: number) => void
+}) {
+  return (
+    <div aria-label="Photo filmstrip" className="flex gap-2 overflow-x-auto pb-1">
+      {photos.map((photo, index) => {
+        const isVideo = photo.content_type?.startsWith('video/') ?? false
+        const active = index === activeIndex
+
+        return (
+          <button
+            key={photo.id}
+            type="button"
+            onClick={() => onSelect(index)}
+            aria-current={active}
+            aria-label={`View photo ${index + 1} of ${photos.length}: ${altText(photo)}`}
+            className={`block flex-shrink-0 overflow-hidden rounded-lg border-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              active ? 'border-gold' : 'border-transparent'
+            }`}
+          >
+            {isVideo ? (
+              <div className="flex h-14 w-14 items-center justify-center bg-gray-900">
+                <Play className="h-5 w-5 text-white" aria-hidden="true" />
+              </div>
+            ) : (
+              <img
+                src={photo.thumb_url ?? photo.url}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="h-14 w-14 object-cover"
+              />
+            )}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// Mounted inside a modal by CelebrateContent (see Celebrate.tsx), which owns
+// this route's document title -- no usePageTitle call here, since unmounting
+// on modal close would otherwise reset the tab title to the generic site
+// default instead of back to "Celebrate".
 export function GalleryContent() {
-  usePageTitle('Gallery')
   const { data: photos, isLoading, isError, error } = useApprovedGallery()
   const submitMutation = useSubmitGalleryItem()
 
@@ -263,12 +250,10 @@ export function GalleryContent() {
   const [caption, setCaption] = useState('')
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<string | null>(null)
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const [activeIndex, setActiveIndex] = useState(0)
 
   const photoList = photos ?? []
-  const visiblePhotos = photoList.slice(0, visibleCount)
-  const remaining = photoList.length - visiblePhotos.length
+  const safeIndex = photoList.length > 0 ? Math.min(activeIndex, photoList.length - 1) : 0
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     setSubmitError(null)
@@ -307,23 +292,61 @@ export function GalleryContent() {
   const isSubmitting = submitMutation.isPending
 
   return (
-      <div className="max-w-5xl mx-auto w-full grid gap-6">
+    <div className="max-w-5xl mx-auto w-full grid gap-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Gallery</CardTitle>
+          <CardDescription>Browse approved photos and share your own.</CardDescription>
+        </CardHeader>
+      </Card>
+
+      {feedback && (
+        <Alert variant="success" role="status" aria-live="polite">
+          {feedback}
+        </Alert>
+      )}
+
+      {isLoading && (
         <Card>
-          <CardHeader>
-            <CardTitle>Gallery</CardTitle>
-            <CardDescription>Browse approved photos and share your own.</CardDescription>
-          </CardHeader>
+          <CardContent className="pt-6">
+            <div role="status" className="text-gray-600 text-sm">
+              Loading photos...
+            </div>
+          </CardContent>
         </Card>
+      )}
 
-        {feedback && (
-          <Alert variant="success" role="status" aria-live="polite">
-            {feedback}
-          </Alert>
-        )}
+      {isError && !isLoading && (
+        <Alert variant="destructive">
+          {error instanceof Error ? error.message : 'Failed to load photos'}
+        </Alert>
+      )}
 
-        <Card>
+      {!isLoading && !isError && photoList.length === 0 && (
+        <Card className="flex flex-col items-center justify-center gap-3 p-10 text-center">
+          <ImageIcon className="h-10 w-10 text-gray-400" aria-hidden="true" />
+          <div>
+            <h3 className="text-base font-semibold text-gray-900 m-0">No photos yet</h3>
+            <p className="text-sm text-gray-600 m-0 mt-1">
+              Approved photos will appear here. Be the first to share one!
+            </p>
+          </div>
+        </Card>
+      )}
+
+      {!isLoading && !isError && photoList.length > 0 && (
+        <div className="grid gap-3">
+          <GalleryViewer photos={photoList} index={safeIndex} onNavigate={setActiveIndex} />
+          <GalleryFilmstrip photos={photoList} activeIndex={safeIndex} onSelect={setActiveIndex} />
+        </div>
+      )}
+
+      <details className="rounded-lg">
+        <summary className="cursor-pointer list-none rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-plum [&::-webkit-details-marker]:hidden">
+          Share a photo
+        </summary>
+        <Card className="mt-2">
           <CardHeader>
-            <CardTitle className="text-lg">Share a photo</CardTitle>
             <CardDescription>
               Submitted photos are reviewed before they appear in the gallery.
             </CardDescription>
@@ -376,62 +399,7 @@ export function GalleryContent() {
             </form>
           </CardContent>
         </Card>
-
-        {isLoading && (
-          <Card>
-            <CardContent className="pt-6">
-              <div role="status" className="text-gray-600 text-sm">
-                Loading photos...
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {isError && !isLoading && (
-          <Alert variant="destructive">
-            {error instanceof Error ? error.message : 'Failed to load photos'}
-          </Alert>
-        )}
-
-        {!isLoading && !isError && photoList.length === 0 && (
-          <Card className="flex flex-col items-center justify-center gap-3 p-10 text-center">
-            <ImageIcon className="h-10 w-10 text-gray-400" aria-hidden="true" />
-            <div>
-              <h3 className="text-base font-semibold text-gray-900 m-0">No photos yet</h3>
-              <p className="text-sm text-gray-600 m-0 mt-1">
-                Approved photos will appear here. Be the first to share one!
-              </p>
-            </div>
-          </Card>
-        )}
-
-        {!isLoading && !isError && photoList.length > 0 && (
-          <>
-            <GalleryGrid photos={visiblePhotos} onOpen={setLightboxIndex} />
-
-            {remaining > 0 && (
-              <div className="flex justify-center">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
-                >
-                  Show more photos ({remaining} remaining)
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-
-        {lightboxIndex !== null && (
-          <Lightbox
-            photos={photoList}
-            index={lightboxIndex}
-            onClose={() => setLightboxIndex(null)}
-            onNavigate={setLightboxIndex}
-          />
-        )}
-      </div>
+      </details>
+    </div>
   )
 }
-

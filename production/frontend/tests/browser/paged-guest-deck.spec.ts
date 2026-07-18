@@ -202,9 +202,7 @@ test.describe('deep links land on the correct slide with no visible jump', () =>
     { path: '/dashboard', label: 'Dashboard', slideId: 'dashboard' },
     { path: '/rsvp', label: 'RSVP', slideId: 'rsvp' },
     { path: '/schedule', label: 'Schedule', slideId: 'schedule' },
-    { path: '/blessings', label: 'Blessings', slideId: 'blessings' },
-    { path: '/music', label: 'Dancefloor', slideId: 'music' },
-    { path: '/gallery', label: 'Gallery', slideId: 'gallery' },
+    { path: '/celebrate', label: 'Celebrate', slideId: 'celebrate' },
     { path: '/wedding-party', label: 'Wedding Party', slideId: 'wedding-party' },
   ]
 
@@ -217,11 +215,15 @@ test.describe('deep links land on the correct slide with no visible jump', () =>
       await page.goto(path)
 
       const announcer = page.getByTestId('paged-deck-announcer')
-      await expect(announcer).toHaveText(new RegExp(`of 7: ${label}$`))
+      await expect(announcer).toHaveText(new RegExp(`of 5: ${label}$`))
       await expect(page.getByTestId(`paged-deck-slide-${slideId}`)).toBeInViewport()
       await expect(page.getByTestId('paged-current-page-name').first()).toHaveText(label)
     })
   }
+
+  // /blessings, /music, /gallery redirect straight to /celebrate now (see
+  // App.tsx) -- covered by celebrate.spec.ts's dedicated redirect coverage,
+  // not repeated here.
 
   test('deep link to /party/stag mounts already scrolled to Stag Do', async ({ page }) => {
     await mockCurrentUser(page, guestUser)
@@ -233,7 +235,7 @@ test.describe('deep links land on the correct slide with no visible jump', () =>
     await page.goto('/party/stag')
 
     const announcer = page.getByTestId('paged-deck-announcer')
-    await expect(announcer).toHaveText(/of 8: Stag Do$/)
+    await expect(announcer).toHaveText(/of 6: Stag Do$/)
     await expect(page.getByTestId('paged-deck-slide-party-stag')).toBeInViewport()
     await expect(page.getByTestId('paged-current-page-name').first()).toHaveText('Stag Do')
   })
@@ -248,26 +250,26 @@ test.describe('deep links land on the correct slide with no visible jump', () =>
     await page.goto('/party/hen')
 
     const announcer = page.getByTestId('paged-deck-announcer')
-    await expect(announcer).toHaveText(/of 8: Hen Do$/)
+    await expect(announcer).toHaveText(/of 6: Hen Do$/)
     await expect(page.getByTestId('paged-deck-slide-party-hen')).toBeInViewport()
     await expect(page.getByTestId('paged-current-page-name').first()).toHaveText('Hen Do')
   })
 })
 
 test.describe('the deck is guest-specific: party pages join the set only for their own members', () => {
-  test('a guest with no party access sees the 7 base pages, no party slide', async ({ page }) => {
+  test('a guest with no party access sees the 5 base pages, no party slide', async ({ page }) => {
     await mockCurrentUser(page, guestUser)
     await mockGuestPageApis(page)
     await page.route('**/api/portal/theme', (route) => json(route, pagedTheme('paged')))
 
     await page.goto('/dashboard')
 
-    await expect(page.getByTestId('paged-deck-announcer')).toHaveText(/of 7: Dashboard$/)
+    await expect(page.getByTestId('paged-deck-announcer')).toHaveText(/of 5: Dashboard$/)
     await expect(page.getByTestId('paged-deck-slide-party-stag')).toHaveCount(0)
     await expect(page.getByTestId('paged-deck-slide-party-hen')).toHaveCount(0)
   })
 
-  test('a guest with stag access sees 8 pages, their own Stag Do only', async ({ page }) => {
+  test('a guest with stag access sees 6 pages, their own Stag Do only', async ({ page }) => {
     await mockCurrentUser(page, guestUser)
     await mockGuestPageApis(page)
     await mockPartyAccess(page, { stag: true, hen: false })
@@ -276,12 +278,12 @@ test.describe('the deck is guest-specific: party pages join the set only for the
 
     await page.goto('/dashboard')
 
-    await expect(page.getByTestId('paged-deck-announcer')).toHaveText(/of 8: Dashboard$/)
+    await expect(page.getByTestId('paged-deck-announcer')).toHaveText(/of 6: Dashboard$/)
     await expect(page.getByTestId('paged-deck-slide-party-stag')).toHaveCount(1)
     await expect(page.getByTestId('paged-deck-slide-party-hen')).toHaveCount(0)
   })
 
-  test('a guest with hen access sees 8 pages, their own Hen Do only', async ({ page }) => {
+  test('a guest with hen access sees 6 pages, their own Hen Do only', async ({ page }) => {
     await mockCurrentUser(page, guestUser)
     await mockGuestPageApis(page)
     await mockPartyAccess(page, { stag: false, hen: true })
@@ -290,13 +292,13 @@ test.describe('the deck is guest-specific: party pages join the set only for the
 
     await page.goto('/dashboard')
 
-    await expect(page.getByTestId('paged-deck-announcer')).toHaveText(/of 8: Dashboard$/)
+    await expect(page.getByTestId('paged-deck-announcer')).toHaveText(/of 6: Dashboard$/)
     await expect(page.getByTestId('paged-deck-slide-party-hen')).toHaveCount(1)
     await expect(page.getByTestId('paged-deck-slide-party-stag')).toHaveCount(0)
   })
 })
 
-test('arrow buttons, keyboard, and aria-live walk through all 7 pages with URL sync via replace', async ({
+test('arrow buttons, keyboard, and aria-live walk through all 5 pages with URL sync via replace', async ({
   page,
 }) => {
   await mockCurrentUser(page, guestUser)
@@ -307,16 +309,14 @@ test('arrow buttons, keyboard, and aria-live walk through all 7 pages with URL s
     { path: '/dashboard', label: 'Dashboard', slideId: 'dashboard' },
     { path: '/rsvp', label: 'RSVP', slideId: 'rsvp' },
     { path: '/schedule', label: 'Schedule', slideId: 'schedule' },
-    { path: '/blessings', label: 'Blessings', slideId: 'blessings' },
-    { path: '/music', label: 'Dancefloor', slideId: 'music' },
-    { path: '/gallery', label: 'Gallery', slideId: 'gallery' },
+    { path: '/celebrate', label: 'Celebrate', slideId: 'celebrate' },
     { path: '/wedding-party', label: 'Wedding Party', slideId: 'wedding-party' },
   ]
 
   await page.goto('/dashboard')
 
   const announcer = page.getByTestId('paged-deck-announcer')
-  await expect(announcer).toHaveText('Page 1 of 7: Dashboard')
+  await expect(announcer).toHaveText('Page 1 of 5: Dashboard')
   await expect(page).toHaveURL(/\/dashboard$/)
 
   const historyLengthBeforeSwiping = await page.evaluate(() => window.history.length)
@@ -326,7 +326,7 @@ test('arrow buttons, keyboard, and aria-live walk through all 7 pages with URL s
     const { path, label, slideId } = forwardSteps[index]
     await page.getByRole('button', { name: 'Next page' }).click()
     await expect(page.getByTestId(`paged-deck-slide-${slideId}`)).toBeInViewport()
-    await expect(announcer).toHaveText(`Page ${index + 1} of 7: ${label}`)
+    await expect(announcer).toHaveText(`Page ${index + 1} of 5: ${label}`)
     await expect(page).toHaveURL(new RegExp(`${path}$`))
   }
 
@@ -363,9 +363,9 @@ test('the back button leaves the paged group entirely instead of stepping throug
   // A real nav-link click is a normal (push) navigation -- one new history
   // entry, same as any other route change in the app.
   await openMobileGuestNavIfPresent(page)
-  await page.getByRole('navigation', { name: 'Guest pages' }).getByRole('link', { name: 'Blessings' }).click()
-  await expect(page).toHaveURL(/\/blessings$/)
-  await expect(page.getByTestId('paged-deck-slide-blessings')).toBeInViewport()
+  await page.getByRole('navigation', { name: 'Guest pages' }).getByRole('link', { name: 'Celebrate' }).click()
+  await expect(page).toHaveURL(/\/celebrate$/)
+  await expect(page.getByTestId('paged-deck-slide-celebrate')).toBeInViewport()
 
   // Swiping backward through Schedule and RSVP uses replace, not push.
   await page.getByRole('button', { name: 'Previous page' }).click()
@@ -373,7 +373,7 @@ test('the back button leaves the paged group entirely instead of stepping throug
   await page.getByRole('button', { name: 'Previous page' }).click()
   await expect(page).toHaveURL(/\/rsvp$/)
 
-  // One back() undoes the single push (Dashboard -> Blessings), landing
+  // One back() undoes the single push (Dashboard -> Celebrate), landing
   // straight back on Dashboard -- not stepping through Schedule/RSVP, which
   // were never real history entries.
   await page.goBack()
@@ -462,9 +462,7 @@ test('inert is applied to off-screen slides so Tab does not leak into them', asy
   await expect(page.getByTestId('paged-deck-slide-dashboard')).not.toHaveAttribute('inert', '')
   await expect(page.getByTestId('paged-deck-slide-rsvp')).toHaveAttribute('inert', '')
   await expect(page.getByTestId('paged-deck-slide-schedule')).toHaveAttribute('inert', '')
-  await expect(page.getByTestId('paged-deck-slide-blessings')).toHaveAttribute('inert', '')
-  await expect(page.getByTestId('paged-deck-slide-music')).toHaveAttribute('inert', '')
-  await expect(page.getByTestId('paged-deck-slide-gallery')).toHaveAttribute('inert', '')
+  await expect(page.getByTestId('paged-deck-slide-celebrate')).toHaveAttribute('inert', '')
   await expect(page.getByTestId('paged-deck-slide-wedding-party')).toHaveAttribute('inert', '')
 
   await page.getByRole('button', { name: 'Next page' }).click()
@@ -509,7 +507,7 @@ test.describe('mobile guest nav is a burger menu, not a wrapped row of links', (
     await expect(page.getByRole('button', { name: /open guest pages menu/i })).toBeVisible()
     await expect(page.getByTestId('mobile-nav-current-page')).toHaveText('Dashboard')
     const guestNav = page.getByRole('navigation', { name: 'Guest pages' })
-    await expect(guestNav.getByRole('link', { name: 'Blessings' })).not.toBeVisible()
+    await expect(guestNav.getByRole('link', { name: 'Celebrate' })).not.toBeVisible()
   })
 
   test('opening the menu reveals every page and selecting one navigates and closes it', async ({
@@ -524,17 +522,17 @@ test.describe('mobile guest nav is a burger menu, not a wrapped row of links', (
     const guestNav = page.getByRole('navigation', { name: 'Guest pages' })
     await page.getByRole('button', { name: /open guest pages menu/i }).click()
     await expect(page.getByRole('button', { name: /close guest pages menu/i })).toBeVisible()
-    for (const label of ['Dashboard', 'RSVP', 'Schedule', 'Blessings', 'Dancefloor', 'Gallery', 'Wedding Party']) {
+    for (const label of ['Dashboard', 'RSVP', 'Schedule', 'Celebrate', 'Wedding Party']) {
       await expect(guestNav.getByRole('link', { name: label })).toBeVisible()
     }
 
-    await guestNav.getByRole('link', { name: 'Blessings' }).click()
+    await guestNav.getByRole('link', { name: 'Celebrate' }).click()
 
-    await expect(page).toHaveURL(/\/blessings$/)
+    await expect(page).toHaveURL(/\/celebrate$/)
     // The menu closes on navigation -- back to the trigger showing the new
     // current page, not the open dropdown.
     await expect(page.getByRole('button', { name: /open guest pages menu/i })).toBeVisible()
-    await expect(guestNav.getByRole('link', { name: 'Blessings' })).not.toBeVisible()
+    await expect(guestNav.getByRole('link', { name: 'Celebrate' })).not.toBeVisible()
   })
 
   test('the dot indicator sits next to the burger trigger in paged mode', async ({ page }) => {

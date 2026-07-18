@@ -56,7 +56,7 @@ const CHECKLIST_ITEMS: ChecklistItem[] = [
     headline: "you haven't requested a song yet 🎵",
     prompt: 'Add a song to the wedding soundtrack.',
     cta: 'Request a song',
-    href: '/music',
+    href: '/celebrate',
     done: 'Song requested — see you on the dancefloor!',
   },
   {
@@ -66,7 +66,7 @@ const CHECKLIST_ITEMS: ChecklistItem[] = [
     headline: "you haven't shared a photo yet 📸",
     prompt: 'Share a favourite photo for the gallery.',
     cta: 'Share a photo',
-    href: '/gallery',
+    href: '/celebrate',
     done: 'Photo shared — lovely!',
   },
   {
@@ -76,7 +76,7 @@ const CHECKLIST_ITEMS: ChecklistItem[] = [
     headline: "you haven't left the couple a blessing yet 💛",
     prompt: 'Leave a few warm words for Ashley & Hazel.',
     cta: 'Write a blessing',
-    href: '/blessings',
+    href: '/celebrate',
     done: "Blessing posted — they'll treasure it.",
   },
 ]

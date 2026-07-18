@@ -1,4 +1,4 @@
-import { Calendar, Clock, Heart, Image as ImageIcon, MapPin, Music2, Send } from 'lucide-react'
+import { Calendar, Clock, MapPin, PartyPopper, Send } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { useAuth } from '../contexts/AuthContext'
@@ -77,22 +77,10 @@ const quickLinks = [
     icon: Calendar,
   },
   {
-    href: '/blessings',
-    title: 'Blessings',
-    description: 'Leave a message for the couple.',
-    icon: Heart,
-  },
-  {
-    href: '/music',
-    title: 'Dancefloor',
-    description: 'Request a song for the big day.',
-    icon: Music2,
-  },
-  {
-    href: '/gallery',
-    title: 'Gallery',
-    description: 'Browse and share photos.',
-    icon: ImageIcon,
+    href: '/celebrate',
+    title: 'Celebrate',
+    description: 'Blessings, the dancefloor, and the photo gallery.',
+    icon: PartyPopper,
   },
 ]
 

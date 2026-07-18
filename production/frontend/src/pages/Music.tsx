@@ -6,7 +6,6 @@ import { useAuth } from '../contexts/AuthContext'
 import { Jukebox } from '../components/Jukebox'
 import { MentionHighlightedText } from '../components/mentions/MentionHighlight'
 import { MentionTextarea } from '../components/mentions/MentionTextarea'
-import { usePageTitle } from '../hooks/usePageTitle'
 import { Alert } from '../components/ui/alert'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
@@ -26,7 +25,7 @@ function optionalText(value: string): string | null {
   return trimmed || null
 }
 
-function songDisplayTitle(song: SongWallItem): string {
+export function songDisplayTitle(song: SongWallItem): string {
   return song.artist ? `${song.title} — ${song.artist}` : song.title
 }
 
@@ -127,12 +126,11 @@ function NowPlayingCard({ song }: { song: SongWallItem }) {
   )
 }
 
-// The actual page content, no GuestLayout wrapper -- App.tsx routes directly
-// to this (both in scroll mode, via the shared PagedGuestLayoutRoute's
-// <Outlet/>, and in paged mode, mounted inside PagedGuestDeck). See
-// docs/specs/VIEWPORT_PAGING_PHASE1.md.
+// Mounted inside a modal by CelebrateContent (see Celebrate.tsx), which owns
+// this route's document title -- no usePageTitle call here, since unmounting
+// on modal close would otherwise reset the tab title to the generic site
+// default instead of back to "Celebrate".
 export function MusicContent() {
-  usePageTitle('Dancefloor')
   const { data: wall, isLoading, isError, error } = useSongWall()
   const submitMutation = useSubmitSongRequest()
   const { data: mentionDirectory } = useMentionsDirectory('general')

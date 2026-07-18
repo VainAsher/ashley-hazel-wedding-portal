@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Route } from '@playwright/test'
+import { expect, test, type Locator, type Page, type Route } from '@playwright/test'
 import {
   cleanupPageState,
   initializeErrorTracking,
@@ -149,96 +149,114 @@ test.afterEach(async ({ page }) => {
   expect(unexpectedErrors).toEqual([])
 })
 
-function mainRegion(page: Page) {
-  return page.getByRole('main')
+// Gallery now renders inside a modal launched from the Celebrate hub
+// (Blessings/Dancefloor/Gallery consolidated -- see Celebrate.tsx) rather
+// than as its own standalone page; /gallery redirects to /celebrate.
+async function openGallery(page: Page) {
+  await page.goto('/celebrate')
+  await page.getByRole('button', { name: 'Open Gallery' }).click()
+  return page.getByRole('dialog')
 }
 
-function gallery(page: Page) {
-  return page.getByRole('region', { name: 'Photo gallery' })
+async function openSharePhotoForm(dialog: Locator) {
+  // <summary> isn't exposed with an accessible role of "button" in Chromium
+  // -- target its text directly rather than getByRole.
+  await dialog.getByText('Share a photo', { exact: true }).click()
 }
 
-test('shows approved photos in the guest gallery', async ({ page }) => {
+test('shows the first approved photo directly, no click-to-open step', async ({ page }) => {
   await installGuestGalleryApi(page, [{ ...approvedItem }])
-  await page.goto('/gallery')
+  const dialog = await openGallery(page)
 
-  // Photo labels render as figure captions, not headings.
-  await expect(gallery(page).getByText('Sunset Toast')).toBeVisible()
-  await expect(gallery(page).getByText('Golden hour')).toBeVisible()
+  await expect(dialog.getByRole('img', { name: 'Sunset Toast' })).toBeVisible()
+  await expect(dialog.getByText('Golden hour')).toBeVisible()
 })
 
-test('opens a photo in the lightbox and closes with Escape', async ({ page }) => {
+test('closes the gallery modal with Escape', async ({ page }) => {
   await installGuestGalleryApi(page, [{ ...approvedItem }])
-  await page.goto('/gallery')
-
-  await gallery(page)
-    .getByRole('button', { name: 'View photo full size: Sunset Toast' })
-    .click()
-
-  const lightbox = page.getByRole('dialog')
-  await expect(lightbox).toBeVisible()
-  await expect(lightbox.getByRole('img', { name: 'Sunset Toast' })).toBeVisible()
-  await expect(lightbox.getByText('1 of 1')).toBeVisible()
+  const dialog = await openGallery(page)
+  await expect(dialog).toBeVisible()
 
   await page.keyboard.press('Escape')
-  await expect(lightbox).toBeHidden()
+  await expect(dialog).toBeHidden()
 })
 
-test('grid renders the thumbnail while the lightbox keeps the original', async ({ page }) => {
+test('hero shows the original photo while the filmstrip uses the thumbnail', async ({ page }) => {
   await installGuestGalleryApi(page, [{ ...approvedItem }])
-  await page.goto('/gallery')
+  const dialog = await openGallery(page)
 
-  // The grid <img> points at the ~480px thumbnail derivative.
-  const gridImage = gallery(page).getByRole('img', { name: 'Sunset Toast' })
-  await expect(gridImage).toHaveAttribute('src', '/uploads/1/thumbs/sunset.jpg')
-
-  // The lightbox always shows the full-size original.
-  await gallery(page)
-    .getByRole('button', { name: 'View photo full size: Sunset Toast' })
-    .click()
-  const lightbox = page.getByRole('dialog')
-  await expect(lightbox.getByRole('img', { name: 'Sunset Toast' })).toHaveAttribute(
+  await expect(dialog.getByRole('img', { name: 'Sunset Toast' })).toHaveAttribute(
     'src',
     '/uploads/1/sunset.jpg',
   )
+  await expect(
+    dialog.getByRole('button', { name: 'View photo 1 of 1: Sunset Toast' }).locator('img'),
+  ).toHaveAttribute('src', '/uploads/1/thumbs/sunset.jpg')
 })
 
-test('grid falls back to the original when there is no thumbnail', async ({ page }) => {
+test('filmstrip falls back to the original when there is no thumbnail', async ({ page }) => {
   await installGuestGalleryApi(page, [{ ...approvedItem, thumb_path: null, thumb_url: null }])
-  await page.goto('/gallery')
+  const dialog = await openGallery(page)
 
-  const gridImage = gallery(page).getByRole('img', { name: 'Sunset Toast' })
-  await expect(gridImage).toHaveAttribute('src', '/uploads/1/sunset.jpg')
+  await expect(
+    dialog.getByRole('button', { name: 'View photo 1 of 1: Sunset Toast' }).locator('img'),
+  ).toHaveAttribute('src', '/uploads/1/sunset.jpg')
+})
+
+test('filmstrip and arrow-button navigation switch the hero photo', async ({ page }) => {
+  const second: GalleryItem = {
+    ...approvedItem,
+    id: 7003,
+    title: 'Cutting the Cake',
+    caption: 'Reception',
+    file_path: '/uploads/1/cake.jpg',
+    url: '/uploads/1/cake.jpg',
+    thumb_path: '1/thumbs/cake.jpg',
+    thumb_url: '/uploads/1/thumbs/cake.jpg',
+  }
+  await installGuestGalleryApi(page, [{ ...approvedItem }, second])
+  const dialog = await openGallery(page)
+
+  await expect(dialog.getByRole('img', { name: 'Sunset Toast' })).toBeVisible()
+
+  await dialog.getByRole('button', { name: 'View photo 2 of 2: Cutting the Cake' }).click()
+  await expect(dialog.getByRole('img', { name: 'Cutting the Cake' })).toBeVisible()
+
+  await dialog.getByRole('button', { name: 'Previous photo' }).click()
+  await expect(dialog.getByRole('img', { name: 'Sunset Toast' })).toBeVisible()
 })
 
 test('shows empty state when there are no approved photos', async ({ page }) => {
   await installGuestGalleryApi(page, [])
-  await page.goto('/gallery')
+  const dialog = await openGallery(page)
 
-  await expect(mainRegion(page).getByText('No photos yet')).toBeVisible()
+  await expect(dialog.getByText('No photos yet')).toBeVisible()
 })
 
 test('validates that a photo is selected before submitting', async ({ page }) => {
   await installGuestGalleryApi(page, [{ ...approvedItem }])
-  await page.goto('/gallery')
+  const dialog = await openGallery(page)
+  await openSharePhotoForm(dialog)
 
-  await mainRegion(page).getByRole('button', { name: 'Submit' }).click()
+  await dialog.getByRole('button', { name: 'Submit' }).click()
 
-  await expect(mainRegion(page).getByRole('alert')).toHaveText('Please select a photo to share.')
+  await expect(dialog.getByRole('alert')).toHaveText('Please select a photo to share.')
 })
 
 test('submits a photo and shows the pending-approval message', async ({ page }) => {
   await installGuestGalleryApi(page, [{ ...approvedItem }])
-  await page.goto('/gallery')
+  const dialog = await openGallery(page)
+  await openSharePhotoForm(dialog)
 
-  await page.getByLabel('Photo', { exact: true }).setInputFiles({
+  await dialog.getByLabel('Photo', { exact: true }).setInputFiles({
     name: 'guest.png',
     mimeType: 'image/png',
     buffer: PNG_BUFFER,
   })
 
-  await mainRegion(page).getByRole('button', { name: 'Submit' }).click()
+  await dialog.getByRole('button', { name: 'Submit' }).click()
 
-  await expect(page.getByRole('status')).toHaveText(
+  await expect(dialog.getByRole('status')).toHaveText(
     'Thanks! Your photo was submitted for approval.',
   )
   expect(submitCount).toBe(1)
@@ -246,56 +264,43 @@ test('submits a photo and shows the pending-approval message', async ({ page }) 
 
 test('upload hint mentions video support and the 150MB cap', async ({ page }) => {
   await installGuestGalleryApi(page, [{ ...approvedItem }])
-  await page.goto('/gallery')
+  const dialog = await openGallery(page)
+  await openSharePhotoForm(dialog)
 
-  await expect(
-    mainRegion(page).getByText('Photos or short videos (MP4), up to 150 MB.'),
-  ).toBeVisible()
+  await expect(dialog.getByText('Photos or short videos (MP4), up to 150 MB.')).toBeVisible()
 })
 
-test('shows an approved video as a play-tile in the guest gallery', async ({ page }) => {
-  await installGuestGalleryApi(page, [{ ...approvedVideo }])
-  await page.goto('/gallery')
-
-  const tileButton = gallery(page).getByRole('button', {
-    name: 'View photo full size: First Dance',
-  })
-  await expect(tileButton).toBeVisible()
-  // No thumbnail exists for video, so no <img> is rendered in the tile.
-  await expect(tileButton.locator('img')).toHaveCount(0)
-})
-
-test('opens a video in the lightbox and renders a playable <video> element', async ({
+test('shows an approved video as a play-tile in the filmstrip and plays directly in the hero', async ({
   page,
 }) => {
   await installGuestGalleryApi(page, [{ ...approvedVideo }])
-  await page.goto('/gallery')
+  const dialog = await openGallery(page)
 
-  await gallery(page)
-    .getByRole('button', { name: 'View photo full size: First Dance' })
-    .click()
+  const filmstripButton = dialog.getByRole('button', { name: 'View photo 1 of 1: First Dance' })
+  await expect(filmstripButton).toBeVisible()
+  // No thumbnail exists for video, so no <img> is rendered in the tile.
+  await expect(filmstripButton.locator('img')).toHaveCount(0)
 
-  const lightbox = page.getByRole('dialog')
-  await expect(lightbox).toBeVisible()
-
-  const video = lightbox.locator('video')
+  // The hero plays the video directly -- no click-to-open step.
+  const video = dialog.locator('video')
   await expect(video).toHaveAttribute('src', '/uploads/1/first-dance.mp4')
   await expect(video).toHaveAttribute('controls', '')
 })
 
 test('submits a video and shows the pending-approval message', async ({ page }) => {
   await installGuestGalleryApi(page, [{ ...approvedItem }])
-  await page.goto('/gallery')
+  const dialog = await openGallery(page)
+  await openSharePhotoForm(dialog)
 
-  await page.getByLabel('Photo', { exact: true }).setInputFiles({
+  await dialog.getByLabel('Photo', { exact: true }).setInputFiles({
     name: 'clip.mp4',
     mimeType: 'video/mp4',
     buffer: MP4_BUFFER,
   })
 
-  await mainRegion(page).getByRole('button', { name: 'Submit' }).click()
+  await dialog.getByRole('button', { name: 'Submit' }).click()
 
-  await expect(page.getByRole('status')).toHaveText(
+  await expect(dialog.getByRole('status')).toHaveText(
     'Thanks! Your photo was submitted for approval.',
   )
   expect(submitCount).toBe(1)

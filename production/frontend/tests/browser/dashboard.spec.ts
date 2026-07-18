@@ -94,17 +94,12 @@ test('shows quick links to the other portal pages', async ({ page }) => {
     'href',
     '/schedule',
   )
-  await expect(quickLinks.getByRole('link', { name: /Blessings/ })).toHaveAttribute(
+  // Blessings/Dancefloor/Gallery consolidated into one Celebrate hub link
+  // (see Celebrate.tsx) -- opens as launcher cards inside a modal, not three
+  // separate quick-link cards.
+  await expect(quickLinks.getByRole('link', { name: /Celebrate/ })).toHaveAttribute(
     'href',
-    '/blessings',
-  )
-  await expect(quickLinks.getByRole('link', { name: /Dancefloor/ })).toHaveAttribute(
-    'href',
-    '/music',
-  )
-  await expect(quickLinks.getByRole('link', { name: /Gallery/ })).toHaveAttribute(
-    'href',
-    '/gallery',
+    '/celebrate',
   )
 })
 
@@ -119,7 +114,7 @@ test('every guest page is reachable from the header nav', async ({ page }) => {
   // projects.
   await openMobileGuestNavIfPresent(page)
   const nav = page.getByRole('navigation', { name: 'Guest pages' })
-  for (const label of ['Dashboard', 'RSVP', 'Schedule', 'Blessings', 'Dancefloor', 'Gallery']) {
+  for (const label of ['Dashboard', 'RSVP', 'Schedule', 'Celebrate']) {
     await expect(nav.getByRole('link', { name: label })).toBeInViewport()
   }
 })
