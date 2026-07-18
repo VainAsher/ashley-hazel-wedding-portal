@@ -146,6 +146,15 @@ export function GuestLayout({ children }: GuestLayoutProps) {
         style={{ backgroundImage: `${tint}, url(${backgroundImage})` }}
       />
 
+      {/* Decorative sunflower & lavender frame -- above the tint, below all
+          content. White centre keyed to transparent so only the corners
+          (and a soft watercolour wash) show. */}
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 -z-[5] bg-cover bg-center"
+        style={{ backgroundImage: 'url(/backgrounds/frame-sunflower-lavender.webp)' }}
+      />
+
       {/* Header */}
       <header className="bg-plum-night/90 backdrop-blur border-b border-gold/40 sticky top-0 z-50 text-cream">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
