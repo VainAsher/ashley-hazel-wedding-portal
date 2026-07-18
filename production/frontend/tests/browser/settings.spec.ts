@@ -158,6 +158,7 @@ test('saves the guest-site theme dials', async ({ page }) => {
         body_font: 'Inter',
         type_scale: 1,
         layout_mode: 'paged',
+        page_backgrounds: {},
       },
     },
   ])
@@ -204,6 +205,7 @@ test('saves chosen fonts and type scale, and previews them live', async ({ page 
         body_font: 'Nunito Sans',
         type_scale: 1.1,
         layout_mode: 'paged',
+        page_backgrounds: {},
       },
     },
   ])
@@ -265,6 +267,7 @@ test('switches guest page navigation to scroll and saves it', async ({ page }) =
       body_font: 'Inter',
       type_scale: 1.0,
       layout_mode: 'scroll',
+      page_backgrounds: {},
     },
   })
   await expect(group.getByRole('radio', { name: /Scroll/ })).toBeChecked()
