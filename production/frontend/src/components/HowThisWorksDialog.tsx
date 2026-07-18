@@ -28,17 +28,9 @@ const PAGES: { name: string; blurb: string }[] = [
     blurb: 'The plan for the day — every event with its time and place, in order.',
   },
   {
-    name: 'Blessings',
-    blurb: 'Leave a short message for the couple, and read the wall of well-wishes.',
-  },
-  {
-    name: 'Dancefloor',
+    name: 'Celebrate',
     blurb:
-      'Request a song, ♥ react to your favourites on the wall, and see what’s playing right now.',
-  },
-  {
-    name: 'Gallery',
-    blurb: 'Browse the photos and share your own (photos are approved before they appear).',
+      'Leave a blessing, request a song for the dancefloor, and browse (or share) photos — each opens right where you are.',
   },
 ]
 

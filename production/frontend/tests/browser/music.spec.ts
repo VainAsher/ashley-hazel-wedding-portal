@@ -215,9 +215,17 @@ function songWall(page: Page) {
   return page.getByRole('region', { name: 'Song wall' })
 }
 
+// Dancefloor now renders inside a modal launched from the Celebrate hub
+// (Blessings/Dancefloor/Gallery consolidated -- see Celebrate.tsx); /music
+// redirects to /celebrate.
+async function openMusic(page: Page) {
+  await page.goto('/celebrate')
+  await page.getByRole('button', { name: 'Open Dancefloor' }).click()
+}
+
 test('renders the song wall entries', async ({ page }) => {
   await installMusicApi(page, wallEntries)
-  await page.goto('/music')
+  await openMusic(page)
 
   await expect(songWall(page).getByText('Dancing Queen — ABBA')).toBeVisible()
   await expect(songWall(page).getByText('Requested by Aunt May')).toBeVisible()
@@ -230,7 +238,7 @@ test('renders the song wall entries', async ({ page }) => {
 
 test('shows the empty state when the wall has no songs', async ({ page }) => {
   await installMusicApi(page, [])
-  await page.goto('/music')
+  await openMusic(page)
 
   await expect(
     page.getByText('No songs yet — be the first to get the dancefloor going!'),
@@ -241,7 +249,7 @@ test('submitting a request posts the payload, shows the success alert, and reset
   page,
 }) => {
   const api = await installMusicApi(page, wallEntries)
-  await page.goto('/music')
+  await openMusic(page)
 
   await page.getByLabel('Song title').fill('September')
   await page.getByLabel('Artist').fill('Earth, Wind & Fire')
@@ -269,7 +277,7 @@ test('submitting a request posts the payload, shows the success alert, and reset
 
 test('optional fields are sent as null when left blank', async ({ page }) => {
   const api = await installMusicApi(page, [])
-  await page.goto('/music')
+  await openMusic(page)
 
   await page.getByLabel('Song title').fill('Come On Eileen')
   await page.getByRole('button', { name: 'Request song' }).click()
@@ -289,7 +297,7 @@ test('optional fields are sent as null when left blank', async ({ page }) => {
 
 test('a blank title shows an inline error and does not post', async ({ page }) => {
   const api = await installMusicApi(page, wallEntries)
-  await page.goto('/music')
+  await openMusic(page)
 
   await page.getByLabel('Song title').fill('   ')
   await page.getByRole('button', { name: 'Request song' }).click()
@@ -306,7 +314,7 @@ test('dedication autocomplete shows filtered suggestions and inserts a mention o
   page,
 }) => {
   await installMusicApi(page, [])
-  await page.goto('/music')
+  await openMusic(page)
 
   const dedicationField = page.getByLabel('Dedication')
   await dedicationField.fill('For @Alex')
@@ -328,7 +336,7 @@ test('renders a highlighted mention in a dedication on the song wall', async ({ 
       requested_by: 'Aunt May',
     }),
   ])
-  await page.goto('/music')
+  await openMusic(page)
 
   const highlighted = songWall(page).locator('span.text-gold')
   await expect(highlighted).toHaveText('@Alex Best Man')
@@ -338,7 +346,7 @@ test('hides the form and shows the closed message outside the live phase', async
   await page.unroute('**/api/auth/me')
   await installAuthMe(page, 'planning')
   await installMusicApi(page, wallEntries)
-  await page.goto('/music')
+  await openMusic(page)
 
   await expect(
     page.getByText("Song requests aren't open yet — check back soon."),
@@ -402,7 +410,7 @@ test('jukebox plays the previewable songs and skips those without previews', asy
 }) => {
   await stubAudioPlayback(page)
   await installMusicApi(page, jukeboxEntries.map((entry) => ({ ...entry })))
-  await page.goto('/music')
+  await openMusic(page)
 
   // Queue only contains songs with previews: 2 of the 3 wall entries.
   await expect(jukebox(page).getByText('1 of 2', { exact: false })).toBeVisible()
@@ -426,7 +434,7 @@ test('jukebox plays the previewable songs and skips those without previews', asy
 test('jukebox advances on track end and loops back to the start', async ({ page }) => {
   await stubAudioPlayback(page)
   await installMusicApi(page, jukeboxEntries.map((entry) => ({ ...entry })))
-  await page.goto('/music')
+  await openMusic(page)
 
   const audio = page.getByTestId('jukebox-audio')
   await expect(jukebox(page).getByTestId('jukebox-title')).toHaveText(
@@ -448,7 +456,7 @@ test('jukebox advances on track end and loops back to the start', async ({ page 
 
 test('no jukebox renders when no wall songs have previews', async ({ page }) => {
   await installMusicApi(page, wallEntries.map((entry) => ({ ...entry })))
-  await page.goto('/music')
+  await openMusic(page)
 
   await expect(songWall(page).getByText('Dancing Queen — ABBA')).toBeVisible()
   await expect(jukebox(page)).toHaveCount(0)
@@ -465,7 +473,7 @@ test('the heart toggle posts a reaction and updates the count optimistically', a
     songRequest({ id: 21, title: 'Dancing Queen', artist: 'ABBA', reaction_count: 2 }),
     songRequest({ id: 22, title: 'Mr. Brightside', requested_by: 'Uncle Bob' }),
   ])
-  await page.goto('/music')
+  await openMusic(page)
 
   const heart = songWall(page).getByRole('button', {
     name: 'Give a heart to Dancing Queen',
@@ -501,7 +509,7 @@ test('tapping a filled heart removes the reaction via DELETE', async ({ page }) 
       reacted_by_me: true,
     }),
   ])
-  await page.goto('/music')
+  await openMusic(page)
 
   const filled = songWall(page).getByRole('button', {
     name: 'Remove your heart from September',
@@ -539,7 +547,7 @@ test('shows the currently-playing card when the couple set a song', async ({ pag
     ],
     41,
   )
-  await page.goto('/music')
+  await openMusic(page)
 
   const nowPlaying = page.getByRole('region', { name: 'Currently playing' })
   await expect(nowPlaying).toBeVisible()
@@ -551,7 +559,7 @@ test('shows the currently-playing card when the couple set a song', async ({ pag
 
 test('no currently-playing card renders when nothing is set', async ({ page }) => {
   await installMusicApi(page, wallEntries.map((entry) => ({ ...entry })))
-  await page.goto('/music')
+  await openMusic(page)
 
   await expect(songWall(page).getByText('Dancing Queen — ABBA')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Currently playing' })).toHaveCount(0)

@@ -104,17 +104,21 @@ test.afterEach(async ({ page }) => {
   expect(unexpectedErrors).toEqual([])
 })
 
-function mainRegion(page: Page) {
-  return page.getByRole('main')
-}
-
 function blessingsRegion(page: Page) {
   return page.getByRole('region', { name: 'Blessings' })
 }
 
+// Blessings now renders inside a modal launched from the Celebrate hub
+// (Blessings/Dancefloor/Gallery consolidated -- see Celebrate.tsx);
+// /blessings redirects to /celebrate.
+async function openBlessings(page: Page) {
+  await page.goto('/celebrate')
+  await page.getByRole('button', { name: 'Open Blessings' }).click()
+}
+
 test('renders existing blessings', async ({ page }) => {
   await installBlessingsApi(page, existing)
-  await page.goto('/blessings')
+  await openBlessings(page)
 
   await expect(blessingsRegion(page).getByText('Aunt May')).toBeVisible()
   await expect(blessingsRegion(page).getByText('Wishing you a lifetime of love.')).toBeVisible()
@@ -122,17 +126,17 @@ test('renders existing blessings', async ({ page }) => {
 
 test('prefills the name from the current user', async ({ page }) => {
   await installBlessingsApi(page, existing)
-  await page.goto('/blessings')
+  await openBlessings(page)
 
   await expect(page.getByLabel('Your name')).toHaveValue('Wedding Guest')
 })
 
 test('submitting a blessing adds it to the list and clears the message', async ({ page }) => {
   await installBlessingsApi(page, existing)
-  await page.goto('/blessings')
+  await openBlessings(page)
 
   await page.getByLabel('Message').fill('Congratulations to you both!')
-  await mainRegion(page).getByRole('button', { name: 'Post blessing' }).click()
+  await page.getByRole('button', { name: 'Post blessing' }).click()
 
   await expect(page.getByRole('status')).toHaveText('Thank you! Your blessing has been shared.')
   await expect(blessingsRegion(page).getByText('Congratulations to you both!')).toBeVisible()
@@ -141,9 +145,9 @@ test('submitting a blessing adds it to the list and clears the message', async (
 
 test('shows the empty state when there are no blessings', async ({ page }) => {
   await installBlessingsApi(page, [])
-  await page.goto('/blessings')
+  await openBlessings(page)
 
-  await expect(mainRegion(page).getByText('No blessings yet')).toBeVisible()
+  await expect(page.getByText('No blessings yet')).toBeVisible()
 })
 
 // ---------------------------------------------------------------------------
@@ -154,7 +158,7 @@ test('autocomplete shows filtered suggestions and inserts a mention on click', a
   page,
 }) => {
   await installBlessingsApi(page, [])
-  await page.goto('/blessings')
+  await openBlessings(page)
 
   const messageField = page.getByLabel('Message')
   await messageField.fill('Big shoutout to @Alex')
@@ -175,7 +179,7 @@ test('renders a highlighted mention on the blessings wall', async ({ page }) => 
       created_at: '2026-05-01T10:00:00Z',
     },
   ])
-  await page.goto('/blessings')
+  await openBlessings(page)
 
   const highlighted = blessingsRegion(page).locator('span.text-gold')
   await expect(highlighted).toHaveText('@Alex Best Man')
