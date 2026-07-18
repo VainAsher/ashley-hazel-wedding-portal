@@ -1,4 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+import uuid
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -12,6 +17,15 @@ from app.logging import get_logger
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 logger = get_logger(__name__)
+
+# ROADMAP item 18 (docs/specs/PAGE_BACKGROUNDS.md): a single background photo,
+# not gallery's video-inclusive 150MB allowance.
+MAX_BACKGROUND_UPLOAD_BYTES = 15 * 1024 * 1024
+
+
+def get_uploads_dir() -> str:
+    # Read lazily so tests can override UPLOADS_DIR at runtime.
+    return os.environ.get("UPLOADS_DIR", "uploads")
 
 
 def get_current_wedding_or_404(db: Session, wedding_id: int, action: str) -> Wedding:
@@ -66,3 +80,49 @@ async def update_wedding_settings(
         },
     )
     return wedding
+
+
+class BackgroundUploadResponse(BaseModel):
+    url: str
+
+
+@router.post("/backgrounds/upload", response_model=BackgroundUploadResponse)
+async def upload_page_background(
+    file: UploadFile = File(...),
+    current_user: UserResponse = Depends(require_coordinator),
+) -> BackgroundUploadResponse:
+    """Upload a photo for a guest/landing page background (ROADMAP item 18).
+
+    No moderation, no thumbnail, no DB row at all -- unlike gallery/profile
+    uploads, this drops the file and returns a URL; the couple's follow-up
+    PUT /api/settings/wedding embeds that URL into theme.page_backgrounds.
+    See docs/specs/PAGE_BACKGROUNDS.md.
+    """
+    content_type = file.content_type or ""
+    if not content_type.startswith("image/"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only image uploads are allowed",
+        )
+
+    data = await file.read()
+    if len(data) > MAX_BACKGROUND_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File exceeds the 15MB upload limit",
+        )
+
+    ext = Path(file.filename or "").suffix
+    stored_name = f"{uuid.uuid4().hex}{ext}"
+    relative_path = f"{current_user.wedding_id}/backgrounds/{stored_name}"
+
+    uploads_dir = Path(get_uploads_dir())
+    background_dir = uploads_dir / str(current_user.wedding_id) / "backgrounds"
+    background_dir.mkdir(parents=True, exist_ok=True)
+    (uploads_dir / relative_path).write_bytes(data)
+
+    logger.info(
+        "page_background_uploaded",
+        extra={"wedding_id": current_user.wedding_id},
+    )
+    return BackgroundUploadResponse(url=f"/uploads/{relative_path}")

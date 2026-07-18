@@ -1,13 +1,40 @@
 from __future__ import annotations
 
+import io
+import os
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlalchemy.orm import Session
 
 from app.db.models import Wedding
 from tests.fixtures.guests import TEST_WEDDING_ID
+
+
+def make_image_bytes(size: tuple[int, int] = (200, 200)) -> bytes:
+    image = Image.new("RGB", size, "#7a3b69")
+    buffer = io.BytesIO()
+    image.save(buffer, "PNG")
+    return buffer.getvalue()
+
+
+@pytest.fixture()
+def uploads_dir(tmp_path: Path) -> Iterator[Path]:
+    """Point UPLOADS_DIR at a temp dir so the repo isn't polluted."""
+    previous = os.environ.get("UPLOADS_DIR")
+    target = tmp_path / "uploads"
+    target.mkdir(parents=True, exist_ok=True)
+    os.environ["UPLOADS_DIR"] = str(target)
+    try:
+        yield target
+    finally:
+        if previous is None:
+            os.environ.pop("UPLOADS_DIR", None)
+        else:
+            os.environ["UPLOADS_DIR"] = previous
 
 
 @pytest.fixture()
@@ -130,6 +157,7 @@ DEFAULT_TYPOGRAPHY = {
     "body_font": "Inter",
     "type_scale": 1.0,
     "layout_mode": "paged",
+    "page_backgrounds": {},
 }
 
 
@@ -202,6 +230,7 @@ class TestWeddingTypography:
             "body_font": "Nunito Sans",
             "type_scale": 1.1,
             "layout_mode": "scroll",
+            "page_backgrounds": {},
         }
         response = coordinator_session.put("/api/settings/wedding", json={"theme": theme})
         assert response.status_code == 200
@@ -393,3 +422,197 @@ class TestPartyVisibilityMode:
         )
         assert response.status_code == 200
         assert response.json()["party_visibility_mode"] == "locked"
+
+
+VALID_PAGE_BACKGROUND = {
+    "source": "stock",
+    "url": "/backgrounds/bg-03-waterfall.jpg",
+    "focal_x": 32.4,
+    "focal_y": 68.1,
+    "zoom": 1.6,
+}
+
+
+class TestPageBackgrounds:
+    """ROADMAP item 18 (docs/specs/PAGE_BACKGROUNDS.md): per-page background
+    photo + focal point/zoom, nested in the theme JSONB exactly like
+    layout_mode -- see TestWeddingLayoutMode above for the precedent."""
+
+    def test_defaults_to_empty_when_unset(
+        self,
+        coordinator_session: TestClient,
+        restore_wedding: None,
+    ) -> None:
+        coordinator_session.put(
+            "/api/settings/wedding",
+            json={"theme": {"primary": "#AA5500"}},
+        )
+        theme = coordinator_session.get("/api/settings/wedding").json()["theme"]
+        assert theme["page_backgrounds"] == {}
+
+    def test_round_trip_through_settings_and_public_theme(
+        self,
+        coordinator_session: TestClient,
+        client: TestClient,
+        db_session: Session,
+        restore_wedding: None,
+    ) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding",
+            json={"theme": {"page_backgrounds": {"dashboard": VALID_PAGE_BACKGROUND}}},
+        )
+        assert response.status_code == 200
+        assert response.json()["theme"]["page_backgrounds"]["dashboard"] == VALID_PAGE_BACKGROUND
+
+        db_session.expire_all()
+        wedding = db_session.get(Wedding, TEST_WEDDING_ID)
+        assert wedding is not None
+        assert wedding.theme["page_backgrounds"]["dashboard"] == VALID_PAGE_BACKGROUND
+
+        # The public (unauthenticated) theme endpoint -- what GuestLayout's
+        # usePortalTheme() and AuthLayout actually read -- round-trips it too.
+        public = client.get("/api/portal/theme")
+        assert public.status_code == 200
+        assert public.json()["theme"]["page_backgrounds"]["dashboard"] == VALID_PAGE_BACKGROUND
+
+    def test_rejects_unknown_page_key(
+        self, coordinator_session: TestClient, restore_wedding: None
+    ) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding",
+            json={"theme": {"page_backgrounds": {"music": VALID_PAGE_BACKGROUND}}},
+        )
+        assert response.status_code == 422
+
+    def test_rejects_unknown_source(
+        self, coordinator_session: TestClient, restore_wedding: None
+    ) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding",
+            json={
+                "theme": {
+                    "page_backgrounds": {
+                        "dashboard": {**VALID_PAGE_BACKGROUND, "source": "instagram"}
+                    }
+                }
+            },
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize("field,value", [("focal_x", -1), ("focal_x", 101), ("focal_y", -1), ("focal_y", 101)])
+    def test_rejects_out_of_range_focal_point(
+        self,
+        coordinator_session: TestClient,
+        restore_wedding: None,
+        field: str,
+        value: float,
+    ) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding",
+            json={"theme": {"page_backgrounds": {"dashboard": {**VALID_PAGE_BACKGROUND, field: value}}}},
+        )
+        assert response.status_code == 422
+
+    @pytest.mark.parametrize("zoom", [0.5, 2.6])
+    def test_rejects_out_of_range_zoom(
+        self,
+        coordinator_session: TestClient,
+        restore_wedding: None,
+        zoom: float,
+    ) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding",
+            json={"theme": {"page_backgrounds": {"dashboard": {**VALID_PAGE_BACKGROUND, "zoom": zoom}}}},
+        )
+        assert response.status_code == 422
+
+    def test_rejects_stock_url_not_in_shipped_list(
+        self, coordinator_session: TestClient, restore_wedding: None
+    ) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding",
+            json={
+                "theme": {
+                    "page_backgrounds": {
+                        "dashboard": {**VALID_PAGE_BACKGROUND, "url": "/backgrounds/not-a-real-file.jpg"}
+                    }
+                }
+            },
+        )
+        assert response.status_code == 422
+
+    def test_rejects_gallery_source_url_outside_uploads(
+        self, coordinator_session: TestClient, restore_wedding: None
+    ) -> None:
+        response = coordinator_session.put(
+            "/api/settings/wedding",
+            json={
+                "theme": {
+                    "page_backgrounds": {
+                        "dashboard": {
+                            "source": "gallery",
+                            "url": "/backgrounds/bg-01-winter-selfie.jpg",
+                            "focal_x": 50,
+                            "focal_y": 50,
+                            "zoom": 1.0,
+                        }
+                    }
+                }
+            },
+        )
+        assert response.status_code == 422
+
+
+class TestBackgroundUpload:
+    """The no-moderation, no-thumbnail upload endpoint backing the page
+    background picker's "Upload" tab -- see upload_my_profile_photo in
+    app/api/profiles.py for the pattern this mirrors."""
+
+    def test_rejects_non_image_upload(
+        self, coordinator_session: TestClient, uploads_dir: Path
+    ) -> None:
+        response = coordinator_session.post(
+            "/api/settings/backgrounds/upload",
+            files={"file": ("notes.txt", b"hello", "text/plain")},
+        )
+        assert response.status_code == 400
+
+    def test_rejects_file_over_size_limit(
+        self, coordinator_session: TestClient, uploads_dir: Path
+    ) -> None:
+        oversized = b"\x00" * (15 * 1024 * 1024 + 1)
+        response = coordinator_session.post(
+            "/api/settings/backgrounds/upload",
+            files={"file": ("huge.png", oversized, "image/png")},
+        )
+        assert response.status_code == 413
+
+    def test_accepts_image_and_stores_under_backgrounds_subfolder(
+        self, coordinator_session: TestClient, uploads_dir: Path
+    ) -> None:
+        response = coordinator_session.post(
+            "/api/settings/backgrounds/upload",
+            files={"file": ("dashboard.png", make_image_bytes(), "image/png")},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["url"].startswith(f"/uploads/{TEST_WEDDING_ID}/backgrounds/")
+
+        relative_path = body["url"].removeprefix("/uploads/")
+        assert (uploads_dir / relative_path).is_file()
+
+    def test_requires_coordinator(
+        self, guest_session: TestClient, uploads_dir: Path
+    ) -> None:
+        response = guest_session.post(
+            "/api/settings/backgrounds/upload",
+            files={"file": ("dashboard.png", make_image_bytes(), "image/png")},
+        )
+        assert response.status_code == 403
+
+    def test_requires_authentication(self, client: TestClient, uploads_dir: Path) -> None:
+        response = client.post(
+            "/api/settings/backgrounds/upload",
+            files={"file": ("dashboard.png", make_image_bytes(), "image/png")},
+        )
+        assert response.status_code == 401
