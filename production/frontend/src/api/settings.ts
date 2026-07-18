@@ -1,3 +1,5 @@
+import type { PageBackground, PageBackgroundKey } from '@/lib/theme'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
 export type WeddingPhase = 'planning' | 'live' | 'event' | 'archived'
@@ -5,6 +7,8 @@ export type WeddingPhase = 'planning' | 'live' | 'event' | 'archived'
 // Wave 4 item 17 Phase 1 (docs/specs/VIEWPORT_PAGING_PHASE1.md): guest-site
 // navigation pattern for Dashboard/RSVP/Schedule/Blessings.
 export type LayoutMode = 'paged' | 'scroll'
+
+export type { PageBackground, PageBackgroundKey, PageBackgroundSource } from '@/lib/theme'
 
 export interface WeddingThemeSettings {
   primary: string
@@ -14,6 +18,7 @@ export interface WeddingThemeSettings {
   body_font: string
   type_scale: number
   layout_mode: LayoutMode
+  page_backgrounds: Partial<Record<PageBackgroundKey, PageBackground>>
 }
 
 // Wave 3 item 14 D1: the non-subject partner's default access to their
@@ -122,4 +127,29 @@ export function updateSettings(payload: WeddingSettingsPayload): Promise<Wedding
     { method: 'PUT', body: JSON.stringify(payload) },
     'Failed to save settings',
   )
+}
+
+export interface BackgroundUploadResponse {
+  url: string
+}
+
+// Multipart upload — deliberately bypasses request()'s JSON Content-Type
+// header so the browser can set its own multipart boundary.
+export async function uploadPageBackground(file: File): Promise<BackgroundUploadResponse> {
+  const body = new FormData()
+  body.append('file', file)
+
+  const response = await fetch(`${API_BASE_URL}/api/settings/backgrounds/upload`, {
+    method: 'POST',
+    credentials: 'include',
+    body,
+  })
+
+  const payload = await response.json().catch(() => null)
+
+  if (!response.ok) {
+    throw new SettingsApiError(extractErrorMessage(payload, 'Failed to upload background'), response.status)
+  }
+
+  return payload as BackgroundUploadResponse
 }

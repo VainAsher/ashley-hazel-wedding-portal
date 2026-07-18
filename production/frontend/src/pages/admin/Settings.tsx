@@ -1,4 +1,11 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 
 import { AdminLayout } from '@/components/AdminLayout'
 import { MenuManager } from '@/components/admin/MenuManager'
@@ -14,11 +21,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useApprovedGallery } from '@/hooks/useGallery'
 import {
   SettingsApiError,
   useSettings,
   useUpdateSettings,
+  useUploadPageBackground,
   type LayoutMode,
+  type PageBackground,
+  type PageBackgroundKey,
+  type PageBackgroundSource,
   type PartyVisibilityMode,
   type WeddingPhase,
   type WeddingSettings,
@@ -27,10 +39,12 @@ import {
 } from '@/hooks/useSettings'
 import {
   buildTint,
+  DEFAULT_PAGE_BACKGROUNDS,
   DEFAULT_THEME,
   ensureFontPreviewStylesheet,
   findBodyFont,
   findDisplayFont,
+  STOCK_BACKGROUNDS,
   THEME_BODY_FONTS,
   THEME_DISPLAY_FONTS,
   type FontOption,
@@ -557,6 +571,334 @@ function LayoutModeCard({ settings }: { settings: WeddingSettings }) {
   )
 }
 
+const PAGE_BACKGROUND_TABS: { key: PageBackgroundKey; label: string }[] = [
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'rsvp', label: 'RSVP' },
+  { key: 'schedule', label: 'Schedule' },
+  { key: 'celebrate', label: 'Celebrate' },
+  { key: 'wedding_party', label: 'Wedding Party' },
+  { key: 'invite', label: 'Invite & Landing' },
+]
+
+type BackgroundSourceTab = 'stock' | 'gallery' | 'upload'
+
+const BACKGROUND_SOURCE_TABS: { key: BackgroundSourceTab; label: string }[] = [
+  { key: 'gallery', label: 'Gallery' },
+  { key: 'stock', label: 'Stock' },
+  { key: 'upload', label: 'Upload' },
+]
+
+// Every key always present (unlike the stored theme, where an absent key
+// means "not customized") — the card always edits the full 6-page map and
+// saves it back in one PUT.
+function pageBackgroundsWithDefaults(
+  theme: WeddingThemeSettings | null,
+): Record<PageBackgroundKey, PageBackground> {
+  const saved = theme?.page_backgrounds ?? {}
+  const result = {} as Record<PageBackgroundKey, PageBackground>
+  for (const { key } of PAGE_BACKGROUND_TABS) {
+    result[key] = saved[key] ?? DEFAULT_PAGE_BACKGROUNDS[key]
+  }
+  return result
+}
+
+function focalFromPointer(event: ReactPointerEvent<HTMLDivElement>): {
+  focal_x: number
+  focal_y: number
+} {
+  const box = event.currentTarget.getBoundingClientRect()
+  return {
+    focal_x: Math.min(100, Math.max(0, ((event.clientX - box.left) / box.width) * 100)),
+    focal_y: Math.min(100, Math.max(0, ((event.clientY - box.top) / box.height) * 100)),
+  }
+}
+
+// ROADMAP item 18 (docs/specs/PAGE_BACKGROUNDS.md): the couple picks a photo
+// per guest page (their own gallery, the 6 stock photos, or an upload) and
+// drags on the live preview to set its focal point, then a zoom slider.
+// Matching the house card style above — own local state seeded from the
+// saved theme, own Save button.
+function PageBackgroundsCard({ settings }: { settings: WeddingSettings }) {
+  const updateMutation = useUpdateSettings()
+  const uploadMutation = useUploadPageBackground()
+  const { data: galleryItems } = useApprovedGallery()
+
+  const [backgrounds, setBackgrounds] = useState<Record<PageBackgroundKey, PageBackground>>(() =>
+    pageBackgroundsWithDefaults(settings.theme),
+  )
+  const [activePage, setActivePage] = useState<PageBackgroundKey>('dashboard')
+  const [activeSource, setActiveSource] = useState<BackgroundSourceTab>('stock')
+  const [feedback, setFeedback] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const draggingRef = useRef(false)
+
+  useEffect(() => {
+    setBackgrounds(pageBackgroundsWithDefaults(settings.theme))
+  }, [settings.theme])
+
+  const baseTheme = themeWithDefaults(settings.theme)
+  const tint = buildTint(
+    isValidHex(baseTheme.secondary) ? baseTheme.secondary : DEFAULT_THEME.secondary,
+    baseTheme.tint_opacity,
+  )
+  const current = backgrounds[activePage]
+  const isSaving = updateMutation.isPending
+
+  const updateCurrent = (patch: Partial<PageBackground>) => {
+    setBackgrounds((prior) => ({
+      ...prior,
+      [activePage]: { ...prior[activePage], ...patch },
+    }))
+  }
+
+  const selectPhoto = (source: PageBackgroundSource, url: string) => {
+    // Reset to a neutral focal point/zoom on every photo swap — an old
+    // focal point rarely fits a differently-composed new photo.
+    updateCurrent({ source, url, focal_x: 50, focal_y: 50, zoom: 1.0 })
+  }
+
+  const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setUploadError(null)
+    try {
+      const result = await uploadMutation.mutateAsync(file)
+      selectPhoto('upload', result.url)
+    } catch (err) {
+      setUploadError(err instanceof SettingsApiError ? err.message : 'Failed to upload photo')
+    }
+  }
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId)
+    draggingRef.current = true
+    updateCurrent(focalFromPointer(event))
+  }
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return
+    updateCurrent(focalFromPointer(event))
+  }
+
+  const endDrag = () => {
+    draggingRef.current = false
+  }
+
+  const saveAll = async () => {
+    setFeedback(null)
+    setSaveError(null)
+    try {
+      await updateMutation.mutateAsync({
+        theme: { ...baseTheme, page_backgrounds: backgrounds },
+      })
+      setFeedback('Page backgrounds saved.')
+    } catch (err) {
+      setSaveError(err instanceof SettingsApiError ? err.message : 'Failed to save page backgrounds')
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg">Page Backgrounds</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4">
+          <p className="text-sm text-gray-600 m-0">
+            Pick a photo for each guest page, drag on the preview to set its focal point, and
+            zoom in or out.
+          </p>
+
+          {feedback && (
+            <Alert variant="success" role="status" aria-live="polite">
+              {feedback}
+            </Alert>
+          )}
+          {saveError && <Alert variant="destructive">{saveError}</Alert>}
+
+          <div
+            role="tablist"
+            aria-label="Page"
+            className="flex flex-wrap gap-1 rounded-md border border-input p-1 w-fit"
+          >
+            {PAGE_BACKGROUND_TABS.map((tab) => {
+              const active = activePage === tab.key
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setActivePage(tab.key)}
+                  className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                    active ? 'bg-plum text-white' : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-[1fr_260px]">
+            <div className="grid gap-2">
+              <span className="text-sm font-medium">Preview</span>
+              <div
+                data-testid="background-preview-box"
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={endDrag}
+                onPointerCancel={endDrag}
+                className="relative aspect-video w-full touch-none select-none overflow-hidden rounded-2xl cursor-crosshair"
+              >
+                <div
+                  className="absolute inset-0 bg-cover"
+                  style={{
+                    backgroundImage: `url(${current.url})`,
+                    backgroundPosition: `${current.focal_x}% ${current.focal_y}%`,
+                    transform: `scale(${current.zoom})`,
+                    transformOrigin: `${current.focal_x}% ${current.focal_y}%`,
+                  }}
+                />
+                <div className="absolute inset-0" style={{ backgroundImage: tint }} />
+                <div
+                  aria-hidden="true"
+                  data-testid="background-focal-point"
+                  className="pointer-events-none absolute h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.4)]"
+                  style={{ left: `${current.focal_x}%`, top: `${current.focal_y}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-500 m-0">
+                Click or drag on the photo to set its focal point.
+              </p>
+
+              <div className="grid gap-2">
+                <Label htmlFor="background-zoom">Zoom ({Math.round(current.zoom * 100)}%)</Label>
+                <input
+                  id="background-zoom"
+                  type="range"
+                  min={100}
+                  max={250}
+                  step={5}
+                  value={Math.round(current.zoom * 100)}
+                  onChange={(event) => updateCurrent({ zoom: Number(event.target.value) / 100 })}
+                  className="w-full accent-plum"
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Button type="button" disabled={isSaving} onClick={() => void saveAll()}>
+                  {isSaving ? 'Saving...' : 'Save all backgrounds'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isSaving}
+                  onClick={() => updateCurrent(DEFAULT_PAGE_BACKGROUNDS[activePage])}
+                >
+                  Reset this page&apos;s photo
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <div
+                role="tablist"
+                aria-label="Photo source"
+                className="inline-flex w-fit overflow-hidden rounded-md border border-input"
+              >
+                {BACKGROUND_SOURCE_TABS.map((tab) => {
+                  const active = activeSource === tab.key
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      onClick={() => setActiveSource(tab.key)}
+                      className={`px-3 py-1.5 text-sm font-medium transition-colors ${
+                        active ? 'bg-plum text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {activeSource === 'stock' && (
+                <div className="grid grid-cols-3 gap-2" aria-label="Stock photos">
+                  {STOCK_BACKGROUNDS.map((bg) => {
+                    const url = `/backgrounds/${bg.file}`
+                    const active = current.source === 'stock' && current.url === url
+                    return (
+                      <button
+                        key={bg.file}
+                        type="button"
+                        aria-pressed={active}
+                        aria-label={bg.label}
+                        onClick={() => selectPhoto('stock', url)}
+                        className={`aspect-square rounded-md bg-cover bg-center ring-2 transition-shadow ${
+                          active ? 'ring-plum' : 'ring-transparent hover:ring-gray-300'
+                        }`}
+                        style={{ backgroundImage: `url(${url})` }}
+                      />
+                    )
+                  })}
+                </div>
+              )}
+
+              {activeSource === 'gallery' && (
+                <div className="grid grid-cols-3 gap-2" aria-label="Gallery photos">
+                  {(galleryItems ?? []).length === 0 && (
+                    <p className="col-span-3 text-xs text-gray-500 m-0">
+                      No approved gallery photos yet.
+                    </p>
+                  )}
+                  {(galleryItems ?? []).map((item) => {
+                    const active = current.source === 'gallery' && current.url === item.url
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        aria-pressed={active}
+                        aria-label={item.title ?? 'Gallery photo'}
+                        onClick={() => selectPhoto('gallery', item.url)}
+                        className={`aspect-square rounded-md bg-cover bg-center ring-2 transition-shadow ${
+                          active ? 'ring-plum' : 'ring-transparent hover:ring-gray-300'
+                        }`}
+                        style={{ backgroundImage: `url(${item.thumb_url ?? item.url})` }}
+                      />
+                    )
+                  })}
+                </div>
+              )}
+
+              {activeSource === 'upload' && (
+                <div className="grid gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    aria-label="Upload a background photo"
+                    disabled={uploadMutation.isPending}
+                    onChange={(event) => void handleUpload(event)}
+                  />
+                  {uploadMutation.isPending && (
+                    <p className="text-xs text-gray-500 m-0">Uploading...</p>
+                  )}
+                  {uploadError && <Alert variant="destructive">{uploadError}</Alert>}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 function validate(form: SettingsFormState): string | null {
   if (!form.couple_names.trim()) {
     return 'Couple names are required.'
@@ -747,6 +1089,8 @@ export function Settings() {
         {!isLoading && !isError && settings && <ThemeCard settings={settings} />}
 
         {!isLoading && !isError && settings && <LayoutModeCard settings={settings} />}
+
+        {!isLoading && !isError && settings && <PageBackgroundsCard settings={settings} />}
 
         {!isLoading && !isError && settings && <PartyVisibilityCard settings={settings} />}
 
