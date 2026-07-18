@@ -482,6 +482,66 @@ THEME_TYPE_SCALES = (0.9, 1.0, 1.1)
 # route-level fallback the couple can flip back to with no redeploy.
 THEME_LAYOUT_MODES = ("paged", "scroll")
 
+# ROADMAP item 18 (docs/specs/PAGE_BACKGROUNDS.md): per-page background photo
+# + focal point/zoom, couple-set in admin Settings. Mirrors
+# production/frontend/public/backgrounds/*.jpg — keep both allowlists in
+# sync, same convention as THEME_DISPLAY_FONTS/THEME_BODY_FONTS above.
+STOCK_BACKGROUND_FILES = (
+    "bg-01-winter-selfie.jpg",
+    "bg-02-registry-office.jpg",
+    "bg-03-waterfall.jpg",
+    "bg-04-woodland-walk.jpg",
+    "bg-05-evening-sky.jpg",
+    "bg-06-registry-candid.jpg",
+)
+PAGE_BACKGROUND_SOURCES = ("stock", "gallery", "upload")
+# Maps onto real guest routes /dashboard, /rsvp, /schedule, /celebrate,
+# /wedding-party, plus the pre-login invite/landing page. Stag/Hen stay on
+# their fixed backgrounds for now -- explicitly out of scope for v1.
+PAGE_BACKGROUND_KEYS = (
+    "dashboard",
+    "rsvp",
+    "schedule",
+    "celebrate",
+    "wedding_party",
+    "invite",
+)
+
+
+class PageBackground(BaseModel):
+    """One guest/landing page's background photo + focal point + zoom.
+
+    focal_x/focal_y: 0-100, the CSS background-position percentage the
+        couple chose by dragging the crosshair in Settings.
+    zoom: 1.0 (natural cover-fit crop) up to 2.5x, anchored at the focal
+        point (see GuestLayout.tsx's transform/transform-origin split).
+    """
+
+    source: str = Field(default="stock")
+    url: str = Field(..., min_length=1, max_length=500)
+    focal_x: float = Field(default=50.0, ge=0, le=100)
+    focal_y: float = Field(default=50.0, ge=0, le=100)
+    zoom: float = Field(default=1.0, ge=1.0, le=2.5)
+
+    @field_validator("source")
+    @classmethod
+    def source_must_be_allowlisted(cls, value: str) -> str:
+        if value not in PAGE_BACKGROUND_SOURCES:
+            raise ValueError(
+                "Background source must be one of: " + ", ".join(PAGE_BACKGROUND_SOURCES)
+            )
+        return value
+
+    @model_validator(mode="after")
+    def url_must_match_source(self) -> "PageBackground":
+        if self.source == "stock":
+            allowed = {f"/backgrounds/{name}" for name in STOCK_BACKGROUND_FILES}
+            if self.url not in allowed:
+                raise ValueError("Stock background must be one of the shipped files")
+        elif not self.url.startswith("/uploads/"):
+            raise ValueError("Gallery/upload backgrounds must reference an uploaded file")
+        return self
+
 
 class WeddingTheme(BaseModel):
     """Guest-site theme dials set by the couple in admin Settings.
@@ -496,6 +556,9 @@ class WeddingTheme(BaseModel):
     layout_mode: 'paged' (viewport-fit swipeable deck, the default) or
         'scroll' (today's normal scrolling pages) for
         Dashboard/RSVP/Schedule/Blessings
+    page_backgrounds: per-page background photo + focal point/zoom, keyed by
+        PAGE_BACKGROUND_KEYS. A key's absence means "not customized" -- the
+        frontend falls back to today's stock photo for that page.
     """
 
     primary: str = Field(default="#f6c445", pattern=HEX_COLOR_PATTERN)
@@ -505,6 +568,7 @@ class WeddingTheme(BaseModel):
     body_font: str = THEME_BODY_FONTS[0]
     type_scale: float = 1.0
     layout_mode: str = THEME_LAYOUT_MODES[0]
+    page_backgrounds: dict[str, PageBackground] = Field(default_factory=dict)
 
     @field_validator("display_font")
     @classmethod
@@ -538,6 +602,18 @@ class WeddingTheme(BaseModel):
         if value not in THEME_LAYOUT_MODES:
             raise ValueError(
                 "Layout mode must be one of: " + ", ".join(THEME_LAYOUT_MODES)
+            )
+        return value
+
+    @field_validator("page_backgrounds")
+    @classmethod
+    def page_backgrounds_keys_must_be_allowlisted(
+        cls, value: dict[str, PageBackground]
+    ) -> dict[str, PageBackground]:
+        unknown = set(value) - set(PAGE_BACKGROUND_KEYS)
+        if unknown:
+            raise ValueError(
+                "Unknown page background key(s): " + ", ".join(sorted(unknown))
             )
         return value
 
