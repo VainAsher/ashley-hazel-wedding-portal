@@ -25,6 +25,24 @@ function json(route: Route, body: unknown, status = 200) {
   })
 }
 
+const LONG_BODY =
+  'The caterer confirmed the tasting date for next Thursday at 6pm. Please let us know ' +
+  'if you have any last-minute dietary changes before then, since the final headcount ' +
+  'goes to the venue on Friday morning and changes after that are much harder to make.'
+
+function seedLongNotification(): NotificationItem {
+  return {
+    id: 401,
+    wedding_id: 1,
+    kind: 'communication',
+    title: 'Tasting details',
+    body: LONG_BODY,
+    link_path: '/schedule',
+    created_at: new Date(Date.now() - 5 * 60_000).toISOString(),
+    read_at: null,
+  }
+}
+
 function seedNotifications(): NotificationItem[] {
   const now = Date.now()
   const iso = (minutesAgo: number) => new Date(now - minutesAgo * 60_000).toISOString()
@@ -209,6 +227,49 @@ test('dashboard Messages card shows recent notifications and marks one read on c
 
   await expect(page.getByTestId('unread-dot')).toHaveCount(1)
   expect(state.readPosts).toEqual([301])
+})
+
+test('dashboard Messages card: a long message shows only a snippet in the list, then the full text and a link when opened', async ({
+  page,
+}) => {
+  await installGuestDashboardApis(page)
+  await installNotificationsApi(page, [seedLongNotification()])
+  await page.route('**/api/portal/schedule', (route) => json(route, []))
+
+  await page.goto('/dashboard')
+
+  const main = page.getByRole('main')
+  await expect(main.getByText('Tasting details')).toBeVisible()
+  // The list only ever shows an 80-character snippet -- the full body isn't
+  // in the DOM until the notification is opened.
+  await expect(page.getByText(LONG_BODY)).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Mark Tasting details read' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Tasting details' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByText(LONG_BODY)).toBeVisible()
+
+  await dialog.getByRole('link', { name: 'Go to this page' }).click()
+  await expect(page).toHaveURL(/\/schedule$/)
+})
+
+test('bell popover: clicking a notification with a long body opens the full message', async ({
+  page,
+}) => {
+  await installGuestDashboardApis(page)
+  await installNotificationsApi(page, [seedLongNotification()])
+  await page.route('**/api/portal/schedule', (route) => json(route, []))
+
+  await page.goto('/dashboard')
+  await page.getByRole('button', { name: 'Notifications (1 unread)' }).click()
+
+  const popover = page.getByRole('dialog', { name: 'Notifications' })
+  await popover.getByRole('button', { name: 'Mark Tasting details read' }).click()
+
+  const dialog = page.getByRole('dialog', { name: 'Tasting details' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByText(LONG_BODY)).toBeVisible()
 })
 
 test('dashboard hides the Messages card when there are no notifications', async ({ page }) => {
