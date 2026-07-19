@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Bell } from 'lucide-react'
 
+import { NotificationDetailDialog } from '@/components/NotificationDetailDialog'
 import {
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
@@ -35,6 +36,7 @@ export function NotificationsBell({ variant = 'guest' }: NotificationsBellProps)
   const markAllRead = useMarkAllNotificationsRead()
 
   const [open, setOpen] = useState(false)
+  const [selected, setSelected] = useState<NotificationItem | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -63,6 +65,7 @@ export function NotificationsBell({ variant = 'guest' }: NotificationsBellProps)
     if (!item.read_at && !markRead.isPending) {
       markRead.mutate(item.id)
     }
+    setSelected(item)
   }
 
   return (
@@ -167,6 +170,11 @@ export function NotificationsBell({ variant = 'guest' }: NotificationsBellProps)
           )}
         </div>
       )}
+
+      <NotificationDetailDialog
+        item={selected}
+        onOpenChange={(isOpen) => !isOpen && setSelected(null)}
+      />
     </div>
   )
 }
