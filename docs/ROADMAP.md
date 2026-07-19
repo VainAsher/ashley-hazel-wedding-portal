@@ -444,6 +444,21 @@ per page. Also a good moment to switch backgrounds to responsive `image-set()` s
 (pairs with item 3's thumbnail tooling). Requires eyes-on-staging iteration with
 screenshots — design work, not plumbing.
 
+> **SHIPPED to production 2026-07-19 as v1.6.0** (PRs #54–#56, no new
+> migrations — `page_backgrounds` nests in the existing `theme` JSONB
+> column, same precedent as `layout_mode`). Landed as a couple-facing
+> self-serve picker rather than a one-off Pillow recrop pass: a new "Page
+> Backgrounds" card in Admin Settings lets the couple pick a photo per
+> page (their own approved gallery, the 6 stock backgrounds, or a fresh
+> upload) and drag a focal-point crosshair + zoom slider on a live
+> preview, independently for Dashboard/RSVP/Schedule/Celebrate/Wedding
+> Party/the pre-login Invite page — full contract in
+> `docs/specs/PAGE_BACKGROUNDS.md`. Shipped in the same release as PR #57,
+> a copy pass across guest + admin pages (error-message consistency, two
+> spots still describing the pre-Celebrate-hub three-page layout, and a
+> rewritten Dashboard/invite welcome reflecting the couple's own story —
+> Jamaica and Zimbabwe, a journey through England, to Halifax).
+
 ### 19. Video support (seed list) — **L**
 
 > **Decision confirmed 2026-07-13:** direct `.mp4` upload (Option B), not
