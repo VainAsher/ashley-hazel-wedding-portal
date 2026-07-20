@@ -82,6 +82,7 @@ jobs:
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/021_party_portals.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/022_member_profiles.sql
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/023_add_guest_address.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f production/database/migrations/024_allow_two_party_admins.sql
 
       - name: Seed test data
         run: |
@@ -188,6 +189,7 @@ jobs:
           psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/021_party_portals.sql
           psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/022_member_profiles.sql
           psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/023_add_guest_address.sql
+          psql "${{ env.DATABASE_URL }}" -v ON_ERROR_STOP=1 -f production/database/migrations/024_allow_two_party_admins.sql
 
       - name: Seed test data
         run: |

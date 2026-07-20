@@ -21,9 +21,20 @@ Agreed 2026-07-12, refining ROADMAP item 14's three open decisions:
    Either way, the subject is **never** self-service — only their partner,
    a coordinator, or that party's admin can flip their reveal on.
 3. **Best Man / Maid of Honour.** Flagging a guest into a party gains a
-   single-select "Best Man" (stag) / "Maid of Honour" (hen) designation —
-   at most one per party — which grants `party_admin`. Assigning a new one
-   automatically clears the previous holder.
+   "Best Man" (stag) / "Maid of Honour" (hen) designation, which grants
+   `party_admin`.
+
+   > **Amended 2026-07-20:** the couple wants two people to be able to share
+   > this role per party, not just one. Up to `MAX_PARTY_ADMINS_PER_PARTY`
+   > (2) may now hold `party_admin` per (wedding, party) — see migration 024
+   > and `app/api/invites.py`. Assigning a new one no longer auto-clears an
+   > existing holder; a third assignment attempt is rejected outright (400)
+   > so the couple picks who to remove first, rather than the system
+   > guessing which of two existing holders to silently demote. The
+   > party_admin-gated permissions below (reveal toggle, message
+   > pin/hide, party-info edit) are unchanged — they already check "is this
+   > invite the/an admin", so they work correctly with either one or two
+   > holders with no code change needed there.
 4. **Profiles: guest-visible, not party-only.** (Feeds ROADMAP item 15 when
    built — recorded here so the decision isn't lost.) The "Meet the wedding
    party" page is visible to every logged-in guest, not gated to party
@@ -46,10 +57,10 @@ Agreed 2026-07-12, refining ROADMAP item 14's three open decisions:
     meaningful only when `role='couple'`: which party is *this partner's
     own* do (Ashley → stag, Hazel → hen, or however the couple assigns it —
     don't hardcode names to values).
-  - Partial unique index `uq_one_party_admin_per_party` on
-    `(wedding_id, party) WHERE party_admin = true` — DB-level backstop; the
-    admin-flagging endpoint still proactively clears the previous holder
-    first so this should never actually fire in normal use.
+  - ~~Partial unique index `uq_one_party_admin_per_party`~~ — dropped by
+    migration 024 (2026-07-20). Up to two `party_admin` holders per
+    (wedding, party) are now allowed; the cap is enforced in
+    `app/api/invites.py`, not the DB.
 - `weddings.party_visibility_mode VARCHAR(20) NOT NULL DEFAULT
   'partner_visible' CHECK (IN ('partner_visible','locked'))` — the new
   Settings dial (own card, alongside Menu/Theme).
@@ -124,9 +135,10 @@ every actual content endpoint independently re-checks the rule above
       needs a coordinator or the Best Man).
     - the subject themself: never (can't self-reveal).
 - `app/api/guests.py` / invites admin: extend the existing invite
-  create/update endpoints with `party`, `party_admin` (server clears any
-  prior holder for that party first, inside the same transaction), and for
-  couple invites, `partner_label` + `associated_party`.
+  create/update endpoints with `party`, `party_admin` (server rejects a
+  third assignment once a party already has MAX_PARTY_ADMINS_PER_PARTY (2)
+  holders — see 2026-07-20 amendment above), and for couple invites,
+  `partner_label` + `associated_party`.
 - `app/api/settings.py`: extend wedding settings PATCH with
   `party_visibility_mode`.
 
@@ -158,10 +170,11 @@ Backend: every branch of the access-rule truth table (subject with/without
 row, non-subject with/without row × both modes), guest-role party==null
 denied, guest of the *other* party denied, coordinator denied party content
 but allowed the admin mutations, reveal-toggle authorization matrix (each
-of the four actor types × allowed/denied), Best Man/MoH single-holder
-enforcement (assigning a new one clears the old — assert via the DB, not
-just the response), cross-wedding 404s throughout. Playwright: nav entries
-appear/disappear per access, the reveal banner + toggle, party-admin
+of the four actor types × allowed/denied), Best Man/MoH two-holder cap
+enforcement (two can coexist, a third is rejected — assert via the DB, not
+just the response — including the party-switch edge case where an existing
+admin moves parties in the same request), cross-wedding 404s throughout.
+Playwright: nav entries appear/disappear per access, the reveal banner + toggle, party-admin
 message pin/hide, the admin invite-editing flows for both new field groups.
 
 ## Deliberately out of scope for D1
