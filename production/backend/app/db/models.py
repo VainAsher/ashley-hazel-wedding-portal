@@ -269,13 +269,6 @@ class Invite(Base):
         Index("idx_invites_code", "code", unique=True),
         Index("idx_invites_wedding_role", "wedding_id", "role"),
         Index("idx_invites_guest_id", "guest_id"),
-        Index(
-            "uq_one_party_admin_per_party",
-            "wedding_id",
-            "party",
-            unique=True,
-            postgresql_where=text("party_admin = true"),
-        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -292,9 +285,10 @@ class Invite(Base):
     )
     # Guest's party membership (Wave 3 item 14 D1). NULL = not in a party.
     party: Mapped[str | None] = mapped_column(String(10))
-    # Best Man (stag) / Maid of Honour (hen) — at most one per (wedding, party);
-    # DB-backstopped by uq_one_party_admin_per_party above. Grants party_admin
-    # powers (pin/hide messages, edit party info, always allowed to reveal).
+    # Best Man (stag) / Maid of Honour (hen) — up to MAX_PARTY_ADMINS_PER_PARTY
+    # (2) per (wedding, party), enforced in app/api/invites.py rather than a
+    # DB constraint (see migration 024). Grants party_admin powers (pin/hide
+    # messages, edit party info, always allowed to reveal).
     party_admin: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("FALSE")
     )

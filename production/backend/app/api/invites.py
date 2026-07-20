@@ -18,23 +18,27 @@ router = APIRouter(prefix="/api/invites", tags=["invites"])
 # Kept editable afterwards so the couple can use different wording.
 DEFAULT_PARTY_TITLE = {"stag": "Best Man", "hen": "Maid of Honour"}
 
+# The couple can name up to this many Best Man/Maid of Honour per party (was
+# single-holder in D1; migration 024 dropped the DB-level backstop for this
+# in favour of the app-level check below).
+MAX_PARTY_ADMINS_PER_PARTY = 2
+
 
 def generate_invite_code(length: int = 10) -> str:
     """Generate a cryptographically random invite code."""
     return secrets.token_urlsafe(length)[:length].upper()
 
 
-def clear_previous_party_admin(
+def ensure_party_admin_capacity(
     db: Session, wedding_id: int, party: str, exclude_invite_id: int | None = None
 ) -> None:
-    """Best Man/Maid of Honour is single-select per (wedding, party).
+    """Reject assigning a new Best Man/Maid of Honour once a party already
+    holds MAX_PARTY_ADMINS_PER_PARTY of them.
 
-    Proactively clears any current holder before a new one is assigned, in
-    the same transaction as the caller's commit (this function does not
-    commit itself) — the partial unique index on invites is a DB-level
-    backstop that should never actually fire because of this. Also clears
-    party_title: it's meaningless without holding the role, and leaving it
-    behind reads as a stale "Best Man" label on someone no longer admin.
+    Deliberately rejects rather than auto-clearing an existing holder (the
+    old single-holder behaviour) — with two slots, guessing which of two
+    existing holders to silently demote would surprise the couple; they pick
+    who to remove first instead.
     """
     query = db.query(Invite).filter(
         Invite.wedding_id == wedding_id,
@@ -43,10 +47,15 @@ def clear_previous_party_admin(
     )
     if exclude_invite_id is not None:
         query = query.filter(Invite.id != exclude_invite_id)
-    query.update(
-        {Invite.party_admin: False, Invite.party_title: None},
-        synchronize_session=False,
-    )
+    if query.count() >= MAX_PARTY_ADMINS_PER_PARTY:
+        title = DEFAULT_PARTY_TITLE.get(party, "Best Man/Maid of Honour")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"This party already has {MAX_PARTY_ADMINS_PER_PARTY} {title}s — "
+                "remove one before adding another."
+            ),
+        )
 
 
 @router.post("", response_model=InviteResponse, status_code=status.HTTP_201_CREATED)
@@ -91,10 +100,7 @@ def create_invite(
     )
 
     if invite.party_admin and invite.party is not None:
-        # Clear the previous holder in the same transaction as the insert
-        # below (single flush, one commit) so the DB never observes two
-        # simultaneous holders for this party.
-        clear_previous_party_admin(db, invite.wedding_id, invite.party)
+        ensure_party_admin_capacity(db, invite.wedding_id, invite.party)
         if not new_invite.party_title:
             new_invite.party_title = DEFAULT_PARTY_TITLE.get(invite.party)
 
@@ -162,6 +168,13 @@ def update_invite(
             status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
         )
 
+    # Snapshot before the field-assignment loop below mutates invite.party --
+    # the party_admin capacity check needs to know whether this invite was
+    # *already* admin of the target party specifically (not just admin of
+    # whatever party it was in before this request, e.g. if it's switching
+    # from stag to hen in the same PATCH).
+    was_party_admin_of = invite.party if invite.party_admin else None
+
     # Update fields if provided
     if invite_update.guest_id is not None:
         invite.guest_id = invite_update.guest_id
@@ -183,11 +196,10 @@ def update_invite(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="party_admin requires a party",
                 )
-            # Clear the previous holder in the same transaction as this
-            # update's commit below.
-            clear_previous_party_admin(
-                db, invite.wedding_id, target_party, exclude_invite_id=invite.id
-            )
+            if was_party_admin_of != target_party:
+                ensure_party_admin_capacity(
+                    db, invite.wedding_id, target_party, exclude_invite_id=invite.id
+                )
             invite.party_admin = True
             if not invite.party_title:
                 invite.party_title = DEFAULT_PARTY_TITLE.get(target_party)

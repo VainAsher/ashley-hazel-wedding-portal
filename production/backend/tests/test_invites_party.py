@@ -292,12 +292,13 @@ class TestUpdateInviteWithPartyFields:
         assert data["associated_party"] == "hen"
 
 
-class TestBestManSingleHolderEnforcement:
-    """Assigning a new Best Man/Maid of Honour clears the previous holder in
-    the same transaction — asserted against the DB directly, not just the
-    HTTP response, per the spec's security emphasis."""
+class TestBestManTwoHolderCap:
+    """Up to two Best Man/Maid of Honour per (wedding, party) — asserted
+    against the DB directly, not just the HTTP response, per the spec's
+    security emphasis. A third is rejected outright rather than silently
+    demoting one of the existing two."""
 
-    def test_assigning_new_party_admin_clears_previous_holder_on_create(
+    def test_two_party_admins_can_coexist_on_create(
         self, couple_session: TestClient, db_session: Session, invite_ids: list[int]
     ) -> None:
         first_guest = make_guest_row(db_session, name="Pytest First Best Man")
@@ -331,14 +332,57 @@ class TestBestManSingleHolderEnforcement:
         db_session.expire_all()
         first_invite = db_session.get(Invite, first["id"])
         second_invite = db_session.get(Invite, second["id"])
-        assert first_invite is not None and first_invite.party_admin is False
+        assert first_invite is not None and first_invite.party_admin is True
         assert second_invite is not None and second_invite.party_admin is True
-        # The demoted holder's title is cleared too — "Best Man" is
-        # meaningless (and confusing) once they no longer hold the role.
-        assert first_invite.party_title is None
+        assert first_invite.party_title == "Best Man"
         assert second_invite.party_title == "Best Man"
 
-    def test_assigning_new_party_admin_clears_previous_holder_on_update(
+    def test_third_party_admin_is_rejected_on_create(
+        self, couple_session: TestClient, db_session: Session, invite_ids: list[int]
+    ) -> None:
+        for name in ("Pytest Cap First", "Pytest Cap Second"):
+            guest = make_guest_row(db_session, name=name)
+            create_invite(
+                couple_session,
+                invite_ids,
+                {
+                    "wedding_id": TEST_WEDDING_ID,
+                    "role": "guest",
+                    "guest_id": guest.id,
+                    "party": "stag",
+                    "party_admin": True,
+                },
+            )
+
+        third_guest = make_guest_row(db_session, name="Pytest Cap Third")
+        response = create_invite(
+            couple_session,
+            invite_ids,
+            {
+                "wedding_id": TEST_WEDDING_ID,
+                "role": "guest",
+                "guest_id": third_guest.id,
+                "party": "stag",
+                "party_admin": True,
+            },
+        )
+
+        assert response.status_code == 400
+        assert "already has 2" in response.json()["detail"]
+
+        db_session.expire_all()
+        admin_count = (
+            db_session.query(Invite)
+            .filter(
+                Invite.wedding_id == TEST_WEDDING_ID,
+                Invite.party == "stag",
+                Invite.party_admin.is_(True),
+            )
+            .count()
+        )
+        assert admin_count == 2
+
+    def test_two_party_admins_can_coexist_on_update(
         self, couple_session: TestClient, db_session: Session, invite_ids: list[int]
     ) -> None:
         first_guest = make_guest_row(db_session, name="Pytest First MoH")
@@ -375,8 +419,129 @@ class TestBestManSingleHolderEnforcement:
         db_session.expire_all()
         first_invite = db_session.get(Invite, first["id"])
         second_invite = db_session.get(Invite, second["id"])
-        assert first_invite is not None and first_invite.party_admin is False
+        assert first_invite is not None and first_invite.party_admin is True
         assert second_invite is not None and second_invite.party_admin is True
+
+    def test_third_party_admin_is_rejected_on_update(
+        self, couple_session: TestClient, db_session: Session, invite_ids: list[int]
+    ) -> None:
+        for name in ("Pytest Update Cap First", "Pytest Update Cap Second"):
+            guest = make_guest_row(db_session, name=name)
+            create_invite(
+                couple_session,
+                invite_ids,
+                {
+                    "wedding_id": TEST_WEDDING_ID,
+                    "role": "guest",
+                    "guest_id": guest.id,
+                    "party": "hen",
+                    "party_admin": True,
+                },
+            )
+
+        third_guest = make_guest_row(db_session, name="Pytest Update Cap Third")
+        third = create_invite(
+            couple_session,
+            invite_ids,
+            {
+                "wedding_id": TEST_WEDDING_ID,
+                "role": "guest",
+                "guest_id": third_guest.id,
+                "party": "hen",
+            },
+        ).json()
+
+        response = couple_session.patch(
+            f"/api/invites/{third['id']}", json={"party_admin": True}
+        )
+        assert response.status_code == 400
+        assert "already has 2" in response.json()["detail"]
+
+        db_session.expire_all()
+        third_invite = db_session.get(Invite, third["id"])
+        assert third_invite is not None and third_invite.party_admin is False
+
+    def test_re_saving_existing_admin_does_not_trip_the_cap(
+        self, couple_session: TestClient, db_session: Session, invite_ids: list[int]
+    ) -> None:
+        # A party at capacity (2) re-saving one of the existing two (e.g. a
+        # title edit alongside party_admin: true) must not be rejected --
+        # they're not requesting a *new* slot.
+        for name in ("Pytest Resave First", "Pytest Resave Second"):
+            guest = make_guest_row(db_session, name=name)
+            create_invite(
+                couple_session,
+                invite_ids,
+                {
+                    "wedding_id": TEST_WEDDING_ID,
+                    "role": "guest",
+                    "guest_id": guest.id,
+                    "party": "stag",
+                    "party_admin": True,
+                },
+            )
+        first_invite = (
+            db_session.query(Invite)
+            .filter(Invite.wedding_id == TEST_WEDDING_ID, Invite.party == "stag")
+            .order_by(Invite.id)
+            .first()
+        )
+        assert first_invite is not None
+
+        response = couple_session.patch(
+            f"/api/invites/{first_invite.id}",
+            json={"party_admin": True, "party_title": "Best Man (renamed)"},
+        )
+        assert response.status_code == 200
+        assert response.json()["party_title"] == "Best Man (renamed)"
+
+    def test_switching_party_while_staying_admin_rechecks_capacity(
+        self, couple_session: TestClient, db_session: Session, invite_ids: list[int]
+    ) -> None:
+        # An invite that's already admin of stag, switching to hen (which is
+        # already at capacity) in the same PATCH, must be rejected against
+        # hen's capacity -- not skipped just because it was already an
+        # admin of *some* party.
+        for name in ("Pytest Switch Hen First", "Pytest Switch Hen Second"):
+            guest = make_guest_row(db_session, name=name)
+            create_invite(
+                couple_session,
+                invite_ids,
+                {
+                    "wedding_id": TEST_WEDDING_ID,
+                    "role": "guest",
+                    "guest_id": guest.id,
+                    "party": "hen",
+                    "party_admin": True,
+                },
+            )
+
+        stag_guest = make_guest_row(db_session, name="Pytest Switch Stag Admin")
+        stag_invite = create_invite(
+            couple_session,
+            invite_ids,
+            {
+                "wedding_id": TEST_WEDDING_ID,
+                "role": "guest",
+                "guest_id": stag_guest.id,
+                "party": "stag",
+                "party_admin": True,
+            },
+        ).json()
+
+        response = couple_session.patch(
+            f"/api/invites/{stag_invite['id']}",
+            json={"party": "hen", "party_admin": True},
+        )
+        assert response.status_code == 400
+        assert "already has 2" in response.json()["detail"]
+
+        db_session.expire_all()
+        refreshed = db_session.get(Invite, stag_invite["id"])
+        # Rejected: neither the party switch nor the admin flag took effect.
+        assert refreshed is not None
+        assert refreshed.party == "stag"
+        assert refreshed.party_admin is True
 
     def test_two_different_parties_keep_separate_admins(
         self, couple_session: TestClient, db_session: Session, invite_ids: list[int]

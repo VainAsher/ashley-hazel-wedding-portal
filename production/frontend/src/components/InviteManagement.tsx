@@ -28,6 +28,18 @@ const PARTY_ADMIN_TITLE: Record<'stag' | 'hen', string> = {
   hen: 'Maid of Honour',
 }
 
+// The couple can name up to this many Best Man/Maid of Honour per party
+// (see MAX_PARTY_ADMINS_PER_PARTY in app/api/invites.py — keep in sync).
+const MAX_PARTY_ADMINS_PER_PARTY = 2
+
+function partyAdminHolderLabel(invite: Invite, guests: Guest[]): string {
+  return (
+    invite.household_name ||
+    guests.find((g) => g.id === invite.guest_id)?.name ||
+    'someone'
+  )
+}
+
 export function InviteManagement({ weddingId }: { weddingId: number }) {
   const [invites, setInvites] = useState<Invite[]>([])
   const [guests, setGuests] = useState<Guest[]>([])
@@ -103,10 +115,10 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
     }
   }
 
-  // The guest currently holding Best Man/Maid of Honour for a party, if any
-  // — used to show the "this will replace the current holder" messaging.
-  const currentPartyAdmin = (target: 'stag' | 'hen') =>
-    invites.find((invite) => invite.party === target && invite.party_admin)
+  // The guest(s) currently holding Best Man/Maid of Honour for a party (up
+  // to MAX_PARTY_ADMINS_PER_PARTY) — used to show capacity messaging.
+  const currentPartyAdmins = (target: 'stag' | 'hen') =>
+    invites.filter((invite) => invite.party === target && invite.party_admin)
 
   const generateInvite = async (e: FormEvent) => {
     e.preventDefault()
@@ -326,24 +338,28 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
                 </label>
               ))}
             </div>
-            {party !== 'none' && (
-              <label style={{ ...radioLabelStyle, marginTop: '8px' }}>
-                <input
-                  type="checkbox"
-                  checked={partyAdmin}
-                  onChange={(e) => setPartyAdmin(e.target.checked)}
-                />
-                {`Make this guest the ${PARTY_ADMIN_TITLE[party]}`}
-                {partyAdmin && currentPartyAdmin(party) && (
-                  <span style={mutedStyle}>
-                    {' '}
-                    — this will replace {currentPartyAdmin(party)?.household_name ||
-                      guests.find((g) => g.id === currentPartyAdmin(party)?.guest_id)?.name ||
-                      'the current holder'}
-                  </span>
-                )}
-              </label>
-            )}
+            {party !== 'none' && (() => {
+              const holders = currentPartyAdmins(party)
+              const atCapacity = holders.length >= MAX_PARTY_ADMINS_PER_PARTY
+              return (
+                <label style={{ ...radioLabelStyle, marginTop: '8px' }}>
+                  <input
+                    type="checkbox"
+                    checked={partyAdmin}
+                    disabled={atCapacity && !partyAdmin}
+                    onChange={(e) => setPartyAdmin(e.target.checked)}
+                  />
+                  {`Make this guest a ${PARTY_ADMIN_TITLE[party]}`}
+                  {atCapacity && !partyAdmin && (
+                    <span style={mutedStyle}>
+                      {' '}
+                      — already has {MAX_PARTY_ADMINS_PER_PARTY}:{' '}
+                      {holders.map((h) => partyAdminHolderLabel(h, guests)).join(' & ')}
+                    </span>
+                  )}
+                </label>
+              )
+            })()}
           </fieldset>
         )}
 
@@ -583,28 +599,30 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
                     </label>
                   ))}
                 </div>
-                {editParty !== 'none' && (
-                  <label style={{ ...radioLabelStyle, marginTop: '8px' }}>
-                    <input
-                      type="checkbox"
-                      checked={editPartyAdmin}
-                      onChange={(e) => setEditPartyAdmin(e.target.checked)}
-                    />
-                    {`Make this guest the ${PARTY_ADMIN_TITLE[editParty]}`}
-                    {editPartyAdmin &&
-                      currentPartyAdmin(editParty) &&
-                      currentPartyAdmin(editParty)?.id !== editingPartyInvite.id && (
+                {editParty !== 'none' && (() => {
+                  const holders = currentPartyAdmins(editParty).filter(
+                    (h) => h.id !== editingPartyInvite.id,
+                  )
+                  const atCapacity = holders.length >= MAX_PARTY_ADMINS_PER_PARTY
+                  return (
+                    <label style={{ ...radioLabelStyle, marginTop: '8px' }}>
+                      <input
+                        type="checkbox"
+                        checked={editPartyAdmin}
+                        disabled={atCapacity && !editPartyAdmin}
+                        onChange={(e) => setEditPartyAdmin(e.target.checked)}
+                      />
+                      {`Make this guest a ${PARTY_ADMIN_TITLE[editParty]}`}
+                      {atCapacity && !editPartyAdmin && (
                         <span style={mutedStyle}>
                           {' '}
-                          — this will replace{' '}
-                          {currentPartyAdmin(editParty)?.household_name ||
-                            guests.find((g) => g.id === currentPartyAdmin(editParty)?.guest_id)
-                              ?.name ||
-                            'the current holder'}
+                          — already has {MAX_PARTY_ADMINS_PER_PARTY}:{' '}
+                          {holders.map((h) => partyAdminHolderLabel(h, guests)).join(' & ')}
                         </span>
                       )}
-                  </label>
-                )}
+                    </label>
+                  )
+                })()}
               </>
             ) : (
               <>

@@ -184,12 +184,21 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
         partner_label: body.partner_label ?? null,
         associated_party: body.associated_party ?? null,
       }
-      // Best Man/MoH single-holder: clear any previous holder for this party.
+      // Best Man/MoH: up to 2 per party, reject a 3rd (matches the real
+      // backend's MAX_PARTY_ADMINS_PER_PARTY cap in app/api/invites.py).
       if (newInvite.party_admin && newInvite.party) {
-        for (const existing of invitesCopy) {
-          if (existing.party === newInvite.party) {
-            existing.party_admin = false
-          }
+        const existingHolders = invitesCopy.filter(
+          (i) => i.party === newInvite.party && i.party_admin,
+        )
+        if (existingHolders.length >= 2) {
+          return await json(
+            route,
+            {
+              detail:
+                'This party already has 2 Best Man/Maid of Honours — remove one before adding another.',
+            },
+            400,
+          )
         }
       }
       invitesCopy.unshift(newInvite)
@@ -232,14 +241,23 @@ async function mockInvites(page: Page, invites: Invite[] = existingInvites) {
           invite.associated_party = body.associated_party ?? null
         }
         if ('party_admin' in body) {
-          invite.party_admin = body.party_admin ?? false
-          if (invite.party_admin && invite.party) {
-            for (const existing of invitesCopy) {
-              if (existing.id !== invite.id && existing.party === invite.party) {
-                existing.party_admin = false
-              }
+          const wantsAdmin = body.party_admin ?? false
+          if (wantsAdmin && !invite.party_admin && invite.party) {
+            const existingHolders = invitesCopy.filter(
+              (i) => i.id !== invite.id && i.party === invite.party && i.party_admin,
+            )
+            if (existingHolders.length >= 2) {
+              return await json(
+                route,
+                {
+                  detail:
+                    'This party already has 2 Best Man/Maid of Honours — remove one before adding another.',
+                },
+                400,
+              )
             }
           }
+          invite.party_admin = wantsAdmin
         }
         return await json(route, invite)
       } else {
@@ -666,10 +684,11 @@ test.describe('wedding party fields', () => {
     await expect(page.getByRole('row', { name: /NEW-/ }).getByText('Stag Do')).toBeVisible()
   })
 
-  test('checking Best Man shows the "will replace" note when a holder exists', async ({ page }) => {
-    // Re-mock with DEMO-001 already holding Best Man for stag, then reload —
-    // mockInvites fully re-registers the route (every method branch returns
-    // explicitly), so this is safe unlike a route.fallback() chain.
+  test('checking Best Man is allowed alongside one existing holder', async ({ page }) => {
+    // Re-mock with DEMO-001 already holding Best Man for stag (1 of the 2
+    // allowed slots filled), then reload — mockInvites fully re-registers
+    // the route (every method branch returns explicitly), so this is safe
+    // unlike a route.fallback() chain.
     await mockInvites(page, [
       { ...existingInvites[0], party: 'stag', party_admin: true, party_title: 'Best Man' },
       existingInvites[1],
@@ -682,9 +701,33 @@ test.describe('wedding party fields', () => {
     const roleSelect = page.getByLabel('Role')
     await roleSelect.selectOption('guest')
     await page.getByRole('radiogroup', { name: 'Wedding party' }).getByLabel('Stag Do').check()
-    await page.getByLabel(/Make this guest the Best Man/).check()
 
-    await expect(page.getByText(/this will replace/)).toBeVisible()
+    const checkbox = page.getByLabel(/Make this guest a Best Man/)
+    await expect(checkbox).toBeEnabled()
+    await checkbox.check()
+    await expect(page.getByText(/already has 2/)).not.toBeVisible()
+
+    await page.getByRole('button', { name: 'Generate Code' }).click()
+    await expect(page.getByText(/Invite code generated:/)).toBeVisible()
+  })
+
+  test('Best Man checkbox is disabled once a party already has 2 holders', async ({ page }) => {
+    await mockInvites(page, [
+      { ...existingInvites[0], party: 'stag', party_admin: true, party_title: 'Best Man' },
+      { ...existingInvites[1], role: 'guest', guest_id: 11, party: 'stag', party_admin: true, party_title: 'Best Man' },
+      existingInvites[2],
+    ])
+    await page.reload()
+    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible()
+    await expect(page.locator('tbody tr').first()).toBeVisible()
+
+    const roleSelect = page.getByLabel('Role')
+    await roleSelect.selectOption('guest')
+    await page.getByRole('radiogroup', { name: 'Wedding party' }).getByLabel('Stag Do').check()
+
+    const checkbox = page.getByLabel(/Make this guest a Best Man/)
+    await expect(checkbox).toBeDisabled()
+    await expect(page.getByText(/already has 2/)).toBeVisible()
   })
 
   test('generating a couple invite with identity fields shows them in the table', async ({ page }) => {
