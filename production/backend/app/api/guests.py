@@ -16,6 +16,12 @@ router = APIRouter(prefix="/api/guests", tags=["guests"])
 logger = get_logger(__name__)
 
 
+# Contact fields stay editable by the guest regardless of wedding phase (see
+# update_guest_rsvp below) -- unlike RSVP status/meal/dietary fields, there's
+# no reason to freeze a guest's own address/phone/email while RSVP is closed.
+GUEST_CONTACT_FIELDS = {"email", "phone", "address"}
+
+
 CONSTRAINT_MESSAGES = {
     "uq_guests_wedding_email": "Guest email already exists for this wedding",
     "guests_wedding_id_email_key": "Guest email already exists for this wedding",
@@ -142,12 +148,15 @@ async def update_guest_rsvp(
     logger.info("guest_rsvp_update_started", extra={"guest_id": guest_id})
     db_guest = get_guest_or_404(db, guest_id, "update_guest_rsvp")
     ensure_guest_rsvp_access(current_user, guest_id)
-    if current_user.wedding_phase != "live":
+    update_data = rsvp.model_dump(exclude_unset=True)
+
+    # Contact fields (email/phone/address) are exempt from the phase gate --
+    # only RSVP status/meal/dietary fields require the wedding to be live.
+    if update_data.keys() - GUEST_CONTACT_FIELDS and current_user.wedding_phase != "live":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="RSVP is not currently open.",
         )
-    update_data = rsvp.model_dump(exclude_unset=True)
 
     # Meal picks are gated like RSVP itself is gated by phase: while the
     # couple's meal_selection_open switch is off, sending a meal field is

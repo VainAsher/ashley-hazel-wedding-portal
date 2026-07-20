@@ -12,6 +12,7 @@ interface Guest {
   name: string
   email: string | null
   phone: string | null
+  address: string | null
   relationship: string | null
   rsvp_status: RsvpStatus
   meal_choice: MealChoice | null
@@ -32,6 +33,7 @@ const initialGuest: Guest = {
   name: 'Existing Guest',
   email: 'existing@example.com',
   phone: '555-0100',
+  address: '10 Guest Lane Halifax',
   relationship: 'friend',
   rsvp_status: 'accepted',
   meal_choice: 'chicken',
@@ -344,10 +346,10 @@ test('exports a single guest row as CSV', async ({ page }) => {
   const lines = content.split('\r\n')
   expect(lines).toHaveLength(2)
   expect(lines[0]).toBe(
-    'id,wedding_id,name,email,phone,relationship,rsvp_status,meal_choice,dietary_restrictions,plus_one_name,plus_one_rsvp,plus_one_dietary,table_number,seat_number,notes',
+    'id,wedding_id,name,email,phone,address,relationship,rsvp_status,meal_choice,dietary_restrictions,plus_one_name,plus_one_rsvp,plus_one_dietary,table_number,seat_number,notes',
   )
   expect(lines[1]).toBe(
-    '2001,1,Existing Guest,existing@example.com,555-0100,friend,accepted,chicken,Gluten free,,,,1,2,Already invited',
+    '2001,1,Existing Guest,existing@example.com,555-0100,10 Guest Lane Halifax,friend,accepted,chicken,Gluten free,,,,1,2,Already invited',
   )
 })
 
@@ -358,6 +360,7 @@ test('exports all guests as CSV with proper escaping', async ({ page }) => {
     name: 'Comma, "Quoted" Guest',
     email: null,
     phone: null,
+    address: null,
     relationship: null,
     meal_choice: null,
     dietary_restrictions: 'No nuts, "especially peanuts"\nsevere allergy',
@@ -385,16 +388,16 @@ test('exports all guests as CSV with proper escaping', async ({ page }) => {
   const content = await readDownloadedCsv(download)
   const lines = content.split('\r\n')
   expect(lines[0]).toBe(
-    'id,wedding_id,name,email,phone,relationship,rsvp_status,meal_choice,dietary_restrictions,plus_one_name,plus_one_rsvp,plus_one_dietary,table_number,seat_number,notes',
+    'id,wedding_id,name,email,phone,address,relationship,rsvp_status,meal_choice,dietary_restrictions,plus_one_name,plus_one_rsvp,plus_one_dietary,table_number,seat_number,notes',
   )
   expect(lines[1]).toBe(
-    '2001,1,Existing Guest,existing@example.com,555-0100,friend,accepted,chicken,Gluten free,,,,1,2,Already invited',
+    '2001,1,Existing Guest,existing@example.com,555-0100,10 Guest Lane Halifax,friend,accepted,chicken,Gluten free,,,,1,2,Already invited',
   )
   // Name and dietary notes contain commas, quotes, and a newline: they must be
   // quoted, with inner quotes doubled. Rows are joined with CRLF, so the
   // embedded LF stays inside the quoted dietary field on a single CRLF line.
   expect(lines[2]).toBe(
-    '2002,1,"Comma, ""Quoted"" Guest",,,,accepted,,"No nuts, ""especially peanuts""\nsevere allergy",,,,,,',
+    '2002,1,"Comma, ""Quoted"" Guest",,,,,accepted,,"No nuts, ""especially peanuts""\nsevere allergy",,,,,,',
   )
   expect(lines).toHaveLength(3)
 })

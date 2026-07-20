@@ -4,6 +4,7 @@ import {
   RsvpApiError,
   fetchGuestRsvp,
   saveGuestRsvp,
+  type GuestContactUpdate,
   type GuestRsvp,
   type GuestRsvpUpdate,
   type RsvpStatus,
@@ -23,6 +24,7 @@ import {
 } from '../components/ui/select'
 import { useAuth } from '../contexts/AuthContext'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { usePortalWedding } from '../hooks/usePortal'
 
 interface RsvpFormData {
   rsvpStatus: RsvpStatus
@@ -50,6 +52,22 @@ function formDataFromGuest(guest: GuestRsvp): RsvpFormData {
   }
 }
 
+interface ContactFormData {
+  email: string
+  phone: string
+  address: string
+}
+
+const defaultContactFormData: ContactFormData = { email: '', phone: '', address: '' }
+
+function contactFormDataFromGuest(guest: GuestRsvp): ContactFormData {
+  return {
+    email: guest.email ?? '',
+    phone: guest.phone ?? '',
+    address: guest.address ?? '',
+  }
+}
+
 function phaseMessage(phase: string): string {
   switch (phase) {
     case 'planning':
@@ -61,6 +79,19 @@ function phaseMessage(phase: string): string {
     default:
       return 'RSVP is currently closed.'
   }
+}
+
+function formatSaveTheDate(value: string): string {
+  const parsed = new Date(`${value}T00:00:00`)
+  if (Number.isNaN(parsed.getTime())) {
+    return value
+  }
+  return parsed.toLocaleDateString(undefined, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
 }
 
 function errorMessage(error: unknown): string {
@@ -122,6 +153,14 @@ export function RSVPContent() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null)
   const [closedMessage, setClosedMessage] = useState<string | null>(null)
 
+  // While RSVP is closed, the page repurposes itself: a save-the-date
+  // reminder plus a self-service form for keeping contact details current.
+  const { data: wedding } = usePortalWedding()
+  const [contactFormData, setContactFormData] = useState<ContactFormData>(defaultContactFormData)
+  const [contactSubmitting, setContactSubmitting] = useState(false)
+  const [contactError, setContactError] = useState<string | null>(null)
+  const [contactStatusMessage, setContactStatusMessage] = useState<string | null>(null)
+
   useEffect(() => {
     if (authLoading) {
       return
@@ -147,19 +186,21 @@ export function RSVPContent() {
         }
 
         const phase = weddingPhase ?? 'live'
-        if (phase !== 'live') {
-          if (mounted) {
-            setClosedMessage(phaseMessage(phase))
-          }
-          return
+        const rsvpOpen = phase === 'live'
+        if (!rsvpOpen && mounted) {
+          setClosedMessage(phaseMessage(phase))
         }
 
-        // The portal menu tells us whether meal selection is open and, if so,
-        // which options to offer. A menu failure must not block the RSVP form
-        // itself — fall back to the closed (dietary-only) experience.
+        // The guest record is always fetched -- while RSVP is closed it's
+        // still needed to pre-fill the self-service contact form. The portal
+        // menu tells us whether meal selection is open and, if so, which
+        // options to offer; it's only relevant while RSVP is open, and a menu
+        // failure must not block the RSVP form itself.
         const [loadedGuest, menu] = await Promise.all([
           fetchGuestRsvp(user.guest_id),
-          fetchPortalMenu().catch(() => ({ meal_selection_open: false, options: [] })),
+          rsvpOpen
+            ? fetchPortalMenu().catch(() => ({ meal_selection_open: false, options: [] }))
+            : Promise.resolve({ meal_selection_open: false, options: [] }),
         ])
         if (!mounted) {
           return
@@ -169,6 +210,7 @@ export function RSVPContent() {
         setMenuOpen(menu.meal_selection_open)
         setMenuOptions(menu.options)
         setFormData(formDataFromGuest(loadedGuest))
+        setContactFormData(contactFormDataFromGuest(loadedGuest))
       } catch (err) {
         if (mounted) {
           setError(errorMessage(err))
@@ -234,6 +276,40 @@ export function RSVPContent() {
     }
   }
 
+  const updateContactField =
+    <Key extends keyof ContactFormData>(key: Key) =>
+    (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setContactFormData((current) => ({ ...current, [key]: event.target.value }))
+    }
+
+  const handleContactSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!guest) {
+      return
+    }
+
+    const payload: GuestContactUpdate = {
+      email: optionalText(contactFormData.email),
+      phone: optionalText(contactFormData.phone),
+      address: optionalText(contactFormData.address),
+    }
+
+    setContactSubmitting(true)
+    setContactError(null)
+    setContactStatusMessage(null)
+
+    try {
+      const updatedGuest = await saveGuestRsvp(guest.id, payload)
+      setGuest(updatedGuest)
+      setContactFormData(contactFormDataFromGuest(updatedGuest))
+      setContactStatusMessage('Thanks — your details are up to date.')
+    } catch (err) {
+      setContactError(errorMessage(err))
+    } finally {
+      setContactSubmitting(false)
+    }
+  }
+
   const formDisabled = submitting || saved
 
   return (
@@ -255,16 +331,85 @@ export function RSVPContent() {
         )}
 
         {!loading && closedMessage && (
-          <Card>
-            <CardContent className="pt-6">
-              <div role="status" className="text-gray-700 text-sm">
-                {closedMessage}
-              </div>
-            </CardContent>
-          </Card>
+          <>
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>Save the Date</CardTitle>
+                <CardDescription>
+                  {wedding
+                    ? `${formatSaveTheDate(wedding.wedding_date)}${
+                        wedding.ceremony_location ? ` · ${wedding.ceremony_location}` : ''
+                      }`
+                    : "We can't wait to celebrate with you."}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div role="status" className="text-gray-700 text-sm">
+                  {closedMessage}
+                </div>
+              </CardContent>
+            </Card>
+
+            {guest && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Your details</CardTitle>
+                  <CardDescription>
+                    Keep your contact details current so the invite (and anything after) reaches
+                    you.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleContactSubmit} className="space-y-4">
+                    <fieldset disabled={contactSubmitting} className="border-0 space-y-4 m-0 p-0">
+                      <div className="space-y-2">
+                        <Label htmlFor="contact-email">Email</Label>
+                        <Input
+                          id="contact-email"
+                          type="email"
+                          value={contactFormData.email}
+                          onChange={updateContactField('email')}
+                          placeholder="you@example.com"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="contact-phone">Phone</Label>
+                        <Input
+                          id="contact-phone"
+                          type="tel"
+                          value={contactFormData.phone}
+                          onChange={updateContactField('phone')}
+                          placeholder="07700 900123"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="contact-address">Postal address</Label>
+                        <textarea
+                          id="contact-address"
+                          maxLength={500}
+                          value={contactFormData.address}
+                          onChange={updateContactField('address')}
+                          rows={3}
+                          placeholder="Street, city, postcode"
+                          className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-base resize-vertical focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        />
+                      </div>
+                    </fieldset>
+
+                    {contactStatusMessage && <Alert variant="success">{contactStatusMessage}</Alert>}
+                    {contactError && <Alert variant="destructive">{contactError}</Alert>}
+
+                    <Button disabled={contactSubmitting} type="submit">
+                      {contactSubmitting ? 'Saving...' : 'Save my details'}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+          </>
         )}
 
-        {!loading && guest && (
+        {!loading && !closedMessage && guest && (
           <>
             <Card className="mb-6">
               <CardHeader>

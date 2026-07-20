@@ -15,6 +15,7 @@ class GuestBase(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     email: str | None = Field(default=None, max_length=255)
     phone: str | None = Field(default=None, max_length=20)
+    address: str | None = Field(default=None, max_length=500)
     relationship: str | None = Field(default=None, max_length=100)
     rsvp_status: RsvpStatus = RsvpStatus.pending
     meal_choice: str | None = Field(default=None, max_length=100)
@@ -56,6 +57,7 @@ class GuestUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     email: str | None = Field(default=None, max_length=255)
     phone: str | None = Field(default=None, max_length=20)
+    address: str | None = Field(default=None, max_length=500)
     relationship: str | None = Field(default=None, max_length=100)
     rsvp_status: RsvpStatus | None = None
     meal_choice: str | None = Field(default=None, max_length=100)
@@ -99,14 +101,32 @@ class GuestRSVPUpdate(BaseModel):
     plus_one_meal_choice: str | None = Field(default=None, max_length=120)
     dietary_notes: str | None = Field(default=None, max_length=500)
     plus_one_name: str | None = Field(default=None, max_length=255)
+    # Contact fields: unlike the fields above, these are accepted regardless
+    # of wedding phase (see guests.py's update_guest_rsvp) so a guest can keep
+    # their details current even while RSVP itself is closed.
+    email: str | None = Field(default=None, max_length=255)
+    phone: str | None = Field(default=None, max_length=20)
+    address: str | None = Field(default=None, max_length=500)
 
-    @field_validator("meal_choice", "plus_one_meal_choice", "dietary_notes", "plus_one_name")
+    @field_validator(
+        "meal_choice", "plus_one_meal_choice", "dietary_notes", "plus_one_name", "phone", "address"
+    )
     @classmethod
     def blank_optional_text_to_none(cls, value: str | None) -> str | None:
         if value is None:
             return None
         stripped = value.strip()
         return stripped or None
+
+    @field_validator("email")
+    @classmethod
+    def email_must_look_valid(cls, value: str | None) -> str | None:
+        if value is None or value == "":
+            return None
+        email = value.strip()
+        if not EMAIL_PATTERN.fullmatch(email):
+            raise ValueError("Email must be a valid address")
+        return email
 
 
 class GuestResponse(GuestBase):
