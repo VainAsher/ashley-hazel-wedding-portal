@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 init_error_tracking(settings)
 
 # Sentry must be initialized before FastAPI app creation so framework integrations attach.
-app = FastAPI(title="Wedding Dashboard API", version="1.6.1")
+app = FastAPI(title="Wedding Dashboard API", version="1.7.0")
 app.middleware("http")(metrics_middleware(settings))
 
 app.add_middleware(
