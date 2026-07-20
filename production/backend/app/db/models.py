@@ -200,6 +200,7 @@ class Guest(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255))
     phone: Mapped[str | None] = mapped_column(String(20))
+    address: Mapped[str | None] = mapped_column(String(500))
     relationship: Mapped[str | None] = mapped_column(String(100))
     rsvp_status: Mapped[RsvpStatus] = mapped_column(
         rsvp_status_enum,

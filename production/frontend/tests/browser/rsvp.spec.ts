@@ -9,6 +9,7 @@ interface Guest {
   name: string
   email: string | null
   phone: string | null
+  address: string | null
   relationship: string | null
   rsvp_status: RsvpStatus
   meal_choice: string | null
@@ -31,6 +32,9 @@ interface PatchRequestRecord {
   plus_one_meal_choice?: string | null
   dietary_notes?: string | null
   plus_one_name?: string | null
+  email?: string | null
+  phone?: string | null
+  address?: string | null
 }
 
 interface PortalMenuOption {
@@ -82,12 +86,24 @@ const currentUser = {
   guest_id: 10,
 }
 
+const planningPhaseUser = { ...currentUser, wedding_phase: 'planning' }
+
+const portalWedding = {
+  couple_names: 'Ashley & Hazel',
+  wedding_date: '2027-06-19',
+  ceremony_time: '14:00:00',
+  ceremony_location: 'The Arches, Dean Clough',
+  reception_location: 'The Arches, Dean Clough',
+  phase: 'planning',
+}
+
 const initialGuest: Guest = {
   id: 10,
   wedding_id: 1,
   name: 'Demo Guest',
   email: 'demo@example.com',
   phone: null,
+  address: null,
   relationship: 'friend',
   rsvp_status: 'accepted',
   meal_choice: 'vegetarian',
@@ -131,16 +147,21 @@ async function installRsvpApi(
     patchStatus?: number
     patchDetail?: string
     requests?: PatchRequestRecord[]
+    user?: typeof currentUser | typeof planningPhaseUser
   } = {},
 ) {
   let guest = { ...(options.guest ?? initialGuest) }
 
   await page.route('**/api/auth/me', async (route) => {
-    await json(route, currentUser)
+    await json(route, options.user ?? currentUser)
   })
 
   await page.route('**/api/portal/menu', async (route) => {
     await json(route, options.menu ?? closedMenu)
+  })
+
+  await page.route('**/api/portal/wedding', async (route) => {
+    await json(route, portalWedding)
   })
 
   await page.route(/\/api\/guests\/10$/, async (route) => {
@@ -386,4 +407,64 @@ test('submits meal choices for guest and plus one while open', async ({ page }) 
       plus_one_meal_choice: 'Wild Mushroom Wellington',
     },
   ])
+})
+
+test('while RSVP is closed, shows a save-the-date and a self-service contact form instead of the RSVP form', async ({
+  page,
+}) => {
+  await installRsvpApi(page, {
+    user: planningPhaseUser,
+    guest: { ...initialGuest, phone: '01422 000000', address: '1 Old Road, Halifax' },
+  })
+
+  await page.goto('/rsvp')
+
+  const main = page.getByRole('main')
+  await expect(main.getByRole('heading', { name: 'Save the Date' })).toBeVisible()
+  await expect(main.getByText(/2027/)).toBeVisible()
+  await expect(main.getByText('The Arches, Dean Clough')).toBeVisible()
+  await expect(main.getByText('RSVP is not open yet — please check back soon.')).toBeVisible()
+
+  // The RSVP form itself (attendance, dietary, etc.) does not render.
+  await expect(main.getByLabel('Accept')).not.toBeVisible()
+
+  // The contact form is pre-filled from the guest record.
+  await expect(main.getByRole('heading', { name: 'Your details' })).toBeVisible()
+  await expect(main.getByLabel('Email')).toHaveValue('demo@example.com')
+  await expect(main.getByLabel('Phone')).toHaveValue('01422 000000')
+  await expect(main.getByLabel('Postal address')).toHaveValue('1 Old Road, Halifax')
+})
+
+test('saves contact details while RSVP is closed, without touching RSVP fields', async ({
+  page,
+}) => {
+  const requests: PatchRequestRecord[] = []
+  await installRsvpApi(page, {
+    user: planningPhaseUser,
+    guest: { ...initialGuest, phone: null, address: null },
+    requests,
+  })
+
+  await page.goto('/rsvp')
+
+  const main = page.getByRole('main')
+  await main.getByLabel('Phone').fill('07700 900123')
+  await main.getByLabel('Postal address').fill('12 Example Street, Halifax, HX1 1AA')
+  await main.getByRole('button', { name: 'Save my details' }).click()
+
+  await expect(
+    page.locator('[role="alert"]').filter({ hasText: "Thanks — your details are up to date." }),
+  ).toBeVisible({ timeout: 5000 })
+
+  expect(requests).toEqual([
+    {
+      email: 'demo@example.com',
+      phone: '07700 900123',
+      address: '12 Example Street, Halifax, HX1 1AA',
+    },
+  ])
+
+  // The form stays editable -- unlike the RSVP form, saving contact details
+  // isn't a one-time action.
+  await expect(main.getByLabel('Phone')).toBeEnabled()
 })

@@ -8,6 +8,7 @@ export interface GuestRsvp {
   name: string
   email: string | null
   phone: string | null
+  address: string | null
   relationship: string | null
   rsvp_status: RsvpStatus
   // Stores the chosen menu option's name (legacy rows may hold old
@@ -35,6 +36,15 @@ export interface GuestRsvpUpdate {
   plus_one_meal_choice?: string | null
   dietary_notes: string | null
   plus_one_name: string | null
+}
+
+// Guest self-service contact update -- accepted by the same PATCH endpoint
+// regardless of wedding phase (see production/backend/app/api/guests.py),
+// unlike the RSVP-status/meal/dietary fields above.
+export interface GuestContactUpdate {
+  email?: string | null
+  phone?: string | null
+  address?: string | null
 }
 
 export class RsvpApiError extends Error {
@@ -95,7 +105,7 @@ export async function fetchGuestRsvp(
 
 export async function saveGuestRsvp(
   guestId: number,
-  payload: GuestRsvpUpdate,
+  payload: GuestRsvpUpdate | GuestContactUpdate,
   apiBaseUrl = API_BASE_URL,
 ): Promise<GuestRsvp> {
   return requestJson<GuestRsvp>(

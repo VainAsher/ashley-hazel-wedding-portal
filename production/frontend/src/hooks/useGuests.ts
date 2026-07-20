@@ -13,6 +13,7 @@ export interface Guest {
   name: string
   email: string | null
   phone: string | null
+  address: string | null
   relationship: string | null
   rsvp_status: RsvpStatus
   // Menu option name (or a legacy fixed value like 'chicken').
@@ -34,6 +35,7 @@ export interface GuestPayload {
   name: string
   email: string | null
   phone: string | null
+  address: string | null
   relationship: string | null
   rsvp_status: RsvpStatus
   // Coordinator edits still offer the legacy fixed values, but existing rows

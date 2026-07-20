@@ -6,6 +6,7 @@ const CSV_COLUMNS = [
   'name',
   'email',
   'phone',
+  'address',
   'relationship',
   'rsvp_status',
   'meal_choice',

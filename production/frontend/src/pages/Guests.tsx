@@ -63,6 +63,7 @@ interface GuestFormState {
   name: string
   email: string
   phone: string
+  address: string
   relationship: string
   rsvp_status: RsvpStatus
   // May hold a guest-picked menu option name, not just the legacy values.
@@ -82,6 +83,7 @@ function emptyFormState(): GuestFormState {
     name: '',
     email: '',
     phone: '',
+    address: '',
     relationship: '',
     rsvp_status: 'pending',
     meal_choice: '',
@@ -101,6 +103,7 @@ function formStateFromGuest(guest: Guest): GuestFormState {
     name: guest.name,
     email: guest.email ?? '',
     phone: guest.phone ?? '',
+    address: guest.address ?? '',
     relationship: guest.relationship ?? '',
     rsvp_status: guest.rsvp_status,
     meal_choice: guest.meal_choice ?? '',
@@ -151,6 +154,7 @@ function buildPayload(form: GuestFormState): GuestPayload {
     name: form.name.trim(),
     email: optionalText(form.email),
     phone: optionalText(form.phone),
+    address: optionalText(form.address),
     relationship: optionalText(form.relationship),
     rsvp_status: form.rsvp_status,
     meal_choice: form.meal_choice || null,
@@ -430,6 +434,26 @@ export function Guests() {
                 type="email"
                 value={form.email}
                 onChange={(event) => updateField('email', event.target.value)}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="guest-phone">Phone</Label>
+              <Input
+                id="guest-phone"
+                type="tel"
+                value={form.phone}
+                onChange={(event) => updateField('phone', event.target.value)}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="guest-address">Postal address</Label>
+              <Input
+                id="guest-address"
+                type="text"
+                value={form.address}
+                onChange={(event) => updateField('address', event.target.value)}
               />
             </div>
 
