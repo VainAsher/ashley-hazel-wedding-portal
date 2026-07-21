@@ -141,6 +141,10 @@ function mainRegion(page: Page) {
   return page.getByRole('main')
 }
 
+async function openBackgroundsTab(page: Page) {
+  await mainRegion(page).getByRole('tab', { name: 'Backgrounds', exact: true }).click()
+}
+
 function previewPhotoLayer(page: Page) {
   return page.getByTestId('background-preview-box').locator('div').first()
 }
@@ -158,6 +162,7 @@ test('renders the default stock photo for each page and switches independently',
   page,
 }) => {
   await page.goto('/admin/settings')
+  await openBackgroundsTab(page)
   const main = mainRegion(page)
   await expect(main.getByRole('heading', { name: 'Page Backgrounds' })).toBeVisible()
 
@@ -172,6 +177,7 @@ test('renders the default stock photo for each page and switches independently',
 
 test('edits to one page do not leak into another before saving', async ({ page }) => {
   await page.goto('/admin/settings')
+  await openBackgroundsTab(page)
   const main = mainRegion(page)
 
   await main.getByRole('button', { name: 'Evening sky' }).click()
@@ -188,6 +194,7 @@ test('picks a stock photo, drags the focal point, zooms, saves, and the change p
   page,
 }) => {
   await page.goto('/admin/settings')
+  await openBackgroundsTab(page)
   const main = mainRegion(page)
 
   await main.getByRole('button', { name: 'Evening sky' }).click()
@@ -227,12 +234,14 @@ test('picks a stock photo, drags the focal point, zooms, saves, and the change p
   expect(savedDashboard.zoom).toBe(1.8)
 
   await page.goto('/admin/settings')
+  await openBackgroundsTab(page)
   await expect(previewPhotoLayer(page)).toHaveCSS('background-image', /bg-05-evening-sky\.jpg/)
   await expect(previewPhotoLayer(page)).toHaveCSS('transform', 'matrix(1.8, 0, 0, 1.8, 0, 0)')
 })
 
 test('picks a gallery photo, resetting focal point and zoom to neutral', async ({ page }) => {
   await page.goto('/admin/settings')
+  await openBackgroundsTab(page)
   const main = mainRegion(page)
 
   await main.getByRole('tab', { name: 'Gallery' }).click()
@@ -245,6 +254,7 @@ test('picks a gallery photo, resetting focal point and zoom to neutral', async (
 
 test('uploads a file and sets it as the background', async ({ page }) => {
   await page.goto('/admin/settings')
+  await openBackgroundsTab(page)
   const main = mainRegion(page)
 
   await main.getByRole('tab', { name: 'Upload' }).click()

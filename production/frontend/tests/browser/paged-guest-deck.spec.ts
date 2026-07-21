@@ -620,6 +620,7 @@ test.describe('the settings toggle switches a live session without a reload', ()
     )
 
     await page.goto('/admin/settings')
+    await page.getByRole('tab', { name: 'Guest Access' }).click()
     await expect(page.getByRole('heading', { name: 'Guest Page Navigation' })).toBeVisible()
 
     const requestCountBeforeSave = themeRequestCount

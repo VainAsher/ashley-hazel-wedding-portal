@@ -168,10 +168,15 @@ function menuCard(page: Page) {
   return page.getByLabel('Menu builder')
 }
 
+async function openMenuTab(page: Page) {
+  await page.getByRole('tab', { name: 'Menu' }).click()
+}
+
 test('renders the menu options with dietary chips and hidden state', async ({ page }) => {
   await installMenuApi(page, makeRequests())
 
   await page.goto('/admin/settings')
+  await openMenuTab(page)
 
   const card = menuCard(page)
   await expect(card.getByText('Herb Roast Chicken')).toBeVisible()
@@ -195,6 +200,7 @@ test('adds a menu option with dietary flags', async ({ page }) => {
   await installMenuApi(page, requests)
 
   await page.goto('/admin/settings')
+  await openMenuTab(page)
 
   const card = menuCard(page)
   await card.getByLabel('Name', { exact: true }).fill('Grilled Sea Bass')
@@ -221,6 +227,7 @@ test('edits an existing option', async ({ page }) => {
   await installMenuApi(page, requests)
 
   await page.goto('/admin/settings')
+  await openMenuTab(page)
 
   const card = menuCard(page)
   await card.getByRole('button', { name: 'Edit Herb Roast Chicken' }).click()
@@ -253,6 +260,7 @@ test('toggles an option in and out of the guest menu', async ({ page }) => {
   await installMenuApi(page, requests)
 
   await page.goto('/admin/settings')
+  await openMenuTab(page)
 
   const card = menuCard(page)
   await card.getByRole('button', { name: 'Hide Herb Roast Chicken' }).click()
@@ -274,6 +282,7 @@ test('deletes an option (soft delete keeps it listed as hidden)', async ({ page 
   await installMenuApi(page, requests)
 
   await page.goto('/admin/settings')
+  await openMenuTab(page)
 
   const card = menuCard(page)
   await card.getByRole('button', { name: 'Delete Wild Mushroom Wellington' }).click()
@@ -292,6 +301,7 @@ test('opens and closes meal selection via the switch', async ({ page }) => {
   await installMenuApi(page, requests)
 
   await page.goto('/admin/settings')
+  await openMenuTab(page)
 
   const card = menuCard(page)
   await card.getByLabel('Meal selection open').check()
