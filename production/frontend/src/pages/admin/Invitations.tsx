@@ -77,7 +77,7 @@ export function Invitations() {
         {error && !loading && <Alert variant="destructive">{error}</Alert>}
 
         {!loading && !error && user && (
-          <section aria-label="Invite Management" className="-mx-4 sm:mx-0">
+          <section aria-label="Invite Management">
             <InviteManagement weddingId={user.wedding_id} />
           </section>
         )}

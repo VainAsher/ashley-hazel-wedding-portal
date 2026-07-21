@@ -1,5 +1,27 @@
 import { useState, useEffect, type FormEvent } from 'react'
 
+import { Alert } from '@/components/ui/alert'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+
 type PartyValue = 'stag' | 'hen' | null
 
 interface Invite {
@@ -31,6 +53,13 @@ const PARTY_ADMIN_TITLE: Record<'stag' | 'hen', string> = {
 // The couple can name up to this many Best Man/Maid of Honour per party
 // (see MAX_PARTY_ADMINS_PER_PARTY in app/api/invites.py — keep in sync).
 const MAX_PARTY_ADMINS_PER_PARTY = 2
+
+// Native <select> elements (not the shadcn Select) — the coordinator/couple
+// role, guest, and party pickers here are exercised by Playwright's
+// selectOption(), which only works against a real <select>. Styled to match
+// Input's look regardless.
+const NATIVE_SELECT_CLASS =
+  'flex h-10 w-full max-w-xs rounded-md border border-input bg-white px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm'
 
 function partyAdminHolderLabel(invite: Invite, guests: Guest[]): string {
   return (
@@ -67,6 +96,10 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
   const [editPartnerLabel, setEditPartnerLabel] = useState('')
   const [editAssociatedParty, setEditAssociatedParty] = useState<'none' | 'stag' | 'hen'>('none')
   const [editSaving, setEditSaving] = useState(false)
+
+  const [inviteToDelete, setInviteToDelete] = useState<Invite | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   // Load invites and guests on mount
   useEffect(() => {
@@ -223,7 +256,6 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
     if (!linkingInviteId || !linkingGuestId) return
 
     try {
-      console.log(`Linking guest ${linkingGuestId} to invite ${linkingInviteId}`)
       const res = await fetch(`/api/invites/${linkingInviteId}`, {
         method: 'PATCH',
         credentials: 'include',
@@ -234,7 +266,6 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
       if (!res.ok) throw new Error('Failed to link guest')
 
       const updated = await res.json()
-      console.log(`Link response:`, updated)
       setInvites(invites.map((i) => (i.id === linkingInviteId ? updated : i)))
       setSuccess('Guest linked to invite')
       setLinkingInviteId(null)
@@ -250,27 +281,42 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
     }
   }
 
-  const deleteInvite = async (inviteId: number) => {
-    if (!confirm('Delete this invite?')) return
+  const requestDelete = (invite: Invite) => {
+    setError(null)
+    setDeleteError(null)
+    setInviteToDelete(invite)
+  }
+
+  const cancelDelete = () => {
+    setInviteToDelete(null)
+    setDeleteError(null)
+  }
+
+  const confirmDeleteInvite = async () => {
+    if (!inviteToDelete) return
+    setDeleting(true)
+    setDeleteError(null)
 
     try {
-      const res = await fetch(`/api/invites/${inviteId}`, {
+      const res = await fetch(`/api/invites/${inviteToDelete.id}`, {
         method: 'DELETE',
         credentials: 'include',
       })
 
       if (!res.ok) throw new Error('Failed to delete invite')
 
-      setInvites(invites.filter((i) => i.id !== inviteId))
-      setError(null)
+      setInvites((current) => current.filter((i) => i.id !== inviteToDelete.id))
       setSuccess('Invite deleted')
+      setInviteToDelete(null)
 
       // Auto-clear success message after 3 seconds
       setTimeout(() => {
         setSuccess(null)
       }, 3000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error deleting invite')
+      setDeleteError(err instanceof Error ? err.message : 'Error deleting invite')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -283,608 +329,428 @@ export function InviteManagement({ weddingId }: { weddingId: number }) {
     guests.filter((g) => !invites.some((i) => i.guest_id === g.id))
 
   return (
-    <div style={containerStyle}>
-      {/* Error Alert */}
-      {error && <div style={alertErrorStyle}>{error}</div>}
-
-      {/* Success Alert */}
-      {success && <div style={alertSuccessStyle}>{success}</div>}
+    <div className="grid gap-6">
+      {error && <Alert variant="destructive">{error}</Alert>}
+      {success && (
+        <Alert variant="success" role="status" aria-live="polite">
+          {success}
+        </Alert>
+      )}
 
       {/* Generate Invite Form */}
-      <section style={sectionStyle}>
-        <h2 style={titleStyle}>Generate New Invite</h2>
-        <form onSubmit={generateInvite} style={formStyle}>
-          <div style={formGroupStyle}>
-            <label htmlFor="role-select" style={labelStyle}>Role</label>
-            <select
-              id="role-select"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              style={inputStyle}
-              disabled={generating}
-            >
-              <option value="guest">Guest</option>
-              <option value="coordinator">Coordinator</option>
-              <option value="couple">Couple</option>
-            </select>
-          </div>
-          <button
-            type="submit"
-            style={buttonPrimaryStyle}
-            disabled={generating}
-          >
-            {generating ? 'Generating...' : 'Generate Code'}
-          </button>
-        </form>
-
-        {/* Wave 3 item 14 D1: guest "wedding party" flags. */}
-        {role === 'guest' && (
-          <fieldset style={partyFieldsetStyle}>
-            <legend style={partyLegendStyle}>Wedding party (optional)</legend>
-            <div style={radioGroupStyle} role="radiogroup" aria-label="Wedding party">
-              {(['none', 'stag', 'hen'] as const).map((value) => (
-                <label key={value} style={radioLabelStyle}>
-                  <input
-                    type="radio"
-                    name="new-invite-party"
-                    value={value}
-                    checked={party === value}
-                    onChange={() => {
-                      setParty(value)
-                      if (value === 'none') setPartyAdmin(false)
-                    }}
-                  />
-                  {value === 'none' ? 'None' : value === 'stag' ? 'Stag Do' : 'Hen Do'}
-                </label>
-              ))}
-            </div>
-            {party !== 'none' && (() => {
-              const holders = currentPartyAdmins(party)
-              const atCapacity = holders.length >= MAX_PARTY_ADMINS_PER_PARTY
-              return (
-                <label style={{ ...radioLabelStyle, marginTop: '8px' }}>
-                  <input
-                    type="checkbox"
-                    checked={partyAdmin}
-                    disabled={atCapacity && !partyAdmin}
-                    onChange={(e) => setPartyAdmin(e.target.checked)}
-                  />
-                  {`Make this guest a ${PARTY_ADMIN_TITLE[party]}`}
-                  {atCapacity && !partyAdmin && (
-                    <span style={mutedStyle}>
-                      {' '}
-                      — already has {MAX_PARTY_ADMINS_PER_PARTY}:{' '}
-                      {holders.map((h) => partyAdminHolderLabel(h, guests)).join(' & ')}
-                    </span>
-                  )}
-                </label>
-              )
-            })()}
-          </fieldset>
-        )}
-
-        {/* Wave 3 item 14 D1: individual couple identity fields. */}
-        {role === 'couple' && (
-          <fieldset style={partyFieldsetStyle}>
-            <legend style={partyLegendStyle}>Individual identity (optional)</legend>
-            <div style={formGroupStyle}>
-              <label htmlFor="partner-label-input" style={labelStyle}>
-                Partner label
-              </label>
-              <input
-                id="partner-label-input"
-                type="text"
-                value={partnerLabel}
-                onChange={(e) => setPartnerLabel(e.target.value)}
-                placeholder="e.g. Ashley"
-                style={inputStyle}
-              />
-            </div>
-            <div style={formGroupStyle}>
-              <label htmlFor="associated-party-select" style={labelStyle}>
-                Their own party
-              </label>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Generate New Invite</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <form onSubmit={generateInvite} className="flex flex-wrap items-end gap-3">
+            <div className="grid gap-2">
+              <Label htmlFor="role-select">Role</Label>
               <select
-                id="associated-party-select"
-                value={associatedParty}
-                onChange={(e) => setAssociatedParty(e.target.value as 'none' | 'stag' | 'hen')}
-                style={inputStyle}
+                id="role-select"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className={NATIVE_SELECT_CLASS}
+                disabled={generating}
               >
-                <option value="none">None</option>
-                <option value="stag">Stag Do</option>
-                <option value="hen">Hen Do</option>
+                <option value="guest">Guest</option>
+                <option value="coordinator">Coordinator</option>
+                <option value="couple">Couple</option>
               </select>
             </div>
-          </fieldset>
-        )}
-      </section>
+            <Button type="submit" disabled={generating}>
+              {generating ? 'Generating...' : 'Generate Code'}
+            </Button>
+          </form>
+
+          {/* Wave 3 item 14 D1: guest "wedding party" flags. */}
+          {role === 'guest' && (
+            <fieldset className="grid gap-3 rounded-md border border-gray-200 p-4">
+              <legend className="px-1 text-xs font-semibold text-gray-700">
+                Wedding party (optional)
+              </legend>
+              <div className="flex gap-4" role="radiogroup" aria-label="Wedding party">
+                {(['none', 'stag', 'hen'] as const).map((value) => (
+                  <label key={value} className="flex items-center gap-1.5 text-sm">
+                    <input
+                      type="radio"
+                      name="new-invite-party"
+                      value={value}
+                      checked={party === value}
+                      onChange={() => {
+                        setParty(value)
+                        if (value === 'none') setPartyAdmin(false)
+                      }}
+                    />
+                    {value === 'none' ? 'None' : value === 'stag' ? 'Stag Do' : 'Hen Do'}
+                  </label>
+                ))}
+              </div>
+              {party !== 'none' && (() => {
+                const holders = currentPartyAdmins(party)
+                const atCapacity = holders.length >= MAX_PARTY_ADMINS_PER_PARTY
+                return (
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={partyAdmin}
+                      disabled={atCapacity && !partyAdmin}
+                      onChange={(e) => setPartyAdmin(e.target.checked)}
+                    />
+                    {`Make this guest a ${PARTY_ADMIN_TITLE[party]}`}
+                    {atCapacity && !partyAdmin && (
+                      <span className="italic text-gray-500">
+                        {' '}
+                        — already has {MAX_PARTY_ADMINS_PER_PARTY}:{' '}
+                        {holders.map((h) => partyAdminHolderLabel(h, guests)).join(' & ')}
+                      </span>
+                    )}
+                  </label>
+                )
+              })()}
+            </fieldset>
+          )}
+
+          {/* Wave 3 item 14 D1: individual couple identity fields. */}
+          {role === 'couple' && (
+            <fieldset className="grid gap-3 rounded-md border border-gray-200 p-4">
+              <legend className="px-1 text-xs font-semibold text-gray-700">
+                Individual identity (optional)
+              </legend>
+              <div className="grid gap-2">
+                <Label htmlFor="partner-label-input">Partner label</Label>
+                <Input
+                  id="partner-label-input"
+                  type="text"
+                  value={partnerLabel}
+                  onChange={(e) => setPartnerLabel(e.target.value)}
+                  placeholder="e.g. Ashley"
+                  className="max-w-xs"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="associated-party-select">Their own party</Label>
+                <select
+                  id="associated-party-select"
+                  value={associatedParty}
+                  onChange={(e) => setAssociatedParty(e.target.value as 'none' | 'stag' | 'hen')}
+                  className={NATIVE_SELECT_CLASS}
+                >
+                  <option value="none">None</option>
+                  <option value="stag">Stag Do</option>
+                  <option value="hen">Hen Do</option>
+                </select>
+              </div>
+            </fieldset>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Invites List */}
-      <section style={sectionStyle}>
-        <h2 style={titleStyle}>
-          Invites ({invites.length})
-        </h2>
-
-        {loading ? (
-          <p>Loading invites...</p>
-        ) : invites.length === 0 ? (
-          <p>No invites yet</p>
-        ) : (
-          <table style={tableStyle}>
-            <thead>
-              <tr style={tableHeaderRowStyle}>
-                <th style={tableCellStyle}>Code</th>
-                <th style={tableCellStyle}>Role</th>
-                <th style={tableCellStyle}>Guest</th>
-                <th style={tableCellStyle}>Wedding Party</th>
-                <th style={tableCellStyle}>Created</th>
-                <th style={tableCellStyle}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invites.map((invite) => {
-                const linkedGuest = guests.find(
-                  (g) => g.id === invite.guest_id
-                )
-                return (
-                  <tr key={invite.id} style={tableRowStyle}>
-                    <td style={tableCellStyle}>
-                      <code style={codeStyle}>{invite.code}</code>
-                      <button
-                        onClick={() => copyToClipboard(invite.code)}
-                        style={buttonSmallStyle}
-                        title="Copy to clipboard"
-                      >
-                        📋
-                      </button>
-                    </td>
-                    <td style={tableCellStyle}>{invite.role}</td>
-                    <td style={tableCellStyle}>
-                      {linkedGuest ? (
-                        <span>{linkedGuest.name}</span>
-                      ) : invite.household_name ? (
-                        <span style={mutedStyle}>{invite.household_name}</span>
-                      ) : (
-                        <span style={mutedStyle}>Unlinked</span>
-                      )}
-                    </td>
-                    <td style={tableCellStyle}>
-                      {invite.role === 'guest' && invite.party && (
-                        <span>
-                          {invite.party === 'stag' ? 'Stag Do' : 'Hen Do'}
-                          {invite.party_admin && (
-                            <span style={mutedStyle}> ({invite.party_title || PARTY_ADMIN_TITLE[invite.party]})</span>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Invites ({invites.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-sm text-gray-600">Loading invites...</p>
+          ) : invites.length === 0 ? (
+            <p className="text-sm text-gray-600">No invites yet</p>
+          ) : (
+            <div className="rounded-md border border-gray-200">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Guest</TableHead>
+                    <TableHead>Wedding Party</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {invites.map((invite) => {
+                    const linkedGuest = guests.find((g) => g.id === invite.guest_id)
+                    return (
+                      <TableRow key={invite.id}>
+                        <TableCell>
+                          <code className="rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs">
+                            {invite.code}
+                          </code>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="ml-1 h-8 w-8"
+                            onClick={() => copyToClipboard(invite.code)}
+                            title="Copy to clipboard"
+                          >
+                            📋
+                          </Button>
+                        </TableCell>
+                        <TableCell>{invite.role}</TableCell>
+                        <TableCell>
+                          {linkedGuest ? (
+                            <span>{linkedGuest.name}</span>
+                          ) : invite.household_name ? (
+                            <span className="italic text-gray-500">{invite.household_name}</span>
+                          ) : (
+                            <span className="italic text-gray-500">Unlinked</span>
                           )}
-                        </span>
-                      )}
-                      {invite.role === 'couple' && invite.associated_party && (
-                        <span style={mutedStyle}>
-                          {invite.partner_label ? `${invite.partner_label} — ` : ''}
-                          {invite.associated_party === 'stag' ? 'Stag Do' : 'Hen Do'}
-                        </span>
-                      )}
-                      {((invite.role === 'guest' && !invite.party) ||
-                        (invite.role === 'couple' && !invite.associated_party)) && (
-                        <span style={mutedStyle}>—</span>
-                      )}
-                    </td>
-                    <td style={tableCellStyle}>
-                      {new Date(invite.created_at).toLocaleDateString()}
-                    </td>
-                    <td style={tableCellActionsStyle}>
-                      {!linkedGuest && getUnlinkedGuests().length > 0 && (
-                        <button
-                          onClick={() => {
-                            setLinkingInviteId(invite.id)
-                            setLinkingGuestId(null)
-                          }}
-                          style={buttonSmallStyle}
-                          title="Link to guest"
-                        >
-                          🔗
-                        </button>
-                      )}
-                      {(invite.role === 'guest' || invite.role === 'couple') && (
-                        <button
-                          onClick={() => openPartyEditor(invite)}
-                          style={buttonSmallStyle}
-                          title="Edit wedding party details"
-                        >
-                          🎉
-                        </button>
-                      )}
-                      <button
-                        onClick={() => deleteInvite(invite.id)}
-                        style={buttonDangerSmallStyle}
-                        title="Delete invite"
-                      >
-                        🗑️
-                      </button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
-      </section>
+                        </TableCell>
+                        <TableCell>
+                          {invite.role === 'guest' && invite.party && (
+                            <span>
+                              {invite.party === 'stag' ? 'Stag Do' : 'Hen Do'}
+                              {invite.party_admin && (
+                                <span className="italic text-gray-500">
+                                  {' '}
+                                  ({invite.party_title || PARTY_ADMIN_TITLE[invite.party]})
+                                </span>
+                              )}
+                            </span>
+                          )}
+                          {invite.role === 'couple' && invite.associated_party && (
+                            <span className="italic text-gray-500">
+                              {invite.partner_label ? `${invite.partner_label} — ` : ''}
+                              {invite.associated_party === 'stag' ? 'Stag Do' : 'Hen Do'}
+                            </span>
+                          )}
+                          {((invite.role === 'guest' && !invite.party) ||
+                            (invite.role === 'couple' && !invite.associated_party)) && (
+                            <span className="italic text-gray-500">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{new Date(invite.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {!linkedGuest && getUnlinkedGuests().length > 0 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => {
+                                  setLinkingInviteId(invite.id)
+                                  setLinkingGuestId(null)
+                                }}
+                                title="Link to guest"
+                              >
+                                🔗
+                              </Button>
+                            )}
+                            {(invite.role === 'guest' || invite.role === 'couple') && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => openPartyEditor(invite)}
+                                title="Edit wedding party details"
+                              >
+                                🎉
+                              </Button>
+                            )}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-800 hover:text-red-800"
+                              onClick={() => requestDelete(invite)}
+                              title="Delete invite"
+                            >
+                              🗑️
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Link Guest Modal */}
-      {linkingInviteId && (
-        <div style={modalOverlayStyle} onClick={(e) => {
-          if (e.target === e.currentTarget) {
+      {/* Link Guest dialog */}
+      <Dialog
+        open={linkingInviteId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
             setLinkingInviteId(null)
             setLinkingGuestId(null)
           }
-        }}>
-          <div style={modalStyle} onClick={(e) => e.stopPropagation()}>
-            <h3 style={modalTitleStyle}>Link Guest to Invite</h3>
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link Guest to Invite</DialogTitle>
+          </DialogHeader>
 
-            <div style={formGroupStyle}>
-              <label htmlFor="guest-select" style={labelStyle}>Select Guest</label>
-              <select
-                id="guest-select"
-                value={linkingGuestId || ''}
-                onChange={(e) => setLinkingGuestId(parseInt(e.target.value))}
-                style={inputStyle}
-              >
-                <option value="">Choose a guest...</option>
-                {getUnlinkedGuests().map((guest) => (
-                  <option key={guest.id} value={guest.id}>
-                    {guest.name} {guest.email && `(${guest.email})`}
-                  </option>
+          <div className="grid gap-2">
+            <Label htmlFor="guest-select">Select Guest</Label>
+            <select
+              id="guest-select"
+              value={linkingGuestId ?? ''}
+              onChange={(e) => setLinkingGuestId(parseInt(e.target.value))}
+              className={NATIVE_SELECT_CLASS}
+            >
+              <option value="">Choose a guest...</option>
+              {getUnlinkedGuests().map((guest) => (
+                <option key={guest.id} value={guest.id}>
+                  {guest.name} {guest.email && `(${guest.email})`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setLinkingInviteId(null)
+                setLinkingGuestId(null)
+              }}
+            >
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void linkGuestToInvite()} disabled={!linkingGuestId}>
+              Link Guest
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Wedding Party Editor dialog (Wave 3 item 14 D1) */}
+      <Dialog
+        open={editingPartyInvite !== null}
+        onOpenChange={(open) => (!open ? setEditingPartyInvite(null) : undefined)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Wedding Party Details</DialogTitle>
+          </DialogHeader>
+
+          {editingPartyInvite?.role === 'guest' ? (
+            <>
+              <div className="flex gap-4" role="radiogroup" aria-label="Wedding party">
+                {(['none', 'stag', 'hen'] as const).map((value) => (
+                  <label key={value} className="flex items-center gap-1.5 text-sm">
+                    <input
+                      type="radio"
+                      name="edit-invite-party"
+                      value={value}
+                      checked={editParty === value}
+                      onChange={() => {
+                        setEditParty(value)
+                        if (value === 'none') setEditPartyAdmin(false)
+                      }}
+                    />
+                    {value === 'none' ? 'None' : value === 'stag' ? 'Stag Do' : 'Hen Do'}
+                  </label>
                 ))}
-              </select>
-            </div>
-
-            <div style={modalButtonsStyle}>
-              <button
-                onClick={linkGuestToInvite}
-                style={buttonPrimaryStyle}
-                disabled={!linkingGuestId}
-              >
-                Link Guest
-              </button>
-              <button
-                onClick={() => {
-                  setLinkingInviteId(null)
-                  setLinkingGuestId(null)
-                }}
-                style={buttonSecondaryStyle}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Wedding Party Editor Modal (Wave 3 item 14 D1) */}
-      {editingPartyInvite && (
-        <div
-          style={modalOverlayStyle}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setEditingPartyInvite(null)
-          }}
-        >
-          <div
-            style={modalStyle}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Edit Wedding Party Details"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={modalTitleStyle}>Edit Wedding Party Details</h3>
-
-            {editingPartyInvite.role === 'guest' ? (
-              <>
-                <div
-                  style={radioGroupStyle}
-                  role="radiogroup"
-                  aria-label="Wedding party"
+              </div>
+              {editParty !== 'none' && editingPartyInvite && (() => {
+                const holders = currentPartyAdmins(editParty).filter(
+                  (h) => h.id !== editingPartyInvite.id,
+                )
+                const atCapacity = holders.length >= MAX_PARTY_ADMINS_PER_PARTY
+                return (
+                  <label className="flex items-center gap-1.5 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={editPartyAdmin}
+                      disabled={atCapacity && !editPartyAdmin}
+                      onChange={(e) => setEditPartyAdmin(e.target.checked)}
+                    />
+                    {`Make this guest a ${PARTY_ADMIN_TITLE[editParty]}`}
+                    {atCapacity && !editPartyAdmin && (
+                      <span className="italic text-gray-500">
+                        {' '}
+                        — already has {MAX_PARTY_ADMINS_PER_PARTY}:{' '}
+                        {holders.map((h) => partyAdminHolderLabel(h, guests)).join(' & ')}
+                      </span>
+                    )}
+                  </label>
+                )
+              })()}
+            </>
+          ) : (
+            <>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-partner-label-input">Partner label</Label>
+                <Input
+                  id="edit-partner-label-input"
+                  type="text"
+                  value={editPartnerLabel}
+                  onChange={(e) => setEditPartnerLabel(e.target.value)}
+                  placeholder="e.g. Ashley"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-associated-party-select">Their own party</Label>
+                <select
+                  id="edit-associated-party-select"
+                  value={editAssociatedParty}
+                  onChange={(e) =>
+                    setEditAssociatedParty(e.target.value as 'none' | 'stag' | 'hen')
+                  }
+                  className={NATIVE_SELECT_CLASS}
                 >
-                  {(['none', 'stag', 'hen'] as const).map((value) => (
-                    <label key={value} style={radioLabelStyle}>
-                      <input
-                        type="radio"
-                        name="edit-invite-party"
-                        value={value}
-                        checked={editParty === value}
-                        onChange={() => {
-                          setEditParty(value)
-                          if (value === 'none') setEditPartyAdmin(false)
-                        }}
-                      />
-                      {value === 'none' ? 'None' : value === 'stag' ? 'Stag Do' : 'Hen Do'}
-                    </label>
-                  ))}
-                </div>
-                {editParty !== 'none' && (() => {
-                  const holders = currentPartyAdmins(editParty).filter(
-                    (h) => h.id !== editingPartyInvite.id,
-                  )
-                  const atCapacity = holders.length >= MAX_PARTY_ADMINS_PER_PARTY
-                  return (
-                    <label style={{ ...radioLabelStyle, marginTop: '8px' }}>
-                      <input
-                        type="checkbox"
-                        checked={editPartyAdmin}
-                        disabled={atCapacity && !editPartyAdmin}
-                        onChange={(e) => setEditPartyAdmin(e.target.checked)}
-                      />
-                      {`Make this guest a ${PARTY_ADMIN_TITLE[editParty]}`}
-                      {atCapacity && !editPartyAdmin && (
-                        <span style={mutedStyle}>
-                          {' '}
-                          — already has {MAX_PARTY_ADMINS_PER_PARTY}:{' '}
-                          {holders.map((h) => partyAdminHolderLabel(h, guests)).join(' & ')}
-                        </span>
-                      )}
-                    </label>
-                  )
-                })()}
-              </>
-            ) : (
-              <>
-                <div style={formGroupStyle}>
-                  <label htmlFor="edit-partner-label-input" style={labelStyle}>
-                    Partner label
-                  </label>
-                  <input
-                    id="edit-partner-label-input"
-                    type="text"
-                    value={editPartnerLabel}
-                    onChange={(e) => setEditPartnerLabel(e.target.value)}
-                    placeholder="e.g. Ashley"
-                    style={inputStyle}
-                  />
-                </div>
-                <div style={formGroupStyle}>
-                  <label htmlFor="edit-associated-party-select" style={labelStyle}>
-                    Their own party
-                  </label>
-                  <select
-                    id="edit-associated-party-select"
-                    value={editAssociatedParty}
-                    onChange={(e) =>
-                      setEditAssociatedParty(e.target.value as 'none' | 'stag' | 'hen')
-                    }
-                    style={inputStyle}
-                  >
-                    <option value="none">None</option>
-                    <option value="stag">Stag Do</option>
-                    <option value="hen">Hen Do</option>
-                  </select>
-                </div>
-              </>
-            )}
+                  <option value="none">None</option>
+                  <option value="stag">Stag Do</option>
+                  <option value="hen">Hen Do</option>
+                </select>
+              </div>
+            </>
+          )}
 
-            <div style={modalButtonsStyle}>
-              <button
-                onClick={savePartyEdits}
-                style={buttonPrimaryStyle}
-                disabled={editSaving}
-              >
-                {editSaving ? 'Saving...' : 'Save'}
-              </button>
-              <button
-                onClick={() => setEditingPartyInvite(null)}
-                style={buttonSecondaryStyle}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => setEditingPartyInvite(null)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={() => void savePartyEdits()} disabled={editSaving}>
+              {editSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog
+        open={inviteToDelete !== null}
+        onOpenChange={(open) => (!open ? cancelDelete() : undefined)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Invite</DialogTitle>
+            <DialogDescription>
+              {inviteToDelete
+                ? `Delete invite code ${inviteToDelete.code}? This action cannot be undone.`
+                : 'Delete this invite?'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {deleteError && <Alert variant="destructive">{deleteError}</Alert>}
+
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={cancelDelete} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void confirmDeleteInvite()}
+              disabled={deleting}
+            >
+              {deleting ? 'Deleting...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
-}
-
-// Styles
-const containerStyle = {
-  display: 'grid',
-  gap: '24px',
-  padding: '20px',
-  maxWidth: '1200px',
-  margin: '0 auto',
-}
-
-const sectionStyle = {
-  border: '1px solid #d6d9df',
-  borderRadius: '6px',
-  padding: '20px',
-  backgroundColor: '#ffffff',
-}
-
-const titleStyle = {
-  fontSize: '20px',
-  fontWeight: 700,
-  margin: '0 0 16px 0',
-}
-
-const formStyle = {
-  display: 'grid',
-  gap: '12px',
-  gridTemplateColumns: 'auto auto',
-  alignItems: 'end',
-}
-
-const formGroupStyle = {
-  display: 'grid',
-  gap: '6px',
-}
-
-const partyFieldsetStyle = {
-  border: '1px solid #e5e7eb',
-  borderRadius: '4px',
-  display: 'grid',
-  gap: '10px',
-  marginTop: '16px',
-  padding: '12px 14px',
-}
-
-const partyLegendStyle = {
-  color: '#374151',
-  fontSize: '13px',
-  fontWeight: 700,
-  padding: '0 4px',
-}
-
-const radioGroupStyle = {
-  display: 'flex',
-  gap: '16px',
-}
-
-const radioLabelStyle = {
-  alignItems: 'center',
-  display: 'flex',
-  fontSize: '14px',
-  gap: '6px',
-}
-
-const labelStyle = {
-  color: '#374151',
-  fontSize: '14px',
-  fontWeight: 700,
-}
-
-const inputStyle = {
-  border: '1px solid #aeb6c2',
-  borderRadius: '4px',
-  fontSize: '14px',
-  padding: '8px 10px',
-  minWidth: '200px',
-}
-
-const buttonPrimaryStyle = {
-  background: '#1f6f5b',
-  border: '1px solid #1f6f5b',
-  borderRadius: '4px',
-  color: '#ffffff',
-  cursor: 'pointer',
-  fontSize: '14px',
-  fontWeight: 700,
-  minHeight: '36px',
-  padding: '8px 14px',
-}
-
-const buttonSecondaryStyle = {
-  background: '#ffffff',
-  border: '1px solid #d6d9df',
-  borderRadius: '4px',
-  color: '#1f2933',
-  cursor: 'pointer',
-  fontSize: '14px',
-  fontWeight: 700,
-  minHeight: '36px',
-  padding: '8px 14px',
-}
-
-const buttonSmallStyle = {
-  background: 'transparent',
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: '16px',
-  padding: '4px 8px',
-  marginLeft: '4px',
-}
-
-const buttonDangerSmallStyle = {
-  ...buttonSmallStyle,
-  color: '#991b1b',
-}
-
-const tableStyle = {
-  width: '100%',
-  borderCollapse: 'collapse' as const,
-}
-
-const tableHeaderRowStyle = {
-  borderBottom: '2px solid #d6d9df',
-  backgroundColor: '#f9fafb',
-}
-
-const tableRowStyle = {
-  borderBottom: '1px solid #e5e7eb',
-}
-
-const tableCellStyle = {
-  padding: '12px',
-  textAlign: 'left' as const,
-  fontSize: '14px',
-}
-
-const tableCellActionsStyle = {
-  ...tableCellStyle,
-  display: 'flex',
-  gap: '4px',
-}
-
-const codeStyle = {
-  backgroundColor: '#f3f4f6',
-  borderRadius: '3px',
-  fontFamily: 'monospace',
-  padding: '2px 4px',
-  fontSize: '12px',
-}
-
-const mutedStyle = {
-  color: '#6b7280',
-  fontStyle: 'italic',
-}
-
-const alertErrorStyle = {
-  backgroundColor: '#fef2f2',
-  border: '1px solid #fecaca',
-  borderRadius: '4px',
-  color: '#991b1b',
-  fontSize: '14px',
-  padding: '10px',
-}
-
-const alertSuccessStyle = {
-  backgroundColor: '#f0fdf4',
-  border: '1px solid #86efac',
-  borderRadius: '4px',
-  color: '#166534',
-  fontSize: '14px',
-  padding: '10px',
-}
-
-const modalOverlayStyle = {
-  position: 'fixed' as const,
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 10000,
-  pointerEvents: 'auto' as const,
-}
-
-const modalStyle = {
-  backgroundColor: '#ffffff',
-  borderRadius: '6px',
-  boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
-  padding: '24px',
-  maxWidth: '400px',
-  width: '90%',
-  pointerEvents: 'auto' as const,
-}
-
-const modalTitleStyle = {
-  fontSize: '18px',
-  fontWeight: 700,
-  margin: '0 0 16px 0',
-}
-
-const modalButtonsStyle = {
-  display: 'flex',
-  gap: '12px',
-  marginTop: '16px',
-  justifyContent: 'flex-end',
 }
