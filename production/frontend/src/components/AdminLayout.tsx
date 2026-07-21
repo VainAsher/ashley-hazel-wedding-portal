@@ -1,10 +1,28 @@
 import React, { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
+import {
+  Bug,
+  CalendarDays,
+  CheckSquare,
+  Heart,
+  Image as ImageIcon,
+  KanbanSquare,
+  LayoutDashboard,
+  Mail,
+  MessageSquare,
+  Music2,
+  Settings as SettingsIcon,
+  Store,
+  Users,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { Button } from '@/components/ui/button'
 import { FeedbackWidget } from '@/components/FeedbackWidget'
 import { NotificationsBell } from '@/components/NotificationsBell'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { cn } from '@/lib/utils'
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -12,30 +30,91 @@ interface AdminLayoutProps {
   title?: string
 }
 
-// coupleOnly entries are hidden from coordinators — their backing APIs
-// (e.g. /api/invites) are require_couple, so the pages would only error.
-const adminMenuItems = [
-  { label: 'Dashboard', href: '/admin', icon: '📊' },
-  { label: 'Guests', href: '/guests', icon: '👥' },
-  { label: 'Invitations', href: '/admin/invitations', icon: '📧', coupleOnly: true },
-  { label: 'RSVP', href: '/admin/rsvp', icon: '✅' },
-  { label: 'Budget', href: '/admin/budget', icon: '💰' },
-  { label: 'Events', href: '/admin/events', icon: '📅' },
-  { label: 'Timeline', href: '/admin/timeline', icon: '🗓️' },
-  { label: 'Communications', href: '/admin/communications', icon: '💬' },
-  { label: 'Vendors', href: '/admin/vendors', icon: '🏪' },
-  { label: 'Gallery', href: '/admin/gallery', icon: '🖼️' },
-  { label: 'Music', href: '/admin/music', icon: '🎵' },
-  { label: 'Blessings', href: '/admin/blessings', icon: '💌' },
-  { label: 'Feedback', href: '/admin/feedback', icon: '🐞' },
-  { label: 'Settings', href: '/admin/settings', icon: '⚙️' },
+interface AdminNavItem {
+  label: string
+  href: string
+  icon: LucideIcon
+  // coupleOnly entries are hidden from coordinators — their backing APIs
+  // (e.g. /api/invites) are require_couple, so the pages would only error.
+  coupleOnly?: boolean
+}
+
+// Grouped by what a couple is actually doing when they reach for it, not by
+// implementation area — this is the order a wedding gets planned in.
+const adminNavGroups: { label: string; items: AdminNavItem[] }[] = [
+  {
+    label: 'Overview',
+    items: [{ label: 'Dashboard', href: '/admin', icon: LayoutDashboard }],
+  },
+  {
+    label: 'Planning',
+    items: [
+      { label: 'Budget', href: '/admin/budget', icon: Wallet },
+      { label: 'Events', href: '/admin/events', icon: CalendarDays },
+      { label: 'Timeline', href: '/admin/timeline', icon: KanbanSquare },
+      { label: 'Vendors', href: '/admin/vendors', icon: Store },
+    ],
+  },
+  {
+    label: 'Guests',
+    items: [
+      { label: 'Guest list', href: '/guests', icon: Users },
+      { label: 'RSVP', href: '/admin/rsvp', icon: CheckSquare },
+      { label: 'Invitations', href: '/admin/invitations', icon: Mail, coupleOnly: true },
+      { label: 'Communications', href: '/admin/communications', icon: MessageSquare },
+    ],
+  },
+  {
+    label: 'Content',
+    items: [
+      { label: 'Gallery', href: '/admin/gallery', icon: ImageIcon },
+      { label: 'Music', href: '/admin/music', icon: Music2 },
+      { label: 'Blessings', href: '/admin/blessings', icon: Heart },
+    ],
+  },
+  {
+    label: 'Support',
+    items: [{ label: 'Feedback', href: '/admin/feedback', icon: Bug }],
+  },
+  {
+    label: 'Settings',
+    items: [{ label: 'Settings', href: '/admin/settings', icon: SettingsIcon }],
+  },
 ]
+
+const SIDEBAR_STATE_KEY = 'ah-admin-sidebar-open'
+
+function readStoredSidebarState(): boolean {
+  try {
+    const stored = window.localStorage.getItem(SIDEBAR_STATE_KEY)
+    return stored === null ? true : stored === '1'
+  } catch {
+    return true
+  }
+}
 
 export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
   usePageTitle(title)
   const { user, logout } = useAuth()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const location = useLocation()
+  const [sidebarOpen, setSidebarOpen] = useState(readStoredSidebarState)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+
+  // Persisted across admin navigations: every /admin/* route mounts its own
+  // AdminLayout instance (no shared layout route), so local state alone
+  // would reset the sidebar to expanded on every click otherwise.
+  const toggleSidebar = () => {
+    setSidebarOpen((current) => {
+      const next = !current
+      try {
+        window.localStorage.setItem(SIDEBAR_STATE_KEY, next ? '1' : '0')
+      } catch {
+        // Private browsing / storage disabled: the toggle still works for
+        // this page load, it just won't persist to the next one.
+      }
+      return next
+    })
+  }
 
   // Close the mobile drawer on Escape for keyboard/accessibility parity.
   useEffect(() => {
@@ -47,77 +126,109 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
     return () => document.removeEventListener('keydown', onKey)
   }, [mobileNavOpen])
 
-  // Shared nav links, reused by the desktop sidebar and the mobile drawer.
-  const visibleMenuItems = adminMenuItems.filter(
-    (item) => !item.coupleOnly || user?.role === 'couple',
+  const isCouple = user?.role === 'couple'
+
+  // Shared nav groups, reused by the desktop sidebar and the mobile drawer.
+  const visibleNavGroups = adminNavGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.coupleOnly || isCouple),
+    }))
+    .filter((group) => group.items.length > 0)
+
+  const navGroups = (opts: { showLabels: boolean; onNavigate?: () => void }) => (
+    <>
+      {visibleNavGroups.map((group) => (
+        <div key={group.label} className="mb-4 last:mb-0">
+          {opts.showLabels && (
+            <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-cream/40">
+              {group.label}
+            </p>
+          )}
+          <div className="space-y-1">
+            {group.items.map((item) => {
+              const active =
+                item.href === '/admin'
+                  ? location.pathname === '/admin'
+                  : location.pathname.startsWith(item.href)
+              return (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  onClick={opts.onNavigate}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors group',
+                    active
+                      ? 'bg-gold/15 text-gold'
+                      : 'text-cream/70 hover:text-gold hover:bg-white/5',
+                  )}
+                  title={!opts.showLabels ? item.label : undefined}
+                >
+                  <item.icon className="h-[18px] w-[18px] flex-shrink-0" aria-hidden="true" />
+                  {opts.showLabels && (
+                    <span className="text-sm font-medium">{item.label}</span>
+                  )}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      ))}
+    </>
   )
-  const navLinks = (opts: { showLabels: boolean; onNavigate?: () => void }) =>
-    visibleMenuItems.map((item) => (
-      <Link
-        key={item.href}
-        to={item.href}
-        onClick={opts.onNavigate}
-        className="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-200 hover:text-gold hover:bg-gray-800 transition-colors group"
-        title={!opts.showLabels ? item.label : undefined}
-      >
-        <span className="text-lg flex-shrink-0">{item.icon}</span>
-        {opts.showLabels && (
-          <span className="text-sm font-medium group-hover:text-gold transition-colors">
-            {item.label}
-          </span>
-        )}
-      </Link>
-    ))
 
   const userSection = (showLabels: boolean) => (
-    <div className="border-t border-gray-800 p-3 space-y-2">
+    <div className="border-t border-white/10 p-3 space-y-2">
       {showLabels && (
-        <div className="text-xs text-gray-400">
-          <p className="font-semibold text-gray-300 truncate">{user?.name}</p>
-          <p className="capitalize text-gray-500">{user?.role}</p>
+        <div className="text-xs text-cream/50 px-1">
+          <p className="font-semibold text-cream/80 truncate">{user?.name}</p>
+          <p className="capitalize">{user?.role}</p>
         </div>
       )}
       <Button
         variant="ghost"
         size="sm"
-        className="w-full justify-start text-gray-300 hover:text-white hover:bg-gray-800"
+        className="w-full justify-start text-cream/70 hover:text-cream hover:bg-white/10"
         onClick={() => logout().catch(() => {})}
       >
-        {showLabels ? '🚪 Logout' : '🚪'}
+        {showLabels ? 'Log out' : '⏻'}
       </Button>
     </div>
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-cream/20 flex">
       {/* Desktop sidebar: in-flow on >= sm screens, hidden on mobile (the mobile
           drawer below takes over so admin pages stay reachable on phones). */}
       <aside
         className={`${
           sidebarOpen ? 'w-64' : 'w-20'
-        } bg-gray-900 text-white transition-all duration-300 flex-col sticky top-0 h-screen hidden sm:flex`}
+        } bg-plum-night text-cream transition-all duration-300 flex-col sticky top-0 h-screen hidden sm:flex`}
       >
         {/* Logo */}
-        <div className="h-16 border-b border-gray-800 flex items-center justify-between px-4">
+        <div className="h-16 border-b border-white/10 flex items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <img
               src="/backgrounds/cat-seal.jpg"
               alt=""
               className="w-8 h-8 rounded-full object-cover ring-2 ring-gold flex-shrink-0"
             />
-            {sidebarOpen && <span className="font-bold text-sm">Ashley &amp; Hazel</span>}
+            {sidebarOpen && (
+              <span className="font-display text-sm font-bold">Ashley &amp; Hazel</span>
+            )}
           </div>
           <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-1 hover:bg-gray-800 rounded transition-colors hidden sm:block"
+            onClick={toggleSidebar}
+            className="p-1 hover:bg-white/10 rounded transition-colors hidden sm:block"
             aria-label="Toggle sidebar"
           >
             <span className="text-lg">{sidebarOpen ? '◀' : '▶'}</span>
           </button>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
-          {navLinks({ showLabels: sidebarOpen })}
+        <nav className="flex-1 px-3 py-4 overflow-y-auto">
+          {navGroups({ showLabels: sidebarOpen })}
         </nav>
 
         {userSection(sidebarOpen)}
@@ -137,19 +248,19 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
             aria-hidden="true"
             onClick={() => setMobileNavOpen(false)}
           />
-          <aside className="absolute left-0 top-0 h-full w-64 bg-gray-900 text-white flex flex-col shadow-xl">
-            <div className="h-16 border-b border-gray-800 flex items-center justify-between px-4">
-              <span className="font-bold text-sm">Wedding</span>
+          <aside className="absolute left-0 top-0 h-full w-64 bg-plum-night text-cream flex flex-col shadow-xl">
+            <div className="h-16 border-b border-white/10 flex items-center justify-between px-4">
+              <span className="font-display text-sm font-bold">Ashley &amp; Hazel</span>
               <button
                 onClick={() => setMobileNavOpen(false)}
-                className="p-1 hover:bg-gray-800 rounded transition-colors"
+                className="p-1 hover:bg-white/10 rounded transition-colors"
                 aria-label="Close menu"
               >
                 <span className="text-lg">✕</span>
               </button>
             </div>
-            <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto">
-              {navLinks({ showLabels: true, onNavigate: () => setMobileNavOpen(false) })}
+            <nav className="flex-1 px-3 py-4 overflow-y-auto">
+              {navGroups({ showLabels: true, onNavigate: () => setMobileNavOpen(false) })}
             </nav>
             {userSection(true)}
           </aside>
@@ -200,7 +311,9 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
             )}
 
             {/* Title */}
-            {title && <h1 className="text-2xl font-bold text-gray-900">{title}</h1>}
+            {title && (
+              <h1 className="font-display text-2xl font-bold text-gray-900">{title}</h1>
+            )}
             </div>
 
             <NotificationsBell variant="admin" />

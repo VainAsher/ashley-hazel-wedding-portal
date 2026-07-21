@@ -101,6 +101,25 @@ async function mockGuestRsvp(page: Page) {
   })
 }
 
+async function mockAdminDashboardStats(page: Page) {
+  // Dashboard stat cards are wired to real data.
+  await page.route('**/api/guests', async (route) => {
+    await json(route, [{ rsvp_status: 'accepted' }, { rsvp_status: 'pending' }])
+  })
+  await page.route('**/api/budget/summary', async (route) => {
+    await json(route, {
+      total_estimated: 500,
+      total_actual: 0,
+      total_paid: 100,
+      remaining: 400,
+      by_category: [],
+    })
+  })
+  await page.route('**/api/events', async (route) => {
+    await json(route, [{ id: 1 }])
+  })
+}
+
 test.beforeEach(async ({ page }) => {
   // Clean up any previous test state
   await cleanupPageState(page)
@@ -145,31 +164,7 @@ test('authenticated guest root traffic lands on the dashboard', async ({ page })
 
 test('authenticated couple root traffic lands on admin stub', async ({ page }) => {
   await mockCurrentUser(page, coupleUser)
-
-  // Mock the Admin page's InviteManagement API calls
-  await page.route('**/api/invites?wedding_id=1', async (route) => {
-    await json(route, [])
-  })
-  await page.route('**/api/guests?wedding_id=1', async (route) => {
-    await json(route, [])
-  })
-
-  // Dashboard stat cards are wired to real data.
-  await page.route('**/api/guests', async (route) => {
-    await json(route, [{ rsvp_status: 'accepted' }, { rsvp_status: 'pending' }])
-  })
-  await page.route('**/api/budget/summary', async (route) => {
-    await json(route, {
-      total_estimated: 500,
-      total_actual: 0,
-      total_paid: 100,
-      remaining: 400,
-      by_category: [],
-    })
-  })
-  await page.route('**/api/events', async (route) => {
-    await json(route, [{ id: 1 }])
-  })
+  await mockAdminDashboardStats(page)
 
   await page.goto('/')
 
@@ -180,7 +175,6 @@ test('authenticated couple root traffic lands on admin stub', async ({ page }) =
   // violations with the AdminLayout sidebar/header navigation.
   const main = page.getByRole('main')
   await expect(main.getByRole('heading', { name: 'Planning Modules' })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Invite Management' })).toBeVisible()
 
   // Stat cards render real, wired figures.
   await expect(main.getByText('RSVP Status')).toBeVisible()
@@ -203,3 +197,4 @@ test('guest admin traffic redirects to the dashboard', async ({ page }) => {
   await expect(page).toHaveURL(/\/dashboard$/)
   await expect(page.getByRole('main').getByText(/days to go/i)).toBeVisible()
 })
+

@@ -15,7 +15,6 @@ import { useBudgetSummary } from '../hooks/useBudget'
 import { useEvents } from '../hooks/useEvents'
 import { formatCurrency } from '../lib/format'
 import { AdminLayout } from '../components/AdminLayout'
-import { InviteManagement } from '../components/InviteManagement'
 import { Alert } from '../components/ui/alert'
 import {
   Card,
@@ -164,10 +163,12 @@ export function Admin() {
                   <CardTitle className="text-sm font-medium text-gray-600">
                     {label}
                   </CardTitle>
-                  <Icon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-plum">
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                  </span>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-2xl font-bold text-gray-900">{value}</p>
+                  <p className="font-display text-2xl font-bold text-gray-900">{value}</p>
                   <p className="text-xs text-gray-500 mt-1">{detail}</p>
                 </CardContent>
               </Card>
@@ -199,17 +200,6 @@ export function Admin() {
               </Link>
             ))}
           </div>
-        </section>
-
-        {/* Invite management (existing functionality, kept accessible).
-            The negative horizontal margin lets InviteManagement's own
-            internal padding span edge-to-edge on narrow viewports so its
-            grid form does not overflow inside AdminLayout's padded main. */}
-        <section aria-label="Invite Management" className="-mx-4 sm:mx-0">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 px-4 sm:px-0">
-            Invite Management
-          </h2>
-          <InviteManagement weddingId={user.wedding_id} />
         </section>
       </div>
     </AdminLayout>

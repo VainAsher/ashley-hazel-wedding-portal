@@ -331,11 +331,12 @@ test.beforeEach(async ({ page }) => {
     mockGuests(page),
   ])
 
-  // Navigate to admin directly (mocked auth will handle the session)
-  await page.goto('/admin', { waitUntil: 'domcontentloaded' })
+  // Navigate to the Invitations page directly (mocked auth will handle the
+  // session) -- InviteManagement lives only here now, not on the dashboard.
+  await page.goto('/admin/invitations', { waitUntil: 'domcontentloaded' })
 
-  // Wait for admin dashboard to load
-  await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({ timeout: 10000 })
+  // Wait for the Invitations page to load
+  await expect(page.getByRole('heading', { name: 'Invitations', level: 1 })).toBeVisible({ timeout: 10000 })
 
   // Wait for invites table to load - this ensures the data has been fetched and rendered
   await expect(page.locator('table')).toBeVisible({ timeout: 10000 })
@@ -357,7 +358,7 @@ test.afterEach(async ({ page }) => {
 
 test('renders Invite Management UI with all sections', async ({ page }) => {
   // Check header (page is already at /admin after beforeEach auth setup)
-  await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Invitations', level: 1 })).toBeVisible()
 
   // Check Generate New Invite form section
   await expect(page.getByRole('heading', { name: 'Generate New Invite' })).toBeVisible()
@@ -655,7 +656,7 @@ test('link guest button is disabled when no guests available', async ({ page }) 
 
   // Reload the page to apply the new guest list
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible({ timeout: 10000 })
+  await expect(page.getByRole('heading', { name: 'Invitations', level: 1 })).toBeVisible({ timeout: 10000 })
 
   // Look for link buttons - should not be visible when no unlinked guests (page is already at /admin)
   // First ensure table is loaded
@@ -695,7 +696,7 @@ test.describe('wedding party fields', () => {
       existingInvites[2],
     ])
     await page.reload()
-    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Invitations', level: 1 })).toBeVisible()
     await expect(page.locator('tbody tr').first()).toBeVisible()
 
     const roleSelect = page.getByLabel('Role')
@@ -718,7 +719,7 @@ test.describe('wedding party fields', () => {
       existingInvites[2],
     ])
     await page.reload()
-    await expect(page.getByRole('heading', { name: 'Admin Dashboard' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Invitations', level: 1 })).toBeVisible()
     await expect(page.locator('tbody tr').first()).toBeVisible()
 
     const roleSelect = page.getByLabel('Role')
