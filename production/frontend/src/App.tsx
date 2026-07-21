@@ -128,6 +128,19 @@ function App() {
               <Route element={<CelebrateContent />} path="/celebrate" />
               <Route element={<WeddingPartyContent />} path="/wedding-party" />
               <Route element={<PartyRouteResolver />} path="/party/:party" />
+              {/* docs/specs/VIEW_AS_GUEST_PREVIEW.md: the couple's read-only
+                  look at the guest experience. Reuses this same layout route
+                  (RequireGuestOrCouple already permits 'couple' through,
+                  blocking only 'coordinator') -- GuestLayout itself carves
+                  out its couple-redirect for this path prefix. RSVP is
+                  genuinely guest-specific data, so it renders a disabled
+                  sample shell instead of a real fetch; the other four pages
+                  are wedding-wide and need no special handling. */}
+              <Route element={<DashboardContent />} path="/preview/dashboard" />
+              <Route element={<RSVPContent previewMode />} path="/preview/rsvp" />
+              <Route element={<ScheduleContent />} path="/preview/schedule" />
+              <Route element={<CelebrateContent />} path="/preview/celebrate" />
+              <Route element={<WeddingPartyContent />} path="/preview/wedding-party" />
             </Route>
             <Route element={adminRoute(<AdminBlessings />)} path="/admin/blessings" />
             <Route element={adminRoute(<AdminMusic />)} path="/admin/music" />

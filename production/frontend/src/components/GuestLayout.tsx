@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Navigate, NavLink, useLocation } from 'react-router-dom'
+import { Link, Navigate, NavLink, useLocation } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { FeedbackWidget } from '@/components/FeedbackWidget'
@@ -86,6 +86,13 @@ export function GuestLayout({ children }: GuestLayoutProps) {
   // directly, rather than maintaining a second static list that has to stay
   // in sync by hand. Cheap even when it won't end up rendered: this just
   // builds plain descriptor objects, it doesn't mount anything.
+  // docs/specs/VIEW_AS_GUEST_PREVIEW.md: the couple's own read-only look at
+  // the guest experience, under a distinct /preview/* path prefix (not a
+  // query param -- the nav links below are plain `to={href}` `NavLink`s, so
+  // a query param would silently drop on the second click between tabs).
+  const isPreview = pathname.startsWith('/preview/')
+  const routePath = isPreview ? pathname.slice('/preview'.length) : pathname
+
   const pagedDeckPages = buildPagedDeckPages(partyAccess)
   const isPagedRoute = pagedDeckPages.some((page) => page.path === pathname)
   // Guests only. A couple member can reach /party/:party (RequireGuestOrCouple
@@ -128,26 +135,26 @@ export function GuestLayout({ children }: GuestLayoutProps) {
   // renders, even if pathname changes while this same GuestLayout instance
   // stays mounted (the whole point of nesting every guest route under one
   // shared layout route).
-  if (user?.role === 'couple' && !pathname.startsWith('/party/')) {
+  if (user?.role === 'couple' && !isPreview && !pathname.startsWith('/party/')) {
     return <Navigate replace to="/admin" />
   }
 
   // ROADMAP item 18 (docs/specs/PAGE_BACKGROUNDS.md): routes the couple can
   // customize a background for resolve through theme.page_backgrounds;
   // everything else (Stag/Hen for now) keeps the legacy static map.
-  const pageBackgroundKey = PAGE_BACKGROUND_ROUTE_KEYS[pathname]
+  const pageBackgroundKey = PAGE_BACKGROUND_ROUTE_KEYS[routePath]
   const background: PageBackground = pageBackgroundKey
     ? resolvePageBackground(pageBackgroundKey, theme)
     : {
         source: 'stock',
-        url: ROUTE_BACKGROUNDS[pathname] ?? ROUTE_BACKGROUNDS['/dashboard'],
+        url: ROUTE_BACKGROUNDS[routePath] ?? ROUTE_BACKGROUNDS['/dashboard'],
         focal_x: 50,
         focal_y: 50,
         zoom: 1.0,
       }
   const tint = buildTint(theme.secondary, theme.tint_opacity)
 
-  const navigationItems = [
+  const baseNavigationItems = [
     { label: 'Dashboard', href: '/dashboard' },
     { label: 'RSVP', href: '/rsvp' },
     { label: 'Schedule', href: '/schedule' },
@@ -155,9 +162,19 @@ export function GuestLayout({ children }: GuestLayoutProps) {
     // Unlike Stag Do/Hen Do below, this has no gating -- the "Meet the
     // wedding party" directory is open to every logged-in guest.
     { label: 'Wedding Party', href: '/wedding-party' },
-    ...(partyAccess?.stag ? [{ label: 'Stag Do', href: '/party/stag' }] : []),
-    ...(partyAccess?.hen ? [{ label: 'Hen Do', href: '/party/hen' }] : []),
   ]
+  // Preview mode prefixes every href so tab-to-tab clicks stay under
+  // /preview/* -- a plain href would land back on the real (redirect-
+  // blocked) route. Stag/Hen are excluded from the preview nav entirely:
+  // party pages are the couple's own real, already-shipped feature
+  // (/party/:party), not something to preview.
+  const navigationItems = isPreview
+    ? baseNavigationItems.map((item) => ({ ...item, href: `/preview${item.href}` }))
+    : [
+        ...baseNavigationItems,
+        ...(partyAccess?.stag ? [{ label: 'Stag Do', href: '/party/stag' }] : []),
+        ...(partyAccess?.hen ? [{ label: 'Hen Do', href: '/party/hen' }] : []),
+      ]
   const currentNavLabel = navigationItems.find((item) => item.href === pathname)?.label
 
   return (
@@ -336,6 +353,24 @@ export function GuestLayout({ children }: GuestLayoutProps) {
           </nav>
         </div>
       </header>
+
+      {/* Preview banner (docs/specs/VIEW_AS_GUEST_PREVIEW.md) -- the "easy
+          accessibility... back to admin" the redesign asked for. Plain
+          in-flow block (not sticky): the header above it isn't a fixed
+          height (its nav row wraps/collapses by breakpoint), so pinning
+          this underneath it would require guessing that height. */}
+      {isPreview && (
+        <div className="bg-gold text-plum-night" data-testid="preview-banner">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="m-0 text-sm font-medium">
+              You're previewing the guest experience — this is what guests see.
+            </p>
+            <Link to="/admin" className="text-sm font-semibold underline hover:no-underline">
+              Exit preview
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main
