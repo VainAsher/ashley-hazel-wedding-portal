@@ -573,13 +573,6 @@ test('shows delete button for invites', async ({ page }) => {
 })
 
 test('deletes an invite after confirmation', async ({ page }) => {
-  let confirmCalled = false
-  page.on('dialog', async (dialog) => {
-    confirmCalled = true
-    expect(dialog.message()).toContain('Delete this invite')
-    await dialog.accept()
-  })
-
   // Count invites before (page is already at /admin)
   const invitesBeforeText = await page.getByRole('heading', { name: /Invites \(\d+\)/ }).textContent()
   const invitesBefore = parseInt(invitesBeforeText?.match(/\d+/)?.[0] || '0')
@@ -591,11 +584,13 @@ test('deletes an invite after confirmation', async ({ page }) => {
   // Ensure button is visible before clicking
   await expect(firstRowDeleteButton).toBeVisible({ timeout: 5000 })
 
-  // Click the delete button (using force to bypass any overlays)
-  await firstRowDeleteButton.click({ force: true, timeout: 5000 })
+  await firstRowDeleteButton.click()
 
-  // Verify confirmation was called
-  expect(confirmCalled).toBe(true)
+  // Confirm via the delete dialog (native confirm() was replaced with the
+  // shared Dialog component, matching the rest of admin).
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByRole('heading', { name: 'Delete Invite' })).toBeVisible()
+  await dialog.getByRole('button', { name: 'Delete', exact: true }).click()
 
   // Check success message (with timeout for visibility)
   await expect(page.getByText('Invite deleted')).toBeVisible({ timeout: 5000 })
