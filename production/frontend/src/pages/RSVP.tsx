@@ -137,7 +137,14 @@ function MealHint({ options, chosen }: { options: PortalMenuOption[]; chosen: st
 // `RSVP` route wrapper below (scroll mode) and by PagedGuestDeck, which
 // mounts all 4 guest pages' content together inside one shared GuestLayout
 // (paged mode). See docs/specs/VIEWPORT_PAGING_PHASE1.md.
-export function RSVPContent() {
+//
+// previewMode (docs/specs/VIEW_AS_GUEST_PREVIEW.md): the couple's session
+// has no guest_id, and this page's data (RSVP status, meal, dietary notes)
+// is genuinely guest-specific -- unlike Dashboard/Schedule/Celebrate/Wedding
+// Party, which are wedding-wide and need no special handling to preview.
+// Rather than fetching or fabricating a real guest's data, previewMode skips
+// the fetch entirely and renders the same shell with every field disabled.
+export function RSVPContent({ previewMode = false }: { previewMode?: boolean } = {}) {
   usePageTitle('RSVP')
   // Current user + wedding phase come from the shared auth context (a single
   // /api/auth/me query for the whole app) rather than a page-level fetch.
@@ -162,7 +169,7 @@ export function RSVPContent() {
   const [contactStatusMessage, setContactStatusMessage] = useState<string | null>(null)
 
   useEffect(() => {
-    if (authLoading) {
+    if (authLoading || previewMode) {
       return
     }
 
@@ -227,7 +234,7 @@ export function RSVPContent() {
     return () => {
       mounted = false
     }
-  }, [authLoading, user, weddingPhase, authError])
+  }, [authLoading, previewMode, user, weddingPhase, authError])
 
   const updateField =
     <Key extends keyof RsvpFormData>(key: Key) =>
@@ -311,6 +318,80 @@ export function RSVPContent() {
   }
 
   const formDisabled = submitting || saved
+
+  if (previewMode) {
+    return (
+      <div className="max-w-2xl mx-auto w-full">
+        <Alert className="mb-6">
+          This is what a guest sees on their RSVP page — their real status appears here once
+          they've logged in and responded.
+        </Alert>
+
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>RSVP</CardTitle>
+          </CardHeader>
+        </Card>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Attendance</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <fieldset disabled className="border-0 space-y-3 m-0 p-0">
+                <label className="flex items-center gap-3">
+                  <input type="radio" disabled className="w-4 h-4" />
+                  <span className="text-sm font-medium">Accept</span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input type="radio" disabled className="w-4 h-4" />
+                  <span className="text-sm font-medium">Decline</span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input type="radio" disabled className="w-4 h-4" />
+                  <span className="text-sm font-medium">Tentative</span>
+                </label>
+              </fieldset>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Dietary requirements</CardTitle>
+              <CardDescription>
+                Guests can tell you about allergies or dietary requirements here, alongside a
+                plus-one name.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <fieldset disabled className="border-0 space-y-4 m-0 p-0">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Dietary requirements
+                  </label>
+                  <textarea
+                    disabled
+                    rows={4}
+                    placeholder="e.g. Nut allergy"
+                    className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-base resize-vertical focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Plus One Name</label>
+                  <Input disabled placeholder="e.g. Jamie Smith" />
+                </div>
+              </fieldset>
+            </CardContent>
+          </Card>
+
+          <Button disabled size="lg" className="w-full">
+            Save RSVP
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-2xl mx-auto w-full">

@@ -4,6 +4,7 @@ import {
   Bug,
   CalendarDays,
   CheckSquare,
+  Eye,
   Heart,
   Image as ImageIcon,
   KanbanSquare,
@@ -316,7 +317,22 @@ export function AdminLayout({ children, breadcrumb, title }: AdminLayoutProps) {
             )}
             </div>
 
-            <NotificationsBell variant="admin" />
+            <div className="flex items-center gap-3">
+              {/* docs/specs/VIEW_AS_GUEST_PREVIEW.md: couple-only, matching
+                  the "couple only" call already made for guest-view access
+                  earlier in this same redesign pass. */}
+              {isCouple && (
+                <Link
+                  to="/preview/dashboard"
+                  aria-label="Preview guest view"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <Eye className="h-4 w-4" aria-hidden="true" />
+                  <span className="hidden sm:inline">Preview guest view</span>
+                </Link>
+              )}
+              <NotificationsBell variant="admin" />
+            </div>
           </div>
         </header>
 
