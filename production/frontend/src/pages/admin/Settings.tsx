@@ -899,6 +899,16 @@ function PageBackgroundsCard({ settings }: { settings: WeddingSettings }) {
   )
 }
 
+type SettingsTab = 'general' | 'look-and-feel' | 'backgrounds' | 'guest-access' | 'menu'
+
+const SETTINGS_TABS: { key: SettingsTab; label: string }[] = [
+  { key: 'general', label: 'General' },
+  { key: 'look-and-feel', label: 'Look & Feel' },
+  { key: 'backgrounds', label: 'Backgrounds' },
+  { key: 'guest-access', label: 'Guest Access' },
+  { key: 'menu', label: 'Menu' },
+]
+
 function validate(form: SettingsFormState): string | null {
   if (!form.couple_names.trim()) {
     return 'Couple names are required.'
@@ -927,6 +937,7 @@ export function Settings() {
   const [form, setForm] = useState<SettingsFormState>(emptyFormState)
   const [formError, setFormError] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<SettingsTab>('general')
 
   useEffect(() => {
     if (settings) {
@@ -993,108 +1004,184 @@ export function Settings() {
           </Alert>
         )}
 
-        {!isLoading && !isError && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form
-                noValidate
-                className="grid gap-4"
-                onSubmit={handleSubmit}
-                aria-label="Wedding settings form"
-              >
-                {formError && <Alert variant="destructive">{formError}</Alert>}
-
-                <div className="grid gap-2">
-                  <Label htmlFor="settings-couple-names">Couple Names</Label>
-                  <Input
-                    id="settings-couple-names"
-                    value={form.couple_names}
-                    onChange={(event) => updateField('couple_names', event.target.value)}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="settings-wedding-date">Wedding Date</Label>
-                  <Input
-                    id="settings-wedding-date"
-                    type="date"
-                    value={form.wedding_date}
-                    onChange={(event) => updateField('wedding_date', event.target.value)}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="settings-ceremony-time">Ceremony Time</Label>
-                  <Input
-                    id="settings-ceremony-time"
-                    type="time"
-                    value={form.ceremony_time}
-                    onChange={(event) => updateField('ceremony_time', event.target.value)}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="settings-ceremony-location">Ceremony Location</Label>
-                  <Input
-                    id="settings-ceremony-location"
-                    value={form.ceremony_location}
-                    onChange={(event) => updateField('ceremony_location', event.target.value)}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="settings-reception-location">Reception Location</Label>
-                  <Input
-                    id="settings-reception-location"
-                    value={form.reception_location}
-                    onChange={(event) => updateField('reception_location', event.target.value)}
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="settings-phase">Wedding Phase</Label>
-                  <Select
-                    value={form.phase}
-                    onValueChange={(value) => updateField('phase', value as WeddingPhase)}
+        {!isLoading && !isError && settings && (
+          <>
+            <div
+              role="tablist"
+              aria-label="Settings sections"
+              className="flex flex-wrap gap-1 rounded-md border border-input p-1 w-fit"
+            >
+              {SETTINGS_TABS.map((tab) => {
+                const active = activeTab === tab.key
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    role="tab"
+                    id={`settings-tab-${tab.key}`}
+                    aria-selected={active}
+                    aria-controls={`settings-panel-${tab.key}`}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                      active ? 'bg-plum text-white' : 'text-gray-700 hover:bg-gray-50'
+                    }`}
                   >
-                    <SelectTrigger id="settings-phase" aria-label="Wedding Phase">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PHASE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-gray-500 m-0">
-                    {PHASE_OPTIONS.find((o) => o.value === form.phase)?.description}
-                  </p>
-                </div>
+                    {tab.label}
+                  </button>
+                )
+              })}
+            </div>
 
-                <div>
-                  <Button type="submit" disabled={isSaving}>
-                    {isSaving ? 'Saving...' : 'Save'}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+            {activeTab === 'general' && (
+              <div
+                role="tabpanel"
+                id="settings-panel-general"
+                aria-labelledby="settings-tab-general"
+                className="grid gap-4"
+              >
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Details</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form
+                      noValidate
+                      className="grid gap-4"
+                      onSubmit={handleSubmit}
+                      aria-label="Wedding settings form"
+                    >
+                      {formError && <Alert variant="destructive">{formError}</Alert>}
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="settings-couple-names">Couple Names</Label>
+                        <Input
+                          id="settings-couple-names"
+                          value={form.couple_names}
+                          onChange={(event) => updateField('couple_names', event.target.value)}
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="settings-wedding-date">Wedding Date</Label>
+                        <Input
+                          id="settings-wedding-date"
+                          type="date"
+                          value={form.wedding_date}
+                          onChange={(event) => updateField('wedding_date', event.target.value)}
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="settings-ceremony-time">Ceremony Time</Label>
+                        <Input
+                          id="settings-ceremony-time"
+                          type="time"
+                          value={form.ceremony_time}
+                          onChange={(event) => updateField('ceremony_time', event.target.value)}
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="settings-ceremony-location">Ceremony Location</Label>
+                        <Input
+                          id="settings-ceremony-location"
+                          value={form.ceremony_location}
+                          onChange={(event) =>
+                            updateField('ceremony_location', event.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="settings-reception-location">Reception Location</Label>
+                        <Input
+                          id="settings-reception-location"
+                          value={form.reception_location}
+                          onChange={(event) =>
+                            updateField('reception_location', event.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div className="grid gap-2">
+                        <Label htmlFor="settings-phase">Wedding Phase</Label>
+                        <Select
+                          value={form.phase}
+                          onValueChange={(value) => updateField('phase', value as WeddingPhase)}
+                        >
+                          <SelectTrigger id="settings-phase" aria-label="Wedding Phase">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PHASE_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-gray-500 m-0">
+                          {PHASE_OPTIONS.find((o) => o.value === form.phase)?.description}
+                        </p>
+                      </div>
+
+                      <div>
+                        <Button type="submit" disabled={isSaving}>
+                          {isSaving ? 'Saving...' : 'Save'}
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {activeTab === 'look-and-feel' && (
+              <div
+                role="tabpanel"
+                id="settings-panel-look-and-feel"
+                aria-labelledby="settings-tab-look-and-feel"
+                className="grid gap-4"
+              >
+                <ThemeCard settings={settings} />
+              </div>
+            )}
+
+            {activeTab === 'backgrounds' && (
+              <div
+                role="tabpanel"
+                id="settings-panel-backgrounds"
+                aria-labelledby="settings-tab-backgrounds"
+                className="grid gap-4"
+              >
+                <PageBackgroundsCard settings={settings} />
+              </div>
+            )}
+
+            {activeTab === 'guest-access' && (
+              <div
+                role="tabpanel"
+                id="settings-panel-guest-access"
+                aria-labelledby="settings-tab-guest-access"
+                className="grid gap-4"
+              >
+                <LayoutModeCard settings={settings} />
+                <PartyVisibilityCard settings={settings} />
+              </div>
+            )}
+
+            {activeTab === 'menu' && (
+              <div
+                role="tabpanel"
+                id="settings-panel-menu"
+                aria-labelledby="settings-tab-menu"
+                className="grid gap-4"
+              >
+                <MenuManager />
+              </div>
+            )}
+          </>
         )}
-
-        {!isLoading && !isError && settings && <ThemeCard settings={settings} />}
-
-        {!isLoading && !isError && settings && <LayoutModeCard settings={settings} />}
-
-        {!isLoading && !isError && settings && <PageBackgroundsCard settings={settings} />}
-
-        {!isLoading && !isError && settings && <PartyVisibilityCard settings={settings} />}
-
-        {!isLoading && !isError && settings && <MenuManager />}
       </div>
     </AdminLayout>
   )

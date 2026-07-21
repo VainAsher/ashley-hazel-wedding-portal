@@ -99,6 +99,10 @@ function mainRegion(page: Page) {
   return page.getByRole('main')
 }
 
+async function openSettingsTab(page: Page, label: string) {
+  await mainRegion(page).getByRole('tab', { name: label }).click()
+}
+
 test('loads and populates the settings form from the API', async ({ page }) => {
   await page.goto('/admin/settings')
 
@@ -135,6 +139,7 @@ test('edits and saves settings with success feedback', async ({ page }) => {
 
 test('saves the guest-site theme dials', async ({ page }) => {
   await page.goto('/admin/settings')
+  await openSettingsTab(page, 'Look & Feel')
 
   const main = mainRegion(page)
   await expect(main.getByRole('heading', { name: 'Guest Site Theme' })).toBeVisible()
@@ -166,6 +171,7 @@ test('saves the guest-site theme dials', async ({ page }) => {
 
 test('saves chosen fonts and type scale, and previews them live', async ({ page }) => {
   await page.goto('/admin/settings')
+  await openSettingsTab(page, 'Look & Feel')
 
   const main = mainRegion(page)
   await expect(main.getByRole('heading', { name: 'Guest Site Theme' })).toBeVisible()
@@ -213,6 +219,7 @@ test('saves chosen fonts and type scale, and previews them live', async ({ page 
 
 test('resets the guest-site theme to defaults', async ({ page }) => {
   await page.goto('/admin/settings')
+  await openSettingsTab(page, 'Look & Feel')
 
   await mainRegion(page).getByRole('button', { name: 'Reset to default' }).click()
   await expect(
@@ -224,6 +231,7 @@ test('resets the guest-site theme to defaults', async ({ page }) => {
 
 test('rejects an invalid hex colour before saving', async ({ page }) => {
   await page.goto('/admin/settings')
+  await openSettingsTab(page, 'Look & Feel')
 
   const main = mainRegion(page)
   await main.getByLabel('Accent colour', { exact: true }).fill('purple')
@@ -236,6 +244,7 @@ test('renders the Guest Page Navigation card with the default paged mode selecte
   page,
 }) => {
   await page.goto('/admin/settings')
+  await openSettingsTab(page, 'Guest Access')
 
   const main = mainRegion(page)
   await expect(main.getByRole('heading', { name: 'Guest Page Navigation' })).toBeVisible()
@@ -247,6 +256,7 @@ test('renders the Guest Page Navigation card with the default paged mode selecte
 
 test('switches guest page navigation to scroll and saves it', async ({ page }) => {
   await page.goto('/admin/settings')
+  await openSettingsTab(page, 'Guest Access')
 
   const main = mainRegion(page)
   const group = main.getByRole('radiogroup', { name: 'Guest page navigation' })
@@ -275,6 +285,7 @@ test('switches guest page navigation to scroll and saves it', async ({ page }) =
 
 test('renders the Party Visibility card with the current mode selected', async ({ page }) => {
   await page.goto('/admin/settings')
+  await openSettingsTab(page, 'Guest Access')
 
   const main = mainRegion(page)
   await expect(main.getByRole('heading', { name: 'Party Visibility' })).toBeVisible()
@@ -286,6 +297,7 @@ test('renders the Party Visibility card with the current mode selected', async (
 
 test('switches party visibility to locked and saves it', async ({ page }) => {
   await page.goto('/admin/settings')
+  await openSettingsTab(page, 'Guest Access')
 
   const main = mainRegion(page)
   const group = main.getByRole('radiogroup', { name: 'Party visibility' })
